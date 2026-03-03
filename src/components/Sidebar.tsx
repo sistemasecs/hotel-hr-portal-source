@@ -1,0 +1,194 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { useData } from '@/context/DataContext';
+import { useLanguage } from '@/context/LanguageContext';
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { user: authUser, isAdmin, logout } = useAuth();
+  const { users } = useData();
+  const { t } = useLanguage();
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+
+  // Automatically open the admin menu if we are on the admin page
+  useEffect(() => {
+    if (pathname.startsWith('/dashboard/admin')) {
+      setIsAdminMenuOpen(true);
+    }
+  }, [pathname]);
+
+  if (!authUser) return null;
+
+  const currentUser = users.find(u => u.id === authUser.id) || authUser;
+
+  const navItems = [
+    { 
+      name: t('dashboard'), 
+      href: '/dashboard',
+      icon: (
+        <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+      )
+    },
+    { 
+      name: t('cultureHub'), 
+      href: '/dashboard/culture',
+      icon: (
+        <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      )
+    },
+    { 
+      name: t('celebrations'), 
+      href: '/dashboard/celebrations',
+      icon: (
+        <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+        </svg>
+      )
+    },
+    { 
+      name: t('learningCenter'), 
+      href: '/dashboard/learning',
+      icon: (
+        <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+        </svg>
+      )
+    },
+  ];
+
+  const adminSubLinks = [
+    { name: 'Staff Directory', tab: 'Directory' },
+    { name: 'Compliance', tab: 'Training' },
+    { name: 'Departments', tab: 'Departments' },
+    { name: 'Events', tab: 'Events' },
+    { name: 'Learning Modules', tab: 'Modules' },
+    { name: 'Recognition', tab: 'Recognition' },
+    { name: 'Settings', tab: 'Settings' },
+  ];
+
+  return (
+    <div className="w-64 bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0">
+      <div className="p-6 border-b border-slate-800">
+        <h1 className="text-xl font-bold tracking-tight">El Carmen Hotel</h1>
+        <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">{t('employeePortal')}</p>
+      </div>
+      
+      <Link 
+        href="/dashboard/profile"
+        className="block p-6 border-b border-slate-800 hover:bg-slate-800 transition-colors group"
+      >
+        <div className="flex items-center space-x-3">
+          {currentUser.avatarUrl ? (
+            <img 
+              src={currentUser.avatarUrl} 
+              alt={currentUser.name} 
+              className={`w-10 h-10 rounded-full ${currentUser.avatarFit === 'contain' ? 'object-contain bg-slate-100' : 'object-cover'}`}
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-sm font-bold group-hover:bg-primary-500 transition-colors">
+              {currentUser.name.charAt(0)}
+            </div>
+          )}
+          <div>
+            <p className="text-sm font-medium group-hover:text-primary-300 transition-colors">{currentUser.name}</p>
+            <p className="text-xs text-slate-400">{currentUser.role} • {currentUser.department}</p>
+          </div>
+        </div>
+      </Link>
+
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard');
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={`flex items-center px-4 py-3 rounded-md text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-primary-600 text-white'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              {item.icon}
+              {item.name}
+            </Link>
+          );
+        })}
+
+        {/* HR Admin Dropdown */}
+        {isAdmin && (
+          <div className="pt-2">
+            <button
+              onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-md text-sm font-medium transition-colors ${
+                pathname.startsWith('/dashboard/admin') && !isAdminMenuOpen
+                  ? 'bg-primary-600 text-white'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center">
+                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span>{t('hrAdmin')}</span>
+              </div>
+              <svg
+                className={`w-4 h-4 transition-transform duration-200 ${isAdminMenuOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {/* Dropdown Content */}
+            {isAdminMenuOpen && (
+              <div className="mt-1 pl-4 space-y-1 border-l-2 border-slate-800 ml-4">
+                {adminSubLinks.map((link) => {
+                  const currentTab = searchParams.get('tab') || 'Directory';
+                  const isActive = pathname === '/dashboard/admin' && currentTab === link.tab;
+                  
+                  return (
+                    <Link
+                      key={link.tab}
+                      href={`/dashboard/admin?tab=${link.tab}`}
+                      className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-primary-600/20 text-primary-400'
+                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      {link.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </nav>
+
+      <div className="p-4 border-t border-slate-800">
+        <button
+          onClick={logout}
+          className="w-full text-left px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors"
+        >
+          {t('signOut')}
+        </button>
+      </div>
+    </div>
+  );
+}
