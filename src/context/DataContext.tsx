@@ -90,8 +90,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Failed to parse events from localStorage');
         }
       }
+
+      const savedModules = localStorage.getItem('hotel_training_modules');
+      if (savedModules) {
+        try {
+          setTrainingModules(JSON.parse(savedModules));
+        } catch (e) {
+          console.error('Failed to parse training modules from localStorage');
+        }
+      }
     }
   }, []);
+
+  // Save training modules to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('hotel_training_modules', JSON.stringify(trainingModules));
+    }
+  }, [trainingModules]);
 
   // Save departments to localStorage whenever it changes
   useEffect(() => {
