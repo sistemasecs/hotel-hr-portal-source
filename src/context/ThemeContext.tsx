@@ -75,7 +75,7 @@ const colorPalettes: Record<ThemeColor, Record<string, string>> = {
 };
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [primaryColor, setPrimaryColorState] = useState<ThemeColor>('indigo');
+  const [primaryColor, setPrimaryColorState] = useState<ThemeColor>('emerald');
 
   useEffect(() => {
     const savedColor = localStorage.getItem('themeColor') as ThemeColor;

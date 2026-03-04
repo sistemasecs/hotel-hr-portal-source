@@ -54,7 +54,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [peerVotes, setPeerVotes] = useState<PeerVote[]>([]);
   const [supervisorScores, setSupervisorScores] = useState<SupervisorScore[]>([]);
   const [employeesOfTheMonth, setEmployeesOfTheMonth] = useState<EmployeeOfTheMonth[]>([]);
-  const [hotelLogo, setHotelLogo] = useState<string | null>(null);
+  const [hotelLogo, setHotelLogo] = useState<string | null>('/logo.png');
 
   // Load persisted data on mount
   useEffect(() => {
