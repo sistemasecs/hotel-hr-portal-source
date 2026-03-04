@@ -59,6 +59,16 @@ export const translations = {
     spanish: 'Spanish',
     
     // HR Admin Page
+    hrAdministration: 'HR Administration',
+    quickAccessTools: 'Quick access to command center tools',
+    openCommandCenter: 'Open Command Center',
+    manageEmployeeProfiles: 'Manage employee profiles',
+    trackTrainingCompletion: 'Track training completion',
+    manageHotelDepartments: 'Manage hotel departments',
+    scheduleCultureEvents: 'Schedule culture hub events',
+    createTrainingContent: 'Create training content',
+    employeeOfTheMonth: 'Employee of the Month',
+    portalConfiguration: 'Portal configuration',
     hrCommandCenter: 'HR Command Center',
     manageStaff: 'Manage staff, events, and company resources.',
     staffDirectory: 'Staff Directory',
@@ -274,6 +284,16 @@ export const translations = {
     spanish: 'Español',
     
     // HR Admin Page
+    hrAdministration: 'Administración de RRHH',
+    quickAccessTools: 'Acceso rápido a herramientas del centro de comando',
+    openCommandCenter: 'Abrir Centro de Comando',
+    manageEmployeeProfiles: 'Gestionar perfiles de empleados',
+    trackTrainingCompletion: 'Seguimiento de entrenamientos',
+    manageHotelDepartments: 'Gestionar departamentos del hotel',
+    scheduleCultureEvents: 'Programar eventos culturales',
+    createTrainingContent: 'Crear contenido de entrenamiento',
+    employeeOfTheMonth: 'Empleado del Mes',
+    portalConfiguration: 'Configuración del portal',
     hrCommandCenter: 'Centro de Comando de RRHH',
     manageStaff: 'Gestiona el personal, eventos y recursos de la empresa.',
     staffDirectory: 'Directorio del Personal',

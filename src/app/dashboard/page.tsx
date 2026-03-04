@@ -43,67 +43,67 @@ export default function DashboardPage() {
 
   const adminLinks = [
     { 
-      name: 'Staff Directory', 
+      name: t('staffDirectory'), 
       tab: 'Directory', 
       icon: (
         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
       ), 
-      desc: 'Manage employee profiles' 
+      desc: t('manageEmployeeProfiles') 
     },
     { 
-      name: 'Compliance', 
+      name: t('complianceOverview'), 
       tab: 'Training', 
       icon: (
         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ), 
-      desc: 'Track training completion' 
+      desc: t('trackTrainingCompletion') 
     },
     { 
-      name: 'Departments', 
+      name: t('manageDepartments'), 
       tab: 'Departments', 
       icon: (
         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
       ), 
-      desc: 'Manage hotel departments' 
+      desc: t('manageHotelDepartments') 
     },
     { 
-      name: 'Events', 
+      name: t('cultureHubEvents'), 
       tab: 'Events', 
       icon: (
         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       ), 
-      desc: 'Schedule culture hub events' 
+      desc: t('scheduleCultureEvents') 
     },
     { 
-      name: 'Learning Modules', 
+      name: t('learningModules'), 
       tab: 'Modules', 
       icon: (
         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
         </svg>
       ), 
-      desc: 'Create training content' 
+      desc: t('createTrainingContent') 
     },
     { 
-      name: 'Recognition', 
+      name: t('recognition'), 
       tab: 'Recognition', 
       icon: (
         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
         </svg>
       ), 
-      desc: 'Employee of the Month' 
+      desc: t('employeeOfTheMonth') 
     },
     { 
-      name: 'Settings', 
+      name: t('settings'), 
       tab: 'Settings', 
       icon: (
         <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,7 +111,7 @@ export default function DashboardPage() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       ), 
-      desc: 'Portal configuration' 
+      desc: t('portalConfiguration') 
     },
   ];
 
@@ -229,11 +229,11 @@ export default function DashboardPage() {
         <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-xl font-semibold text-slate-800">HR Administration</h2>
-              <p className="text-sm text-slate-500 mt-1">Quick access to command center tools</p>
+              <h2 className="text-xl font-semibold text-slate-800">{t('hrAdministration')}</h2>
+              <p className="text-sm text-slate-500 mt-1">{t('quickAccessTools')}</p>
             </div>
             <Link href="/dashboard/admin" className="text-sm font-medium text-primary-600 hover:text-primary-800">
-              Open Command Center &rarr;
+              {t('openCommandCenter')} &rarr;
             </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
