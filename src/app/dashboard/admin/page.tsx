@@ -309,6 +309,9 @@ function AdminDashboardContent() {
 
           newUsers.forEach(userData => {
             if (userData.name && userData.email && userData.password && userData.role && userData.department && userData.birthday && userData.hireDate) {
+              // We need to cast to any here because the addUser function in DataContext
+              // expects Omit<User, 'id'>, but the API endpoint expects a password field
+              // which is not part of the User type (it's only used during creation)
               addUser({
                 name: userData.name,
                 email: userData.email,
@@ -323,7 +326,7 @@ function AdminDashboardContent() {
                 likes: userData.likes ? userData.likes.split(',').map((s: string) => s.trim()) : [],
                 dislikes: userData.dislikes ? userData.dislikes.split(',').map((s: string) => s.trim()) : [],
                 allergies: userData.allergies ? userData.allergies.split(',').map((s: string) => s.trim()) : [],
-              });
+              } as any);
               addedCount++;
             } else {
               errorCount++;
