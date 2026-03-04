@@ -43,7 +43,7 @@ function AdminDashboardContent() {
 
   // Department State
   const [newDeptName, setNewDeptName] = useState('');
-  const [editingDept, setEditingDept] = useState<{oldName: string, newName: string} | null>(null);
+  const [editingDept, setEditingDept] = useState<{ oldName: string, newName: string } | null>(null);
 
   // Event Types State
   const [newEventTypeName, setNewEventTypeName] = useState('');
@@ -169,7 +169,7 @@ function AdminDashboardContent() {
     const [y, m, d] = editEventForm.date.split('-');
     const localDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
     const monthYear = localDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-    
+
     // Create a URL-friendly ID: "summer-party-july-2026"
     const generatedId = `${cleanTitle}-${monthYear}`
       .toLowerCase()
@@ -183,7 +183,7 @@ function AdminDashboardContent() {
     } else {
       addEvent({ ...eventToSave, id: generatedId } as Event);
     }
-    
+
     setIsEventModalOpen(false);
     setEditingEvent(null);
     setEditEventForm({});
@@ -221,12 +221,12 @@ function AdminDashboardContent() {
 
   const handleSaveScore = (userId: string) => {
     const score = scoreInput[userId];
-    if (score !== undefined && score >= 0 && score <= 100) {
+    if (score !== undefined && score >= 0 && score <= 100 && user?.id) {
       setSupervisorScore({
         employeeId: userId,
         score: score,
         month: currentMonthStr
-      });
+      }, user.id);
       alert('Score saved successfully!');
     } else {
       alert('Please enter a valid score between 0 and 100.');
@@ -291,7 +291,7 @@ function AdminDashboardContent() {
         alert(t('fileTooLarge'));
         return;
       }
-      
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setHotelLogo(reader.result as string);
@@ -321,7 +321,7 @@ function AdminDashboardContent() {
 
           setCsvPreviewData({ valid, invalid });
           setIsCsvModalOpen(true);
-          
+
           if (fileInputRef.current) {
             fileInputRef.current.value = '';
           }
@@ -362,9 +362,9 @@ function AdminDashboardContent() {
 
   const handleDownloadTemplate = () => {
     const headers = ['name', 'email', 'password', 'role', 'department', 'birthday', 'hireDate', 'tShirtSize', 'likes', 'dislikes', 'allergies'];
-    const csvContent = headers.join(',') + '\n' + 
+    const csvContent = headers.join(',') + '\n' +
       'John Doe,john@example.com,password123,Staff,Housekeeping,1990-01-01,2023-01-01,M,"Coffee, Dogs","Loud noises",Peanuts';
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -376,8 +376,8 @@ function AdminDashboardContent() {
     document.body.removeChild(link);
   };
 
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredUsers = users.filter(u =>
+    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.role.toLowerCase().includes(searchQuery.toLowerCase())
@@ -395,19 +395,18 @@ function AdminDashboardContent() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                activeTab === tab
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-              }`}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === tab
+                ? 'bg-primary-600 text-white'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                }`}
             >
-              {tab === 'Directory' ? t('staffDirectory') : 
-               tab === 'Training' ? t('complianceOverview') : 
-               tab === 'Departments' ? t('manageDepartments') : 
-               tab === 'Events' ? t('cultureHubEvents') :
-               tab === 'Modules' ? t('learningModules') :
-               tab === 'Recognition' ? 'Recognition' :
-               'Settings'}
+              {tab === 'Directory' ? t('staffDirectory') :
+                tab === 'Training' ? t('complianceOverview') :
+                  tab === 'Departments' ? t('manageDepartments') :
+                    tab === 'Events' ? t('cultureHubEvents') :
+                      tab === 'Modules' ? t('learningModules') :
+                        tab === 'Recognition' ? 'Recognition' :
+                          'Settings'}
             </button>
           ))}
         </div>
@@ -442,7 +441,7 @@ function AdminDashboardContent() {
                   </svg>
                   {t('uploadBatch')}
                 </button>
-                <button 
+                <button
                   onClick={handleAddUserClick}
                   className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors whitespace-nowrap"
                 >
@@ -469,9 +468,9 @@ function AdminDashboardContent() {
                     <td className="p-4">
                       <div className="flex items-center space-x-3">
                         {u.avatarUrl ? (
-                          <img 
-                            src={u.avatarUrl} 
-                            alt={u.name} 
+                          <img
+                            src={u.avatarUrl}
+                            alt={u.name}
                             className={`w-8 h-8 rounded-full ${u.avatarFit === 'contain' ? 'object-contain bg-slate-100' : 'object-cover'}`}
                           />
                         ) : (
@@ -566,7 +565,7 @@ function AdminDashboardContent() {
               {(csvPreviewData.valid.length > 0 || csvPreviewData.invalid.length > 0) && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-slate-800">{t('csvUploadPreview')}</h3>
-                  
+
                   {csvPreviewData.valid.length > 0 && (
                     <div className="bg-emerald-50 border border-emerald-200 rounded-lg overflow-hidden">
                       <div className="p-3 bg-emerald-100 border-b border-emerald-200">
@@ -703,6 +702,7 @@ function AdminDashboardContent() {
                   className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="Staff">Staff</option>
+                  <option value="Supervisor">Supervisor</option>
                   <option value="HR Admin">HR Admin</option>
                 </select>
               </div>
@@ -835,11 +835,10 @@ function AdminDashboardContent() {
                         <td className="p-4 text-sm font-medium text-slate-900">{u.name}</td>
                         <td className="p-4 text-sm text-slate-600">{m.title}</td>
                         <td className="p-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            ut.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ut.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
                             ut.status === 'In Progress' ? 'bg-amber-100 text-amber-800' :
-                            'bg-slate-100 text-slate-800'
-                          }`}>
+                              'bg-slate-100 text-slate-800'
+                            }`}>
                             {ut.status}
                           </span>
                         </td>
@@ -997,7 +996,7 @@ function AdminDashboardContent() {
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h2 className="text-xl font-semibold text-slate-800">Culture Hub Events</h2>
-              <button 
+              <button
                 onClick={handleAddEventClick}
                 className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors"
               >
@@ -1027,12 +1026,11 @@ function AdminDashboardContent() {
                         {e.time && <p className="text-xs text-slate-500">{e.time}</p>}
                       </td>
                       <td className="p-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          e.type === 'Birthday' ? 'bg-pink-100 text-pink-800' :
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${e.type === 'Birthday' ? 'bg-pink-100 text-pink-800' :
                           e.type === 'Celebration' ? 'bg-yellow-100 text-yellow-800' :
-                          e.type === 'Social' ? 'bg-green-100 text-green-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
+                            e.type === 'Social' ? 'bg-green-100 text-green-800' :
+                              'bg-blue-100 text-blue-800'
+                          }`}>
                           {e.type}
                         </span>
                       </td>
@@ -1266,11 +1264,10 @@ function AdminDashboardContent() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            module.type === 'Video' ? 'bg-blue-100 text-blue-800' :
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${module.type === 'Video' ? 'bg-blue-100 text-blue-800' :
                             module.type === 'Document' ? 'bg-green-100 text-green-800' :
-                            'bg-purple-100 text-purple-800'
-                          }`}>
+                              'bg-purple-100 text-purple-800'
+                            }`}>
                             {module.type}
                           </span>
                         </td>
@@ -1361,9 +1358,9 @@ function AdminDashboardContent() {
                     <td className="p-4">
                       <div className="flex items-center space-x-3">
                         {entry.user.avatarUrl ? (
-                          <img 
-                            src={entry.user.avatarUrl} 
-                            alt={entry.user.name} 
+                          <img
+                            src={entry.user.avatarUrl}
+                            alt={entry.user.name}
                             className={`w-8 h-8 rounded-full ${entry.user.avatarFit === 'contain' ? 'object-contain bg-slate-100' : 'object-cover'}`}
                           />
                         ) : (
@@ -1415,11 +1412,10 @@ function AdminDashboardContent() {
                       <button
                         onClick={() => handleAwardEotm(entry.user.id)}
                         disabled={currentEotm?.userId === entry.user.id}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                          currentEotm?.userId === entry.user.id
-                            ? 'bg-amber-100 text-amber-800 cursor-not-allowed'
-                            : 'bg-primary-600 text-white hover:bg-primary-700'
-                        }`}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${currentEotm?.userId === entry.user.id
+                          ? 'bg-amber-100 text-amber-800 cursor-not-allowed'
+                          : 'bg-primary-600 text-white hover:bg-primary-700'
+                          }`}
                       >
                         {currentEotm?.userId === entry.user.id ? 'Awarded' : 'Award EOTM'}
                       </button>
@@ -1448,16 +1444,15 @@ function AdminDashboardContent() {
                     <button
                       key={color}
                       onClick={() => setPrimaryColor(color)}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform ${
-                        primaryColor === color ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'hover:scale-105'
-                      }`}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform ${primaryColor === color ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'hover:scale-105'
+                        }`}
                       style={{
-                        backgroundColor: 
+                        backgroundColor:
                           color === 'indigo' ? '#6366f1' :
-                          color === 'blue' ? '#3b82f6' :
-                          color === 'purple' ? '#a855f7' :
-                          color === 'rose' ? '#f43f5e' :
-                          '#10b981'
+                            color === 'blue' ? '#3b82f6' :
+                              color === 'purple' ? '#a855f7' :
+                                color === 'rose' ? '#f43f5e' :
+                                  '#10b981'
                       }}
                       title={color.charAt(0).toUpperCase() + color.slice(1)}
                     >

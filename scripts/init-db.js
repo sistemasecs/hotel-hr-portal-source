@@ -22,7 +22,8 @@ async function initDb() {
         likes TEXT[],
         dislikes TEXT[],
         t_shirt_size VARCHAR(10),
-        allergies TEXT[]
+        allergies TEXT[],
+        supervisor_id UUID REFERENCES users(id) ON DELETE SET NULL
       );
 
       CREATE TABLE IF NOT EXISTS events (
@@ -110,6 +111,12 @@ async function initDb() {
       CREATE TABLE IF NOT EXISTS hotel_config (
         key VARCHAR(100) PRIMARY KEY,
         value TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        token VARCHAR(255) PRIMARY KEY,
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL
       );
     `);
     console.log('Database initialized successfully');

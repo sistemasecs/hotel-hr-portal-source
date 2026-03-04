@@ -1,4 +1,4 @@
-export type Role = 'Staff' | 'HR Admin';
+export type Role = 'Staff' | 'Supervisor' | 'HR Admin';
 export type Department = string;
 
 export interface User {
@@ -7,6 +7,7 @@ export interface User {
   email: string;
   role: Role;
   department: Department;
+  supervisorId?: string | null;
   avatarUrl?: string;
   avatarFit?: 'cover' | 'contain';
   birthday: string; // YYYY-MM-DD

@@ -34,7 +34,7 @@ interface DataContextType {
   peerVotes: PeerVote[];
   addPeerVote: (vote: Omit<PeerVote, 'id'>) => void;
   supervisorScores: SupervisorScore[];
-  setSupervisorScore: (score: Omit<SupervisorScore, 'id'>) => void;
+  setSupervisorScore: (score: Omit<SupervisorScore, 'id'>, submitterId: string) => void;
   employeesOfTheMonth: EmployeeOfTheMonth[];
   setEmployeeOfTheMonth: (eotm: Omit<EmployeeOfTheMonth, 'id' | 'awardedAt'>) => void;
   hotelLogo: string | null;
@@ -513,12 +513,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const setSupervisorScore = async (score: Omit<SupervisorScore, 'id'>) => {
+  const setSupervisorScore = async (score: Omit<SupervisorScore, 'id'>, submitterId: string) => {
     try {
       const response = await fetch('/api/gamification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'supervisorScore', payload: score })
+        body: JSON.stringify({ action: 'supervisorScore', payload: { ...score, submitterId } })
       });
       if (response.ok) {
         const result = await response.json();

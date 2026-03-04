@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function LoginPage() {
@@ -31,17 +32,15 @@ export default function LoginPage() {
       <div className="absolute top-4 right-4 flex space-x-2">
         <button
           onClick={() => setLanguage('en')}
-          className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-            language === 'en' ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
+          className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${language === 'en' ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
         >
           EN
         </button>
         <button
           onClick={() => setLanguage('es')}
-          className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-            language === 'es' ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
+          className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${language === 'es' ? 'bg-primary-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
         >
           ES
         </button>
@@ -109,15 +108,14 @@ export default function LoginPage() {
               {t('signIn')}
             </button>
           </div>
-          
+
           <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => alert(t('contactHR'))}
+            <Link
+              href="/forgot-password"
               className="text-sm text-primary-600 hover:text-primary-500 font-medium"
             >
               {t('forgotPassword')}
-            </button>
+            </Link>
           </div>
         </form>
       </div>

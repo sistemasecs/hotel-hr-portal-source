@@ -54,7 +54,17 @@ export async function POST(request: Request) {
         }
 
         if (action === 'supervisorScore') {
-            const { employeeId, score, month, notes } = payload;
+            const { employeeId, score, month, notes, submitterId } = payload;
+
+            // Check submitter permissions
+            if (!submitterId) {
+                return NextResponse.json({ error: 'Submitter ID is required' }, { status: 400 });
+            }
+            const submitterCheck = await pool.query('SELECT role FROM users WHERE id = $1', [submitterId]);
+            if (submitterCheck.rowCount === 0 || (submitterCheck.rows[0].role !== 'Supervisor' && submitterCheck.rows[0].role !== 'HR Admin')) {
+                return NextResponse.json({ error: 'Unauthorized to submit supervisor scores' }, { status: 403 });
+            }
+
             const result = await pool.query(
                 `INSERT INTO supervisor_scores (employee_id, score, month, notes) 
          VALUES ($1, $2, $3, $4) 
