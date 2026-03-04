@@ -549,16 +549,16 @@ function AdminDashboardContent() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-100">
-              <h2 className="text-xl font-semibold text-slate-800">Compliance Overview</h2>
+              <h2 className="text-xl font-semibold text-slate-800">{t('complianceOverview')}</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                    <th className="p-4 font-semibold">Employee</th>
-                    <th className="p-4 font-semibold">Module</th>
-                    <th className="p-4 font-semibold">Status</th>
-                    <th className="p-4 font-semibold">Completion Date</th>
+                    <th className="p-4 font-semibold">{t('employees')}</th>
+                    <th className="p-4 font-semibold">{t('module')}</th>
+                    <th className="p-4 font-semibold">{t('status')}</th>
+                    <th className="p-4 font-semibold">{t('completionDate')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -591,29 +591,29 @@ function AdminDashboardContent() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 h-fit">
-            <h2 className="text-xl font-semibold text-slate-800 mb-6">Assign Training</h2>
+            <h2 className="text-xl font-semibold text-slate-800 mb-6">{t('assignTraining')}</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Select Employee</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('selectEmployee')}</label>
                 <select
                   className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
                   value={selectedUser || ''}
                   onChange={(e) => setSelectedUser(e.target.value)}
                 >
-                  <option value="" disabled>Choose an employee...</option>
+                  <option value="" disabled>{t('chooseEmployee')}</option>
                   {users.map(u => (
                     <option key={u.id} value={u.id}>{u.name} ({u.department})</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Select Module</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('selectModule')}</label>
                 <select
                   className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
                   value={selectedModule || ''}
                   onChange={(e) => setSelectedModule(e.target.value)}
                 >
-                  <option value="" disabled>Choose a module...</option>
+                  <option value="" disabled>{t('chooseModule')}</option>
                   {trainingModules.map(m => (
                     <option key={m.id} value={m.id}>{m.title}</option>
                   ))}
@@ -1080,7 +1080,7 @@ function AdminDashboardContent() {
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                   <th className="p-4 font-semibold">Rank</th>
-                  <th className="p-4 font-semibold">Employee</th>
+                  <th className="p-4 font-semibold">{t('employees')}</th>
                   <th className="p-4 font-semibold text-center">Trainings (x10)</th>
                   <th className="p-4 font-semibold text-center">Peer Votes (x5)</th>
                   <th className="p-4 font-semibold text-center">Supervisor Score</th>
