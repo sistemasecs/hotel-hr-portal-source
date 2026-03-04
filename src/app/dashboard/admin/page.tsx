@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -8,6 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { User, Event, TrainingModule } from '@/types';
 import ModuleForm from '@/components/admin/ModuleForm';
+import Papa from 'papaparse';
 
 function AdminDashboardContent() {
   const { user, isAdmin } = useAuth();
@@ -33,6 +34,8 @@ function AdminDashboardContent() {
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editUserForm, setEditUserForm] = useState<Partial<User> & { password?: string }>({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Department State
   const [newDeptName, setNewDeptName] = useState('');
@@ -293,6 +296,60 @@ function AdminDashboardContent() {
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const newUsers = results.data as any[];
+          let addedCount = 0;
+          let errorCount = 0;
+
+          newUsers.forEach(userData => {
+            if (userData.name && userData.email && userData.password && userData.role && userData.department && userData.birthday && userData.hireDate) {
+              addUser({
+                name: userData.name,
+                email: userData.email,
+                password: userData.password,
+                role: userData.role as any,
+                department: userData.department,
+                birthday: userData.birthday,
+                hireDate: userData.hireDate,
+                avatarUrl: userData.avatarUrl || '',
+                avatarFit: 'cover',
+                tShirtSize: userData.tShirtSize as any || '',
+                likes: userData.likes ? userData.likes.split(',').map((s: string) => s.trim()) : [],
+                dislikes: userData.dislikes ? userData.dislikes.split(',').map((s: string) => s.trim()) : [],
+                allergies: userData.allergies ? userData.allergies.split(',').map((s: string) => s.trim()) : [],
+              });
+              addedCount++;
+            } else {
+              errorCount++;
+            }
+          });
+
+          alert(`Successfully added ${addedCount} employees. ${errorCount > 0 ? `Failed to add ${errorCount} employees due to missing required fields.` : ''}`);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        },
+        error: (error) => {
+          console.error('Error parsing CSV:', error);
+          alert('Error parsing CSV file. Please check the format.');
+        }
+      });
+    }
+  };
+
+  const filteredUsers = users.filter(u => 
+    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.role.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-8">
       <header className="flex justify-between items-end border-b border-slate-200 pb-6">
@@ -325,14 +382,49 @@ function AdminDashboardContent() {
 
       {activeTab === 'Directory' && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+          <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
             <h2 className="text-xl font-semibold text-slate-800">{t('staffDirectory')}</h2>
-            <button 
-              onClick={handleAddUserClick}
-              className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors"
-            >
-              + {t('addEmployee')}
-            </button>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder={t('searchEmployees')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full sm:w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm focus:ring-primary-500 focus:border-primary-500"
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <input
+                  type="file"
+                  accept=".csv"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="csv-upload"
+                />
+                <label
+                  htmlFor="csv-upload"
+                  className="cursor-pointer px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors flex items-center"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  Upload CSV
+                </label>
+                <button 
+                  onClick={handleAddUserClick}
+                  className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors whitespace-nowrap"
+                >
+                  + {t('addEmployee')}
+                </button>
+              </div>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -347,7 +439,7 @@ function AdminDashboardContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {users.map(u => (
+                {filteredUsers.map(u => (
                   <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center space-x-3">
