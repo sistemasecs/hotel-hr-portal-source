@@ -68,13 +68,13 @@ export default function Sidebar() {
   ];
 
   const adminSubLinks = [
-    { name: 'Staff Directory', tab: 'Directory' },
-    { name: 'Compliance', tab: 'Training' },
-    { name: 'Departments', tab: 'Departments' },
-    { name: 'Events', tab: 'Events' },
-    { name: 'Learning Modules', tab: 'Modules' },
-    { name: 'Recognition', tab: 'Recognition' },
-    { name: 'Settings', tab: 'Settings' },
+    { name: t('staffDirectory'), tab: 'Directory' },
+    { name: t('complianceOverview'), tab: 'Training' },
+    { name: t('manageDepartments'), tab: 'Departments' },
+    { name: t('cultureHubEvents'), tab: 'Events' },
+    { name: t('learningModules'), tab: 'Modules' },
+    { name: t('recognition'), tab: 'Recognition' },
+    { name: t('settings'), tab: 'Settings' },
   ];
 
   return (
