@@ -37,6 +37,10 @@ function AdminDashboardContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // CSV Upload State
+  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+  const [csvPreviewData, setCsvPreviewData] = useState<{ valid: any[], invalid: any[] }>({ valid: [], invalid: [] });
+
   // Department State
   const [newDeptName, setNewDeptName] = useState('');
   const [editingDept, setEditingDept] = useState<{oldName: string, newName: string} | null>(null);
@@ -304,46 +308,72 @@ function AdminDashboardContent() {
         skipEmptyLines: true,
         complete: (results) => {
           const newUsers = results.data as any[];
-          let addedCount = 0;
-          let errorCount = 0;
+          const valid: any[] = [];
+          const invalid: any[] = [];
 
           newUsers.forEach(userData => {
             if (userData.name && userData.email && userData.password && userData.role && userData.department && userData.birthday && userData.hireDate) {
-              // We need to cast to any here because the addUser function in DataContext
-              // expects Omit<User, 'id'>, but the API endpoint expects a password field
-              // which is not part of the User type (it's only used during creation)
-              addUser({
-                name: userData.name,
-                email: userData.email,
-                password: userData.password,
-                role: userData.role as any,
-                department: userData.department,
-                birthday: userData.birthday,
-                hireDate: userData.hireDate,
-                avatarUrl: userData.avatarUrl || '',
-                avatarFit: 'cover',
-                tShirtSize: userData.tShirtSize as any || '',
-                likes: userData.likes ? userData.likes.split(',').map((s: string) => s.trim()) : [],
-                dislikes: userData.dislikes ? userData.dislikes.split(',').map((s: string) => s.trim()) : [],
-                allergies: userData.allergies ? userData.allergies.split(',').map((s: string) => s.trim()) : [],
-              } as any);
-              addedCount++;
+              valid.push(userData);
             } else {
-              errorCount++;
+              invalid.push(userData);
             }
           });
 
-          alert(`Successfully added ${addedCount} employees. ${errorCount > 0 ? `Failed to add ${errorCount} employees due to missing required fields.` : ''}`);
+          setCsvPreviewData({ valid, invalid });
+          setIsCsvModalOpen(true);
+          
           if (fileInputRef.current) {
             fileInputRef.current.value = '';
           }
         },
         error: (error) => {
           console.error('Error parsing CSV:', error);
-          alert('Error parsing CSV file. Please check the format.');
+          alert(t('csvUploadFormatError'));
         }
       });
     }
+  };
+
+  const handleConfirmCsvUpload = () => {
+    let addedCount = 0;
+    csvPreviewData.valid.forEach(userData => {
+      addUser({
+        name: userData.name,
+        email: userData.email,
+        password: userData.password,
+        role: userData.role as any,
+        department: userData.department,
+        birthday: userData.birthday,
+        hireDate: userData.hireDate,
+        avatarUrl: userData.avatarUrl || '',
+        avatarFit: 'cover',
+        tShirtSize: userData.tShirtSize as any || '',
+        likes: userData.likes ? userData.likes.split(',').map((s: string) => s.trim()) : [],
+        dislikes: userData.dislikes ? userData.dislikes.split(',').map((s: string) => s.trim()) : [],
+        allergies: userData.allergies ? userData.allergies.split(',').map((s: string) => s.trim()) : [],
+      } as any);
+      addedCount++;
+    });
+
+    alert(t('csvUploadSuccess').replace('{count}', addedCount.toString()));
+    setIsCsvModalOpen(false);
+    setCsvPreviewData({ valid: [], invalid: [] });
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = ['name', 'email', 'password', 'role', 'department', 'birthday', 'hireDate', 'tShirtSize', 'likes', 'dislikes', 'allergies'];
+    const csvContent = headers.join(',') + '\n' + 
+      'John Doe,john@example.com,password123,Staff,Housekeeping,1990-01-01,2023-01-01,M,"Coffee, Dogs","Loud noises",Peanuts';
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'employee_import_template.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const filteredUsers = users.filter(u => 
@@ -403,23 +433,15 @@ function AdminDashboardContent() {
                 </div>
               </div>
               <div className="flex space-x-2">
-                <input
-                  type="file"
-                  accept=".csv"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="csv-upload"
-                />
-                <label
-                  htmlFor="csv-upload"
-                  className="cursor-pointer px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors flex items-center"
+                <button
+                  onClick={() => setIsCsvModalOpen(true)}
+                  className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors flex items-center whitespace-nowrap"
                 >
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
-                  Upload CSV
-                </label>
+                  {t('uploadBatch')}
+                </button>
                 <button 
                   onClick={handleAddUserClick}
                   className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors whitespace-nowrap"
@@ -483,6 +505,153 @@ function AdminDashboardContent() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* CSV Upload Modal */}
+      {isCsvModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-slate-900">{t('csvUploadTitle')}</h2>
+              <button
+                onClick={() => {
+                  setIsCsvModalOpen(false);
+                  setCsvPreviewData({ valid: [], invalid: [] });
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                <p className="text-sm text-slate-600 mb-4">{t('csvUploadDesc')}</p>
+                <div className="flex space-x-4">
+                  <button
+                    onClick={handleDownloadTemplate}
+                    className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    {t('downloadTemplate')}
+                  </button>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="csv-upload-modal"
+                    />
+                    <label
+                      htmlFor="csv-upload-modal"
+                      className="cursor-pointer px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors flex items-center"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      {t('uploadCsv')}
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {(csvPreviewData.valid.length > 0 || csvPreviewData.invalid.length > 0) && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-slate-800">{t('csvUploadPreview')}</h3>
+                  
+                  {csvPreviewData.valid.length > 0 && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg overflow-hidden">
+                      <div className="p-3 bg-emerald-100 border-b border-emerald-200">
+                        <h4 className="text-sm font-semibold text-emerald-800">
+                          {t('csvUploadValidRows')} ({csvPreviewData.valid.length})
+                        </h4>
+                      </div>
+                      <div className="overflow-x-auto max-h-60">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-emerald-50 sticky top-0">
+                            <tr>
+                              <th className="p-2 font-medium text-emerald-800">Name</th>
+                              <th className="p-2 font-medium text-emerald-800">Email</th>
+                              <th className="p-2 font-medium text-emerald-800">Role</th>
+                              <th className="p-2 font-medium text-emerald-800">Department</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-emerald-100">
+                            {csvPreviewData.valid.map((row, i) => (
+                              <tr key={i}>
+                                <td className="p-2 text-emerald-900">{row.name}</td>
+                                <td className="p-2 text-emerald-900">{row.email}</td>
+                                <td className="p-2 text-emerald-900">{row.role}</td>
+                                <td className="p-2 text-emerald-900">{row.department}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {csvPreviewData.invalid.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg overflow-hidden">
+                      <div className="p-3 bg-red-100 border-b border-red-200">
+                        <h4 className="text-sm font-semibold text-red-800">
+                          {t('csvUploadInvalidRows')} ({csvPreviewData.invalid.length}) - {t('csvUploadMissingFields')}
+                        </h4>
+                      </div>
+                      <div className="overflow-x-auto max-h-60">
+                        <table className="w-full text-left text-sm">
+                          <thead className="bg-red-50 sticky top-0">
+                            <tr>
+                              <th className="p-2 font-medium text-red-800">Name</th>
+                              <th className="p-2 font-medium text-red-800">Email</th>
+                              <th className="p-2 font-medium text-red-800">Role</th>
+                              <th className="p-2 font-medium text-red-800">Department</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-red-100">
+                            {csvPreviewData.invalid.map((row, i) => (
+                              <tr key={i}>
+                                <td className="p-2 text-red-900">{row.name || '-'}</td>
+                                <td className="p-2 text-red-900">{row.email || '-'}</td>
+                                <td className="p-2 text-red-900">{row.role || '-'}</td>
+                                <td className="p-2 text-red-900">{row.department || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
+                    <button
+                      onClick={() => {
+                        setIsCsvModalOpen(false);
+                        setCsvPreviewData({ valid: [], invalid: [] });
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+                    >
+                      {t('csvUploadCancel')}
+                    </button>
+                    <button
+                      onClick={handleConfirmCsvUpload}
+                      disabled={csvPreviewData.valid.length === 0}
+                      className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t('csvUploadConfirm')} ({csvPreviewData.valid.length})
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
