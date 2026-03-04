@@ -1,0 +1,57 @@
+import { NextResponse } from 'next/server';
+import pool from '@/lib/db';
+
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
+    try {
+        const { id } = await context.params;
+        const updates = await request.json();
+
+        // Extract valid fields for update
+        const allowedFields = ['title', 'date', 'time', 'type', 'description', 'location'];
+        const updateClauses = [];
+        const values = [];
+        let paramIndex = 1;
+
+        for (const [key, value] of Object.entries(updates)) {
+            if (allowedFields.includes(key) && value !== undefined) {
+                updateClauses.push(`${key} = $${paramIndex}`);
+                values.push(value);
+                paramIndex++;
+            }
+        }
+
+        if (updateClauses.length === 0) {
+            return NextResponse.json({ error: 'No valid fields provided for update' }, { status: 400 });
+        }
+
+        values.push(id);
+        const query = `UPDATE events SET ${updateClauses.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
+
+        const result = await pool.query(query, values);
+
+        if (result.rowCount === 0) {
+            return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+        }
+
+        return NextResponse.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error updating event:', error);
+        return NextResponse.json({ error: 'Failed to update event' }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
+    try {
+        const { id } = await context.params;
+        const result = await pool.query('DELETE FROM events WHERE id = $1 RETURNING id', [id]);
+
+        if (result.rowCount === 0) {
+            return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true, id: result.rows[0].id });
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        return NextResponse.json({ error: 'Failed to delete event' }, { status: 500 });
+    }
+}

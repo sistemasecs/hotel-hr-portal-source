@@ -1,5 +1,6 @@
 const { Pool } = require('pg');
-require('dotenv').config({ path: '.env.local' });
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env.local') });
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -64,6 +65,51 @@ async function initDb() {
         status VARCHAR(50) NOT NULL,
         completion_date DATE,
         PRIMARY KEY (user_id, module_id)
+      );
+
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_fit VARCHAR(20) DEFAULT 'cover';
+
+      CREATE TABLE IF NOT EXISTS celebration_photos (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title VARCHAR(255) NOT NULL,
+        caption TEXT,
+        image_url TEXT NOT NULL,
+        event_type VARCHAR(100) NOT NULL,
+        event_date DATE NOT NULL,
+        uploaded_by UUID REFERENCES users(id) ON DELETE CASCADE,
+        uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        event_id UUID REFERENCES events(id) ON DELETE SET NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS peer_votes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        voter_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        nominee_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        month VARCHAR(7) NOT NULL,
+        reason TEXT,
+        UNIQUE(voter_id, month)
+      );
+
+      CREATE TABLE IF NOT EXISTS supervisor_scores (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        employee_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        score INTEGER NOT NULL,
+        month VARCHAR(7) NOT NULL,
+        notes TEXT,
+        UNIQUE(employee_id, month)
+      );
+
+      CREATE TABLE IF NOT EXISTS employee_of_the_month (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        month VARCHAR(7) NOT NULL,
+        awarded_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(month)
+      );
+
+      CREATE TABLE IF NOT EXISTS hotel_config (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT NOT NULL
       );
     `);
     console.log('Database initialized successfully');

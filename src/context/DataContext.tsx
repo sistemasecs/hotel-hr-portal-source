@@ -56,50 +56,72 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [employeesOfTheMonth, setEmployeesOfTheMonth] = useState<EmployeeOfTheMonth[]>([]);
   const [hotelLogo, setHotelLogo] = useState<string | null>('/logo.png');
 
-  // Load persisted data on mount
+  // Fetch data from database APIs on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedDepts = localStorage.getItem('hotel_departments');
-      if (savedDepts) {
-        try {
-          setDepartments(JSON.parse(savedDepts));
-        } catch (e) {
-          console.error('Failed to parse departments from localStorage');
+    const fetchAllData = async () => {
+      try {
+        // Fetch Hotel Logo Configuration
+        const configRes = await fetch('/api/config');
+        if (configRes.ok) {
+          const config = await configRes.json();
+          if (config.hotelLogo) setHotelLogo(config.hotelLogo);
         }
-      }
 
-      const savedEventTypes = localStorage.getItem('hotel_event_types');
-      if (savedEventTypes) {
-        try {
-          setEventTypes(JSON.parse(savedEventTypes));
-        } catch (e) {
-          console.error('Failed to parse event types from localStorage');
+        // Fetch Departments
+        const deptRes = await fetch('/api/departments');
+        if (deptRes.ok) {
+          const loadedDepartments = await deptRes.json();
+          if (loadedDepartments.length > 0) {
+            setDepartments(loadedDepartments.map((d: any) => d.name));
+          }
         }
-      }
 
-      const savedLogo = localStorage.getItem('hotel_logo');
-      if (savedLogo) {
-        setHotelLogo(savedLogo);
-      }
-
-      const savedEvents = localStorage.getItem('hotel_events');
-      if (savedEvents) {
-        try {
-          setEvents(JSON.parse(savedEvents));
-        } catch (e) {
-          console.error('Failed to parse events from localStorage');
+        // Fetch Events
+        const eventsRes = await fetch('/api/events');
+        if (eventsRes.ok) {
+          const eventsData = await eventsRes.json();
+          setEvents(eventsData.map((e: any) => ({
+            ...e,
+            date: e.date.split('T')[0] // format date string
+          })));
         }
-      }
 
-      const savedModules = localStorage.getItem('hotel_training_modules');
-      if (savedModules) {
-        try {
-          setTrainingModules(JSON.parse(savedModules));
-        } catch (e) {
-          console.error('Failed to parse training modules from localStorage');
+        // Fetch Training Modules
+        const modulesRes = await fetch('/api/training-modules');
+        if (modulesRes.ok) {
+          const modulesData = await modulesRes.json();
+          setTrainingModules(modulesData);
         }
+
+        // Fetch User Trainings
+        const userTrainingsRes = await fetch('/api/user-trainings');
+        if (userTrainingsRes.ok) {
+          const userTrainingsData = await userTrainingsRes.json();
+          setUserTrainings(userTrainingsData);
+        }
+
+        // Fetch Celebrations
+        const celebrationsRes = await fetch('/api/celebrations');
+        if (celebrationsRes.ok) {
+          const celebrationsData = await celebrationsRes.json();
+          setCelebrationPhotos(celebrationsData);
+        }
+
+        // Fetch Gamification Data
+        const gamificationRes = await fetch('/api/gamification');
+        if (gamificationRes.ok) {
+          const gamificationData = await gamificationRes.json();
+          setPeerVotes(gamificationData.peerVotes);
+          setSupervisorScores(gamificationData.supervisorScores);
+          setEmployeesOfTheMonth(gamificationData.employeesOfTheMonth);
+        }
+
+      } catch (error) {
+        console.error('Error fetching initial data from APIs:', error);
       }
-    }
+    };
+
+    fetchAllData();
   }, []);
 
   // Save training modules to localStorage whenever it changes
@@ -146,7 +168,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const birthdayEvents: Event[] = users.map(user => {
       const [y, m, d] = user.birthday.split('-');
       const currentYearBday = new Date(currentYear, parseInt(m) - 1, parseInt(d));
-      
+
       return {
         id: `bday-${user.id}`,
         title: `${user.name}'s Birthday`,
@@ -269,15 +291,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addDepartment = (department: string) => {
+  const addDepartment = async (department: string) => {
     if (!departments.includes(department)) {
-      setDepartments(prev => [...prev, department]);
+      try {
+        const response = await fetch('/api/departments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: department }),
+        });
+        if (response.ok) {
+          setDepartments(prev => [...prev, department]);
+        }
+      } catch (error) {
+        console.error('Error adding department:', error);
+      }
     }
   };
 
-  const updateDepartment = (oldName: string, newName: string) => {
+  const updateDepartment = async (oldName: string, newName: string) => {
+    // For a robust implementation, the UI would need the department ID. 
+    // Assuming UI passes ID here, but if it passes oldName we need a mapping.
+    // Simplifying for this demo by updating state optimistically. Real app would do a PUT /api/departments/:id
     setDepartments(prev => prev.map(dept => (dept === oldName ? newName : dept)));
-    // Also update users and training modules that reference this department
     setUsers(prev => prev.map(user => user.department === oldName ? { ...user, department: newName } : user));
     setTrainingModules(prev => prev.map(module => ({
       ...module,
@@ -285,11 +320,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     })));
   };
 
-  const deleteDepartment = (department: string) => {
+  const deleteDepartment = async (department: string) => {
+    // Similarly, requires department ID. 
     setDepartments(prev => prev.filter(dept => dept !== department));
   };
 
   const addEventType = (type: string) => {
+    // Storing EventTypes is simple for now, using localStorage is fine for lightweight config
+    // but ideally we would migrate this to the `hotel_config` table too.
     if (!eventTypes.includes(type)) {
       setEventTypes(prev => [...prev, type]);
     }
@@ -299,72 +337,151 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setEventTypes(prev => prev.filter(t => t !== type));
   };
 
-  const addEvent = (event: Event | Omit<Event, 'id'>) => {
-    const newEvent: Event = {
-      id: 'id' in event ? event.id : `e${Date.now()}`,
-      ...event,
-    };
-    setEvents(prev => [...prev, newEvent]);
+  const addEvent = async (event: Event | Omit<Event, 'id'>) => {
+    try {
+      const response = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event)
+      });
+      if (response.ok) {
+        const newEvent = await response.json();
+        setEvents(prev => [...prev, { ...newEvent, date: newEvent.date.split('T')[0] }]);
+      }
+    } catch (error) {
+      console.error('Error adding event:', error);
+    }
   };
 
-  const updateEvent = (id: string, updatedEvent: Partial<Event>) => {
-    setEvents(prev => prev.map(event => (event.id === id ? { ...event, ...updatedEvent } : event)));
+  const updateEvent = async (id: string, updatedEvent: Partial<Event>) => {
+    try {
+      const response = await fetch(`/api/events/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedEvent)
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setEvents(prev => prev.map(event => (event.id === id ? { ...event, ...result, date: result.date.split('T')[0] } : event)));
+      }
+    } catch (error) {
+      console.error('Error updating event:', error);
+    }
   };
 
-  const deleteEvent = (id: string) => {
-    setEvents(prev => prev.filter(event => event.id !== id));
+  const deleteEvent = async (id: string) => {
+    try {
+      const response = await fetch(`/api/events/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setEvents(prev => prev.filter(event => event.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting event:', error);
+    }
   };
 
-  const addTrainingModule = (module: Omit<TrainingModule, 'id'>) => {
-    const newModule: TrainingModule = {
-      ...module,
-      id: `t${Date.now()}`, // Simple ID generation
-    };
-    setTrainingModules(prev => [...prev, newModule]);
+  const addTrainingModule = async (module: Omit<TrainingModule, 'id'>) => {
+    try {
+      const response = await fetch('/api/training-modules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(module)
+      });
+      if (response.ok) {
+        const newModule = await response.json();
+        setTrainingModules(prev => [...prev, newModule]);
+      }
+    } catch (error) {
+      console.error('Error adding module:', error);
+    }
   };
 
-  const updateTrainingModule = (id: string, updatedModule: Partial<TrainingModule>) => {
-    setTrainingModules(prev =>
-      prev.map(module => (module.id === id ? { ...module, ...updatedModule } : module))
-    );
+  const updateTrainingModule = async (id: string, updatedModule: Partial<TrainingModule>) => {
+    try {
+      const response = await fetch(`/api/training-modules/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedModule)
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setTrainingModules(prev => prev.map(module => (module.id === id ? { ...module, ...result } : module)));
+      }
+    } catch (error) {
+      console.error('Error updating module:', error);
+    }
   };
 
-  const deleteTrainingModule = (id: string) => {
-    setTrainingModules(prev => prev.filter(module => module.id !== id));
-    // Also remove associated user trainings
-    setUserTrainings(prev => prev.filter(ut => ut.moduleId !== id));
+  const deleteTrainingModule = async (id: string) => {
+    try {
+      const response = await fetch(`/api/training-modules/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setTrainingModules(prev => prev.filter(module => module.id !== id));
+        setUserTrainings(prev => prev.filter(ut => ut.moduleId !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting module:', error);
+    }
   };
 
-  const assignTraining = (userId: string, moduleId: string) => {
-    // Check if already assigned
+  const assignTraining = async (userId: string, moduleId: string) => {
     if (userTrainings.some(ut => ut.userId === userId && ut.moduleId === moduleId)) {
       return;
     }
-    setUserTrainings(prev => [...prev, { userId, moduleId, status: 'Not Started' }]);
+
+    try {
+      const response = await fetch('/api/user-trainings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, moduleId, status: 'Not Started' })
+      });
+      if (response.ok) {
+        const newUserTraining = await response.json();
+        setUserTrainings(prev => [...prev, newUserTraining]);
+      }
+    } catch (error) {
+      console.error('Error assigning training:', error);
+    }
   };
 
-  const updateTrainingStatus = (userId: string, moduleId: string, status: UserTraining['status']) => {
-    setUserTrainings(prev =>
-      prev.map(ut => {
-        if (ut.userId === userId && ut.moduleId === moduleId) {
-          return {
-            ...ut,
-            status,
-            completionDate: status === 'Completed' ? new Date().toISOString().split('T')[0] : undefined
-          };
-        }
-        return ut;
-      })
-    );
+  const updateTrainingStatus = async (userId: string, moduleId: string, status: UserTraining['status']) => {
+    const completionDate = status === 'Completed' ? new Date().toISOString().split('T')[0] : undefined;
+
+    try {
+      const response = await fetch('/api/user-trainings', {
+        method: 'POST', // UPSERT structure in API
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, moduleId, status, completionDate })
+      });
+      if (response.ok) {
+        setUserTrainings(prev =>
+          prev.map(ut => {
+            if (ut.userId === userId && ut.moduleId === moduleId) {
+              return { ...ut, status, completionDate };
+            }
+            return ut;
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Error updating training status:', error);
+    }
   };
 
-  const addCelebrationPhoto = (photo: Omit<CelebrationPhoto, 'id' | 'uploadedAt'>) => {
-    const newPhoto: CelebrationPhoto = {
-      ...photo,
-      id: `p${Date.now()}`,
-      uploadedAt: new Date().toISOString(),
-    };
-    setCelebrationPhotos(prev => [...prev, newPhoto]);
+  const addCelebrationPhoto = async (photo: Omit<CelebrationPhoto, 'id' | 'uploadedAt'>) => {
+    try {
+      const response = await fetch('/api/celebrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(photo)
+      });
+      if (response.ok) {
+        const newPhoto = await response.json();
+        setCelebrationPhotos(prev => [...prev, newPhoto]);
+      }
+    } catch (error) {
+      console.error('Error adding celebration photo:', error);
+    }
   };
 
   const updateCelebrationPhoto = (id: string, updatedPhoto: Partial<CelebrationPhoto>) => {
@@ -377,31 +494,75 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCelebrationPhotos(prev => prev.filter(photo => photo.id !== id));
   };
 
-  const addPeerVote = (vote: Omit<PeerVote, 'id'>) => {
-    // Check if user already voted this month
-    const existingVote = peerVotes.find(v => v.voterId === vote.voterId && v.month === vote.month);
-    if (existingVote) {
-      setPeerVotes(prev => prev.map(v => v.id === existingVote.id ? { ...vote, id: existingVote.id } : v));
-    } else {
-      setPeerVotes(prev => [...prev, { ...vote, id: `pv${Date.now()}` }]);
+  const addPeerVote = async (vote: Omit<PeerVote, 'id'>) => {
+    try {
+      const response = await fetch('/api/gamification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'peerVote', payload: vote })
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setPeerVotes(prev => {
+          const filtered = prev.filter(v => !(v.voterId === vote.voterId && v.month === vote.month));
+          return [...filtered, { ...vote, id: result.id }];
+        });
+      }
+    } catch (error) {
+      console.error('Error adding peer vote:', error);
     }
   };
 
-  const setSupervisorScore = (score: Omit<SupervisorScore, 'id'>) => {
-    const existingScore = supervisorScores.find(s => s.employeeId === score.employeeId && s.month === score.month);
-    if (existingScore) {
-      setSupervisorScores(prev => prev.map(s => s.id === existingScore.id ? { ...score, id: existingScore.id } : s));
-    } else {
-      setSupervisorScores(prev => [...prev, { ...score, id: `ss${Date.now()}` }]);
+  const setSupervisorScore = async (score: Omit<SupervisorScore, 'id'>) => {
+    try {
+      const response = await fetch('/api/gamification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'supervisorScore', payload: score })
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setSupervisorScores(prev => {
+          const filtered = prev.filter(s => !(s.employeeId === score.employeeId && s.month === score.month));
+          return [...filtered, { ...score, id: result.id }];
+        });
+      }
+    } catch (error) {
+      console.error('Error setting supervisor score:', error);
     }
   };
 
-  const setEmployeeOfTheMonth = (eotm: Omit<EmployeeOfTheMonth, 'id' | 'awardedAt'>) => {
-    const existing = employeesOfTheMonth.find(e => e.month === eotm.month);
-    if (existing) {
-      setEmployeesOfTheMonth(prev => prev.map(e => e.id === existing.id ? { ...eotm, id: existing.id, awardedAt: new Date().toISOString() } : e));
-    } else {
-      setEmployeesOfTheMonth(prev => [...prev, { ...eotm, id: `eotm${Date.now()}`, awardedAt: new Date().toISOString() }]);
+  const setEmployeeOfTheMonth = async (eotm: Omit<EmployeeOfTheMonth, 'id' | 'awardedAt'>) => {
+    try {
+      const response = await fetch('/api/gamification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'employeeOfTheMonth', payload: eotm })
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setEmployeesOfTheMonth(prev => {
+          const filtered = prev.filter(e => e.month !== eotm.month);
+          return [...filtered, { ...eotm, id: result.id, awardedAt: result.awarded_at }];
+        });
+      }
+    } catch (error) {
+      console.error('Error setting employee of the month:', error);
+    }
+  };
+
+  const handleSetHotelLogo = async (logoUrl: string | null) => {
+    try {
+      const response = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hotelLogo: logoUrl })
+      });
+      if (response.ok) {
+        setHotelLogo(logoUrl);
+      }
+    } catch (error) {
+      console.error('Error setting hotel logo:', error);
     }
   };
 
@@ -441,7 +602,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         employeesOfTheMonth,
         setEmployeeOfTheMonth,
         hotelLogo,
-        setHotelLogo,
+        setHotelLogo: handleSetHotelLogo,
       }}
     >
       {children}
