@@ -3,7 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  
+
   /* Default Primary Color (Indigo) */
   --primary-50: #eef2ff;
   --primary-100: #e0e7ff;
@@ -22,7 +22,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  
+
   --color-primary-50: var(--primary-50);
   --color-primary-100: var(--primary-100);
   --color-primary-200: var(--primary-200);
@@ -35,48 +35,56 @@
   --color-primary-900: var(--primary-900);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Force readable dark text in all input fields across the app */
+input,
+textarea,
+select {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+}
+
 @media print {
   @page {
-    margin: 0; /* Removes browser header/footer (URL, date, time) */
+    margin: 0;
+    /* Removes browser header/footer (URL, date, time) */
   }
 
   body {
-    padding: 1.5cm; /* Adds safe area for printing */
+    padding: 1.5cm;
+    /* Adds safe area for printing */
   }
 
   .no-print {
     display: none !important;
   }
-  
+
   /* Hide the sidebar when printing */
   .w-64.bg-slate-900 {
     display: none !important;
   }
-  
+
   /* Remove the left margin from the main content area when printing */
   main.ml-64 {
     margin-left: 0 !important;
     padding: 0 !important;
   }
-  
+
   /* Ensure the calendar takes full width */
   .lg\:col-span-2 {
     grid-column: span 3 / span 3 !important;
   }
-  
+
   /* Force background colors to print */
   * {
     -webkit-print-color-adjust: exact !important;
