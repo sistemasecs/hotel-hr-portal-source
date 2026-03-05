@@ -7,14 +7,15 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         const updates = await request.json();
 
         // Extract valid fields for update
-        const allowedFields = ['title', 'date', 'time', 'type', 'description', 'location'];
+        const allowedFields = ['title', 'date', 'time', 'type', 'description', 'location', 'coverImageUrl'];
         const updateClauses = [];
         const values = [];
         let paramIndex = 1;
 
         for (const [key, value] of Object.entries(updates)) {
             if (allowedFields.includes(key) && value !== undefined) {
-                updateClauses.push(`${key} = $${paramIndex}`);
+                const dbColumn = key === 'coverImageUrl' ? 'cover_image_url' : key;
+                updateClauses.push(`${dbColumn} = ${paramIndex}`);
                 values.push(value);
                 paramIndex++;
             }
@@ -25,7 +26,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         }
 
         values.push(id);
-        const query = `UPDATE events SET ${updateClauses.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
+        const query = `UPDATE events SET ${updateClauses.join(', ')} WHERE id = ${paramIndex} RETURNING *`;
 
         const result = await pool.query(query, values);
 
@@ -33,7 +34,11 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
             return NextResponse.json({ error: 'Event not found' }, { status: 404 });
         }
 
-        return NextResponse.json(result.rows[0]);
+        const row = result.rows[0];
+        return NextResponse.json({
+            ...row,
+            coverImageUrl: row.cover_image_url
+        });
     } catch (error) {
         console.error('Error updating event:', error);
         return NextResponse.json({ error: 'Failed to update event' }, { status: 500 });

@@ -83,7 +83,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const eventsData = await eventsRes.json();
           setEvents(eventsData.map((e: any) => ({
             ...e,
-            date: e.date.split('T')[0] // format date string
+            date: e.date.split('T')[0], // format date string
+            coverImageUrl: e.coverImageUrl || e.cover_image_url // ensure mapping
           })));
         }
 
