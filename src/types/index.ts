@@ -109,3 +109,28 @@ export interface EmployeeOfTheMonth {
   month: string; // YYYY-MM
   awardedAt: string; // ISO timestamp
 }
+
+export type RequestType = 
+  | 'Vacation' 
+  | 'Absence' 
+  | 'Shift Change' 
+  | 'Uniform' 
+  | 'Data Update' 
+  | 'Document' 
+  | 'Other';
+
+export type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Completed';
+
+export interface EmployeeRequest {
+  id: string;
+  userId: string;
+  userName?: string;
+  userDepartment?: string;
+  type: RequestType;
+  status: RequestStatus;
+  data: any; // JSON data specific to the request type
+  supervisorId?: string | null;
+  hrNotes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

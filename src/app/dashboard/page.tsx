@@ -192,6 +192,26 @@ export default function DashboardPage() {
                 {t('viewAll')} &rarr;
               </Link>
             </div>
+            <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
+              <div>
+                <p className="text-sm font-medium text-blue-600">My Requests</p>
+                <p className="text-xs text-blue-500 mt-1">Submit and track HR requests</p>
+              </div>
+              <Link href="/dashboard/requests" className="text-sm font-medium text-blue-600 hover:text-blue-800">
+                View &rarr;
+              </Link>
+            </div>
+            {(currentUser.role === 'HR Admin' || currentUser.role === 'Supervisor') && (
+              <div className="flex justify-between items-center p-4 bg-amber-50 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium text-amber-600">Pending Approvals</p>
+                  <p className="text-xs text-amber-500 mt-1">Review employee requests</p>
+                </div>
+                <Link href="/dashboard/requests/approvals" className="text-sm font-medium text-amber-600 hover:text-amber-800">
+                  Review &rarr;
+                </Link>
+              </div>
+            )}
           </div>
         </section>
 
