@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useData } from '@/context/DataContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { CelebrationPhoto } from '@/types';
+import { CelebrationPhoto, EventComment } from '@/types';
 
 export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId: string }> }) {
   const [eventId, setEventId] = useState<string | null>(null);
@@ -36,6 +36,56 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Comments State
+  const [comments, setComments] = useState<EventComment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  // Fetch comments when eventId is available
+  useEffect(() => {
+    if (eventId) {
+      const fetchComments = async () => {
+        try {
+          const res = await fetch(`/api/events/${eventId}/comments`);
+          if (res.ok) {
+            const data = await res.json();
+            setComments(data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch comments:', error);
+        }
+      };
+      fetchComments();
+    }
+  }, [eventId]);
+
+  const handlePostComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !user || !eventId) return;
+
+    setIsSubmittingComment(true);
+    try {
+      const res = await fetch(`/api/events/${eventId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, content: newComment.trim() })
+      });
+
+      if (res.ok) {
+        const postedComment = await res.json();
+        setComments(prev => [...prev, postedComment]);
+        setNewComment('');
+      } else {
+        alert('Failed to post comment');
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      alert('An error occurred while posting the comment');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
 
   if (!eventId) {
     return <div className="text-center py-16">Loading...</div>;
@@ -291,6 +341,72 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
           </div>
         </div>
       )}
+
+      {/* Comments Section */}
+      <div className="mt-12 border-t border-slate-200 pt-8">
+        <h2 className="text-2xl font-bold text-slate-900 mb-6">Comments</h2>
+        
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mb-8">
+          <form onSubmit={handlePostComment} className="flex items-start space-x-4">
+            <div className="flex-shrink-0">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold">
+                  {user?.name.charAt(0)}
+                </div>
+              )}
+            </div>
+            <div className="flex-grow">
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Write a comment..."
+                className="w-full border border-slate-300 rounded-lg shadow-sm p-3 text-sm focus:ring-primary-500 focus:border-primary-500 min-h-[80px]"
+                required
+              />
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isSubmittingComment || !newComment.trim()}
+                  className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50"
+                >
+                  {isSubmittingComment ? 'Posting...' : 'Post Comment'}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div className="space-y-6">
+          {comments.length > 0 ? (
+            comments.map((comment) => (
+              <div key={comment.id} className="flex space-x-4">
+                <div className="flex-shrink-0">
+                  {comment.userAvatarUrl ? (
+                    <img src={comment.userAvatarUrl} alt={comment.userName} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold">
+                      {comment.userName?.charAt(0) || '?'}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-grow bg-slate-50 rounded-lg p-4">
+                  <div className="flex justify-between items-baseline mb-1">
+                    <h4 className="font-semibold text-slate-900">{comment.userName}</h4>
+                    <span className="text-xs text-slate-500">
+                      {new Date(comment.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-slate-700 text-sm whitespace-pre-wrap">{comment.content}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-slate-500 text-center py-4">No comments yet. Be the first to share your thoughts!</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

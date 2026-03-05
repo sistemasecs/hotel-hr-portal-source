@@ -72,6 +72,16 @@ export interface CelebrationPhoto {
   eventId?: string; // reference to the Event this photo belongs to
 }
 
+export interface EventComment {
+  id: string;
+  eventId: string;
+  userId: string;
+  userName: string;
+  userAvatarUrl?: string;
+  content: string;
+  createdAt: string; // ISO timestamp
+}
+
 export interface PeerVote {
   id: string;
   voterId: string;
