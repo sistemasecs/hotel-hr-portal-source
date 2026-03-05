@@ -79,7 +79,12 @@ export interface EventComment {
   userName: string;
   userAvatarUrl?: string;
   content: string;
+  imageUrl?: string;
   createdAt: string; // ISO timestamp
+  reactions: {
+    emoji: string;
+    userIds: string[];
+  }[];
 }
 
 export interface PeerVote {

@@ -40,7 +40,12 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
   // Comments State
   const [comments, setComments] = useState<EventComment[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [commentImageFile, setCommentImageFile] = useState<File | null>(null);
+  const [commentImagePreview, setCommentImagePreview] = useState<string | null>(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const commentFileInputRef = useRef<HTMLInputElement>(null);
+
+  const EMOJIS = ['👍', '❤️', '😂', '🎉', '👏'];
 
   // Fetch comments when eventId is available
   useEffect(() => {
@@ -60,22 +65,62 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
     }
   }, [eventId]);
 
+  const handleCommentImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        alert(t('invalidFileType'));
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert(t('fileTooLarge'));
+        return;
+      }
+      setCommentImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCommentImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !user || !eventId) return;
 
     setIsSubmittingComment(true);
     try {
+      let imageUrl = null;
+
+      // Upload image if selected
+      if (commentImageFile) {
+        const formData = new FormData();
+        formData.append('file', commentImageFile);
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (uploadRes.ok) {
+          const { url } = await uploadRes.json();
+          imageUrl = url;
+        } else {
+          throw new Error('Failed to upload image');
+        }
+      }
+
       const res = await fetch(`/api/events/${eventId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, content: newComment.trim() })
+        body: JSON.stringify({ userId: user.id, content: newComment.trim(), imageUrl })
       });
 
       if (res.ok) {
         const postedComment = await res.json();
         setComments(prev => [...prev, postedComment]);
         setNewComment('');
+        setCommentImageFile(null);
+        setCommentImagePreview(null);
+        if (commentFileInputRef.current) {
+          commentFileInputRef.current.value = '';
+        }
       } else {
         alert('Failed to post comment');
       }
@@ -84,6 +129,48 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
       alert('An error occurred while posting the comment');
     } finally {
       setIsSubmittingComment(false);
+    }
+  };
+
+  const handleToggleReaction = async (commentId: string, emoji: string) => {
+    if (!user) return;
+
+    // Optimistic UI update
+    setComments(prev => prev.map(comment => {
+      if (comment.id === commentId) {
+        const existingReactionIndex = comment.reactions.findIndex(r => r.emoji === emoji);
+        let newReactions = [...comment.reactions];
+
+        if (existingReactionIndex >= 0) {
+          const reaction = newReactions[existingReactionIndex];
+          if (reaction.userIds.includes(user.id)) {
+            // Remove user
+            reaction.userIds = reaction.userIds.filter(id => id !== user.id);
+            if (reaction.userIds.length === 0) {
+              newReactions.splice(existingReactionIndex, 1);
+            }
+          } else {
+            // Add user
+            reaction.userIds.push(user.id);
+          }
+        } else {
+          // Add new reaction
+          newReactions.push({ emoji, userIds: [user.id] });
+        }
+        return { ...comment, reactions: newReactions };
+      }
+      return comment;
+    }));
+
+    try {
+      await fetch(`/api/comments/${commentId}/reactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, emoji })
+      });
+    } catch (error) {
+      console.error('Error toggling reaction:', error);
+      // Ideally, revert optimistic update here on failure
     }
   };
 
@@ -365,7 +452,45 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
                 className="w-full border border-slate-300 rounded-lg shadow-sm p-3 text-sm focus:ring-primary-500 focus:border-primary-500 min-h-[80px]"
                 required
               />
-              <div className="mt-2 flex justify-end">
+              
+              {/* Image Preview */}
+              {commentImagePreview && (
+                <div className="mt-2 relative inline-block">
+                  <img src={commentImagePreview} alt="Preview" className="h-24 rounded-md object-cover border border-slate-200" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCommentImageFile(null);
+                      setCommentImagePreview(null);
+                      if (commentFileInputRef.current) commentFileInputRef.current.value = '';
+                    }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm hover:bg-red-600"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-2 flex justify-between items-center">
+                <div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={commentFileInputRef}
+                    onChange={handleCommentImageSelect}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => commentFileInputRef.current?.click()}
+                    className="text-slate-500 hover:text-primary-600 p-2 rounded-full hover:bg-slate-100 transition-colors"
+                    title="Attach an image"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
                 <button
                   type="submit"
                   disabled={isSubmittingComment || !newComment.trim()}
@@ -391,14 +516,66 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
                     </div>
                   )}
                 </div>
-                <div className="flex-grow bg-slate-50 rounded-lg p-4">
-                  <div className="flex justify-between items-baseline mb-1">
-                    <h4 className="font-semibold text-slate-900">{comment.userName}</h4>
-                    <span className="text-xs text-slate-500">
-                      {new Date(comment.createdAt).toLocaleString()}
-                    </span>
+                <div className="flex-grow">
+                  <div className="bg-slate-50 rounded-lg p-4 inline-block min-w-[200px] max-w-full">
+                    <div className="flex justify-between items-baseline mb-1 space-x-4">
+                      <h4 className="font-semibold text-slate-900">{comment.userName}</h4>
+                      <span className="text-xs text-slate-500">
+                        {new Date(comment.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-slate-700 text-sm whitespace-pre-wrap">{comment.content}</p>
+                    
+                    {comment.imageUrl && (
+                      <div className="mt-3">
+                        <img src={comment.imageUrl} alt="Comment attachment" className="max-h-64 rounded-md object-contain border border-slate-200" />
+                      </div>
+                    )}
                   </div>
-                  <p className="text-slate-700 text-sm whitespace-pre-wrap">{comment.content}</p>
+
+                  {/* Reactions Bar */}
+                  <div className="mt-2 flex items-center space-x-2 flex-wrap">
+                    {/* Display existing reactions */}
+                    {comment.reactions?.map((reaction) => {
+                      const hasReacted = user && reaction.userIds.includes(user.id);
+                      return (
+                        <button
+                          key={reaction.emoji}
+                          onClick={() => handleToggleReaction(comment.id, reaction.emoji)}
+                          className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs border transition-colors ${
+                            hasReacted 
+                              ? 'bg-primary-50 border-primary-200 text-primary-700' 
+                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>{reaction.emoji}</span>
+                          <span className="font-medium">{reaction.userIds.length}</span>
+                        </button>
+                      );
+                    })}
+
+                    {/* Add Reaction Button */}
+                    <div className="relative group">
+                      <button className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button>
+                      
+                      {/* Emoji Picker Tooltip */}
+                      <div className="absolute bottom-full left-0 mb-2 hidden group-hover:flex bg-white border border-slate-200 shadow-lg rounded-full p-1 space-x-1 z-10">
+                        {EMOJIS.map(emoji => (
+                          <button
+                            key={emoji}
+                            onClick={() => handleToggleReaction(comment.id, emoji)}
+                            className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-full text-lg transition-transform hover:scale-110"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))
