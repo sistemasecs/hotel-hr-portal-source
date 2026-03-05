@@ -65,6 +65,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (configRes.ok) {
           const config = await configRes.json();
           if (config.hotelLogo) setHotelLogo(config.hotelLogo);
+          if (config.eventTypes) setEventTypes(config.eventTypes);
         }
 
         // Fetch Departments
@@ -123,45 +124,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     fetchAllData();
   }, []);
-
-  // Save training modules to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('hotel_training_modules', JSON.stringify(trainingModules));
-    }
-  }, [trainingModules]);
-
-  // Save departments to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('hotel_departments', JSON.stringify(departments));
-    }
-  }, [departments]);
-
-  // Save event types to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('hotel_event_types', JSON.stringify(eventTypes));
-    }
-  }, [eventTypes]);
-
-  // Save events to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('hotel_events', JSON.stringify(events));
-    }
-  }, [events]);
-
-  // Save hotelLogo to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (hotelLogo) {
-        localStorage.setItem('hotel_logo', hotelLogo);
-      } else {
-        localStorage.removeItem('hotel_logo');
-      }
-    }
-  }, [hotelLogo]);
 
   const allEvents = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -312,16 +274,38 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDepartments(prev => prev.filter(dept => dept !== department));
   };
 
-  const addEventType = (type: string) => {
-    // Storing EventTypes is simple for now, using localStorage is fine for lightweight config
-    // but ideally we would migrate this to the `hotel_config` table too.
+  const addEventType = async (type: string) => {
     if (!eventTypes.includes(type)) {
-      setEventTypes(prev => [...prev, type]);
+      const newEventTypes = [...eventTypes, type];
+      try {
+        const response = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventTypes: newEventTypes })
+        });
+        if (response.ok) {
+          setEventTypes(newEventTypes);
+        }
+      } catch (error) {
+        console.error('Error adding event type:', error);
+      }
     }
   };
 
-  const deleteEventType = (type: string) => {
-    setEventTypes(prev => prev.filter(t => t !== type));
+  const deleteEventType = async (type: string) => {
+    const newEventTypes = eventTypes.filter(t => t !== type);
+    try {
+      const response = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventTypes: newEventTypes })
+      });
+      if (response.ok) {
+        setEventTypes(newEventTypes);
+      }
+    } catch (error) {
+      console.error('Error deleting event type:', error);
+    }
   };
 
   const addEvent = async (event: Event | Omit<Event, 'id'>) => {
