@@ -10,23 +10,25 @@ import { CelebrationPhoto } from '@/types';
 
 export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId: string }> }) {
   const [eventId, setEventId] = useState<string | null>(null);
-  
+
   useEffect(() => {
     params.then(p => setEventId(decodeURIComponent(p.eventId)));
   }, [params]);
-  
+
   const { allEvents, celebrationPhotos, addCelebrationPhoto, deleteCelebrationPhoto, updateEvent } = useData();
   const { user } = useAuth();
   const { t } = useLanguage();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const event = eventId ? allEvents.find(a => a.id === eventId) : null;
   const eventPhotos = eventId ? celebrationPhotos.filter(p => p.eventId === eventId) : [];
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadForm, setUploadForm] = useState<Partial<CelebrationPhoto>>({});
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   if (!eventId) {
     return <div className="text-center py-16">Loading...</div>;
@@ -52,11 +54,12 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
         alert(t('invalidFileType'));
         return;
       }
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > 10 * 1024 * 1024) {
         alert(t('fileTooLarge'));
         return;
       }
-      
+      setSelectedFile(file);
+      // Show local preview while uploading
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewImage(reader.result as string);
@@ -65,26 +68,45 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
     }
   };
 
-  const handleUpload = () => {
-    if (!uploadForm.title || !previewImage || !user) {
+  const handleUpload = async () => {
+    if (!uploadForm.title || !selectedFile || !user) {
       alert(t('fillRequiredFields'));
       return;
     }
 
-    addCelebrationPhoto({
-      title: uploadForm.title,
-      caption: uploadForm.caption,
-      imageUrl: previewImage,
-      eventType: event.type, // Inherit from event
-      eventDate: event.date, // Inherit from event
-      uploadedBy: user.id,
-      eventId: event.id,
-    });
+    setIsUploading(true);
+    try {
+      // 1. Upload file to Vercel Blob via /api/upload
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json();
+        throw new Error(err.error || 'Upload failed');
+      }
+      const { url } = await uploadRes.json();
 
-    setIsUploadModalOpen(false);
-    setUploadForm({});
-    setPreviewImage(null);
-    alert(t('photoUploaded'));
+      // 2. Save the cloud URL to the DB
+      await addCelebrationPhoto({
+        title: uploadForm.title,
+        caption: uploadForm.caption,
+        imageUrl: url,
+        eventType: event.type,
+        eventDate: event.date,
+        uploadedBy: user.id,
+        eventId: event.id,
+      });
+
+      setIsUploadModalOpen(false);
+      setUploadForm({});
+      setPreviewImage(null);
+      setSelectedFile(null);
+      alert(t('photoUploaded'));
+    } catch (err: any) {
+      alert(err.message || t('uploadError'));
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const parseDate = (dateStr: string) => {
@@ -108,13 +130,12 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
           <h1 className="text-3xl font-bold text-slate-900">{event.title}</h1>
           {event.description && <p className="text-slate-500 mt-2">{event.description}</p>}
           <div className="flex items-center space-x-4 mt-3 text-sm text-slate-500">
-            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-              event.type === 'Birthday' ? 'bg-pink-100 text-pink-800' :
-              event.type === 'Celebration' ? 'bg-amber-100 text-amber-800' :
-              event.type === 'Social' ? 'bg-green-100 text-green-800' :
-              event.type === 'Meeting' ? 'bg-blue-100 text-blue-800' :
-              'bg-slate-100 text-slate-800'
-            }`}>
+            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${event.type === 'Birthday' ? 'bg-pink-100 text-pink-800' :
+                event.type === 'Celebration' ? 'bg-amber-100 text-amber-800' :
+                  event.type === 'Social' ? 'bg-green-100 text-green-800' :
+                    event.type === 'Meeting' ? 'bg-blue-100 text-blue-800' :
+                      'bg-slate-100 text-slate-800'
+              }`}>
               {event.type}
             </span>
             <span>{parseDate(event.date).toLocaleDateString()}</span>
@@ -196,7 +217,7 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-slate-900 mb-4">Add Photo to Event</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">{t('photoTitle')} *</label>
@@ -254,10 +275,10 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
               </button>
               <button
                 onClick={handleUpload}
-                disabled={!uploadForm.title || !previewImage}
+                disabled={!uploadForm.title || !selectedFile || isUploading}
                 className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50"
               >
-                {t('uploadPhoto')}
+                {isUploading ? 'Uploading...' : t('uploadPhoto')}
               </button>
             </div>
           </div>

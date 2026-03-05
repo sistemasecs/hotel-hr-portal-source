@@ -188,20 +188,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const response = await fetch('/api/users');
         if (response.ok) {
           const data = await response.json();
-          // Merge with localStorage avatars and fit preferences
-          const usersWithLocalData = data.map((u: User) => {
-            if (typeof window !== 'undefined') {
-              const localAvatar = localStorage.getItem(`avatar_${u.id}`);
-              const localFit = localStorage.getItem(`avatarFit_${u.id}`);
-              return {
-                ...u,
-                avatarUrl: localAvatar || u.avatarUrl,
-                avatarFit: (localFit as 'cover' | 'contain') || u.avatarFit || 'cover'
-              };
-            }
-            return u;
-          });
-          setUsers(usersWithLocalData);
+          setUsers(data);
         } else {
           console.error('Failed to fetch users');
         }
@@ -236,26 +223,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateUser = async (id: string, updatedUser: Partial<User>) => {
     try {
-      // Save avatar and fit to localStorage to bypass DB size limits for base64 images
-      if (typeof window !== 'undefined') {
-        if (updatedUser.avatarUrl) {
-          localStorage.setItem(`avatar_${id}`, updatedUser.avatarUrl);
-        }
-        if (updatedUser.avatarFit) {
-          localStorage.setItem(`avatarFit_${id}`, updatedUser.avatarFit);
-        }
+      let dataToSave = { ...updatedUser };
 
-        // If updating the currently logged-in user, update auth storage too
-        const storedAuthUser = localStorage.getItem('hotel_hr_user');
-        if (storedAuthUser) {
-          try {
-            const authUser = JSON.parse(storedAuthUser);
-            if (authUser.id === id) {
-              localStorage.setItem('hotel_hr_user', JSON.stringify({ ...authUser, ...updatedUser }));
-            }
-          } catch (e) {
-            console.error('Failed to parse stored auth user', e);
+      // If avatar is a base64 image, upload it to cloud storage first
+      if (dataToSave.avatarUrl && dataToSave.avatarUrl.startsWith('data:image')) {
+        try {
+          const base64Data = dataToSave.avatarUrl;
+          // Convert base64 to a File object
+          const res = await fetch(base64Data);
+          const blob = await res.blob();
+          const file = new File([blob], `avatar-${id}.jpg`, { type: blob.type });
+
+          const formData = new FormData();
+          formData.append('file', file);
+          const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+          if (uploadRes.ok) {
+            const { url } = await uploadRes.json();
+            dataToSave.avatarUrl = url; // Replace base64 with cloud URL
+          } else {
+            console.error('Avatar upload to cloud failed, keeping local preview only.');
+            delete dataToSave.avatarUrl; // Don't break the save
           }
+        } catch (uploadErr) {
+          console.error('Error uploading avatar:', uploadErr);
+          delete dataToSave.avatarUrl;
         }
       }
 
@@ -268,23 +259,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Create a copy without the potentially huge base64 avatarUrl for the DB update
-      const dbUpdateData = { ...updatedUser };
-      if (dbUpdateData.avatarUrl && dbUpdateData.avatarUrl.startsWith('data:image')) {
-        delete dbUpdateData.avatarUrl; // Don't send huge base64 to DB
-      }
-
       const response = await fetch(`/api/users/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dbUpdateData),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToSave),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        const updated = await response.json();
+        // Sync state with what DB confirmed (including the real cloud URL)
+        setUsers(prev => prev.map(user => (user.id === id ? { ...user, ...updated } : user)));
+      } else {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Failed to update user in DB, but local state was updated.', errorData);
+        console.error('Failed to update user in DB.', errorData);
       }
     } catch (error) {
       console.error('Error updating user:', error);
