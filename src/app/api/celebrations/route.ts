@@ -29,19 +29,27 @@ export async function POST(request: Request) {
         const photo = await request.json();
 
         const id = photo.id && photo.id.includes('-') ? photo.id : undefined;
+        
+        // Handle synthetic birthday event IDs (e.g., 'carloslara2026')
+        // The database event_id column is a UUID foreign key to the events table.
+        // Since birthday events are generated on the fly and don't exist in the events table,
+        // we must set event_id to null to avoid a foreign key constraint violation.
+        // Real UUIDs contain hyphens, synthetic birthday IDs do not.
+        const isBirthdayEvent = photo.eventId && !photo.eventId.includes('-');
+        const dbEventId = isBirthdayEvent ? null : photo.eventId;
 
         let result;
         if (id) {
             result = await pool.query(
                 `INSERT INTO celebration_photos (id, title, caption, image_url, event_type, event_date, uploaded_by, event_id) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-                [id, photo.title, photo.caption, photo.imageUrl, photo.eventType, photo.eventDate, photo.uploadedBy, photo.eventId]
+                [id, photo.title, photo.caption, photo.imageUrl, photo.eventType, photo.eventDate, photo.uploadedBy, dbEventId]
             );
         } else {
             result = await pool.query(
                 `INSERT INTO celebration_photos (title, caption, image_url, event_type, event_date, uploaded_by, event_id) 
          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-                [photo.title, photo.caption, photo.imageUrl, photo.eventType, photo.eventDate, photo.uploadedBy, photo.eventId]
+                [photo.title, photo.caption, photo.imageUrl, photo.eventType, photo.eventDate, photo.uploadedBy, dbEventId]
             );
         }
 
@@ -54,7 +62,8 @@ export async function POST(request: Request) {
             eventDate: new Date(result.rows[0].event_date).toISOString().split('T')[0],
             uploadedBy: result.rows[0].uploaded_by,
             uploadedAt: result.rows[0].uploaded_at,
-            eventId: result.rows[0].event_id || undefined
+            // Return the original synthetic ID so the frontend state updates correctly
+            eventId: isBirthdayEvent ? photo.eventId : (result.rows[0].event_id || undefined)
         });
     } catch (error) {
         console.error('Error creating celebration photo:', error);

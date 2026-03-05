@@ -22,7 +22,14 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const event = eventId ? allEvents.find(a => a.id === eventId) : null;
-  const eventPhotos = eventId ? celebrationPhotos.filter(p => p.eventId === eventId) : [];
+  const eventPhotos = eventId ? celebrationPhotos.filter(p => {
+    if (!eventId.includes('-')) {
+      // For synthetic birthday events (e.g., carloslara2026), match by type and date 
+      // since they don't have a real DB event_id. Real UUIDs contain hyphens.
+      return p.eventType === 'Birthday' && p.eventDate === event?.date;
+    }
+    return p.eventId === eventId;
+  }) : [];
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadForm, setUploadForm] = useState<Partial<CelebrationPhoto>>({});

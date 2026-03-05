@@ -130,9 +130,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const birthdayEvents: Event[] = users.map(user => {
       const [y, m, d] = user.birthday.split('-');
       const currentYearBday = new Date(currentYear, parseInt(m) - 1, parseInt(d));
+      const formattedName = user.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 
       return {
-        id: `bday-${user.id}`,
+        id: `${formattedName}${currentYear}`,
         title: `${user.name}'s Birthday`,
         date: currentYearBday.toISOString().split('T')[0],
         type: 'Birthday' as const,
