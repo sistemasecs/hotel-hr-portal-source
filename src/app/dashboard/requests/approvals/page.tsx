@@ -190,7 +190,7 @@ export default function ApprovalsPage() {
                   <p className="text-slate-500 mt-1">{t('submittedBy')} <span className="font-medium text-slate-700">{selectedRequest.userName}</span> ({selectedRequest.userDepartment})</p>
                 </div>
                 <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-semibold rounded-full">
-                  {selectedRequest.status}
+                  {selectedRequest.status === 'Pending' ? t('statusPending') : selectedRequest.status === 'Approved' ? t('statusApproved') : selectedRequest.status === 'Rejected' ? t('statusRejected') : selectedRequest.status}
                 </span>
               </div>
 

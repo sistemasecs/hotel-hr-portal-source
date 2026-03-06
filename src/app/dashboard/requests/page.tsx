@@ -220,7 +220,7 @@ export default function MyRequestsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status)}`}>
-                            {request.status}
+                            {request.status === 'Pending' ? t('statusPending') : request.status === 'Approved' ? t('statusApproved') : request.status === 'Rejected' ? t('statusRejected') : request.status}
                           </span>
                         </td>
                         <td className="px-6 py-4">
