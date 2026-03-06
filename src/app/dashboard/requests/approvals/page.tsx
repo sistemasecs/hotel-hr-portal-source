@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { EmployeeRequest } from '@/types';
+import VacationCalendar from '@/components/requests/VacationCalendar';
 
 export default function ApprovalsPage() {
   const { user } = useAuth();
@@ -13,10 +14,13 @@ export default function ApprovalsPage() {
   const [selectedRequest, setSelectedRequest] = useState<EmployeeRequest | null>(null);
   const [hrNotes, setHrNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [vacations, setVacations] = useState<EmployeeRequest[]>([]);
 
   useEffect(() => {
     if (user && (user.role === 'HR Admin' || user.role === 'Supervisor' || user.role === 'Manager')) {
       fetchRequests();
+      fetchVacations();
     }
   }, [user]);
 
@@ -35,6 +39,18 @@ export default function ApprovalsPage() {
     }
   };
 
+  const fetchVacations = async () => {
+    try {
+      const res = await fetch(`/api/requests/vacations?userId=${user?.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVacations(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch vacations:', error);
+    }
+  };
+
   const handleUpdateStatus = async (status: 'Approved' | 'Rejected') => {
     if (!selectedRequest) return;
 
@@ -50,6 +66,10 @@ export default function ApprovalsPage() {
         setRequests(prev => prev.filter(r => r.id !== selectedRequest.id));
         setSelectedRequest(null);
         setHrNotes('');
+        // Refresh vacations if a vacation request was updated
+        if (selectedRequest.type === 'Vacation') {
+          fetchVacations();
+        }
       } else {
         alert('Failed to update request');
       }
@@ -67,20 +87,37 @@ export default function ApprovalsPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">{t('pendingApprovals')}</h1>
-        <p className="text-slate-600 mt-2">{t('reviewRequests')}</p>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">{t('pendingApprovals')}</h1>
+          <p className="text-slate-600 mt-2">{t('reviewRequests')}</p>
+        </div>
+        <div className="flex bg-slate-100 p-1 rounded-lg">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            List View
+          </button>
+          <button
+            onClick={() => setViewMode('calendar')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${viewMode === 'calendar' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            Vacation Calendar
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* List of Requests */}
-        <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-200px)]">
-          <div className="p-4 border-b border-slate-100 bg-slate-50">
-            <h2 className="font-semibold text-slate-800">{t('pendingRequests')} ({requests.length})</h2>
-          </div>
-          <div className="overflow-y-auto flex-grow">
-            {isLoading ? (
-              <div className="p-8 text-center text-slate-500">{t('loading')}</div>
+      {viewMode === 'list' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* List of Requests */}
+          <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-200px)]">
+            <div className="p-4 border-b border-slate-100 bg-slate-50">
+              <h2 className="font-semibold text-slate-800">{t('pendingRequests')} ({requests.length})</h2>
+            </div>
+            <div className="overflow-y-auto flex-grow">
+              {isLoading ? (
+                <div className="p-8 text-center text-slate-500">{t('loading')}</div>
             ) : requests.length === 0 ? (
               <div className="p-8 text-center text-slate-500">{t('noRequestsYet')}</div>
             ) : (
@@ -175,6 +212,9 @@ export default function ApprovalsPage() {
           )}
         </div>
       </div>
+      ) : (
+        <VacationCalendar vacations={vacations} />
+      )}
     </div>
   );
 }
