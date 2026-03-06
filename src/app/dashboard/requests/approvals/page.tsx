@@ -200,7 +200,7 @@ export default function ApprovalsPage() {
                   <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-6">
                     {Object.entries(selectedRequest.data).map(([key, value]) => (
                       <div key={key}>
-                        <dt className="text-sm font-medium text-slate-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</dt>
+                        <dt className="text-sm font-medium text-slate-500 capitalize">{t(key as any) || key.replace(/([A-Z])/g, ' $1').trim()}</dt>
                         <dd className="mt-1 text-sm text-slate-900 font-medium">
                           {key === 'colleagueAgreed' ? (
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
