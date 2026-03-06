@@ -61,7 +61,7 @@ export default function MyRequestsPage() {
       const res = await fetch(`/api/requests/${requestId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: updatedData }),
+        body: JSON.stringify({ data: updatedData, userId: user?.id }),
       });
 
       if (res.ok) {

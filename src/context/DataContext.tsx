@@ -187,12 +187,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addUser = async (user: Omit<User, 'id'>) => {
     try {
+      const currentUser = JSON.parse(localStorage.getItem('hotel_hr_user') || '{}');
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(user),
+        body: JSON.stringify({ ...user, currentUserId: currentUser.id }),
       });
 
       if (response.ok) {
@@ -244,10 +245,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
+      const currentUser = JSON.parse(localStorage.getItem('hotel_hr_user') || '{}');
       const response = await fetch(`/api/users/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dataToSave),
+        body: JSON.stringify({ ...dataToSave, currentUserId: currentUser.id }),
       });
 
       if (response.ok) {

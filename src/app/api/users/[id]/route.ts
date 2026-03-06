@@ -41,6 +41,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const body = await request.json();
     
+    const { currentUserId, ...updateData } = body;
+    
     // Build the SET clause dynamically based on provided fields
     const updates: string[] = [];
     const values: any[] = [];
@@ -62,7 +64,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       allergies: 'allergies',
     };
 
-    for (const [key, value] of Object.entries(body)) {
+    for (const [key, value] of Object.entries(updateData)) {
       if (fieldMap[key] !== undefined) {
         updates.push(`${fieldMap[key]} = $${paramIndex}`);
         values.push(value);
@@ -106,7 +108,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       allergies: row.allergies || [],
     };
 
-    await logActivity(null, 'UPDATE', 'USER', updatedUser.id, { updatedFields: Object.keys(body) });
+    await logActivity(currentUserId || null, 'UPDATE', 'USER', updatedUser.id, { updatedFields: Object.keys(updateData) });
 
     return NextResponse.json(updatedUser);
   } catch (error) {

@@ -6,7 +6,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     try {
         const { id } = await context.params;
         const body = await request.json();
-        const { status, hrNotes, data } = body;
+        const { status, hrNotes, data, userId } = body;
 
         // Allow updating either status or data (for colleague agreement)
         if (!status && !data) {
@@ -66,7 +66,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         }
 
         const updatedRequest = result.rows[0];
-        await logActivity(null, 'UPDATE', 'REQUEST', updatedRequest.id, { status: updatedRequest.status });
+        await logActivity(userId || null, 'UPDATE', 'REQUEST', updatedRequest.id, { status: updatedRequest.status });
 
         return NextResponse.json(updatedRequest);
     } catch (error) {

@@ -33,7 +33,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, password, role, department, area, supervisorId, birthday, hireDate, likes, dislikes, tShirtSize, allergies } = body;
+    const { name, email, password, role, department, area, supervisorId, birthday, hireDate, likes, dislikes, tShirtSize, allergies, currentUserId } = body;
 
     // Hash the password before storing
     const salt = await bcrypt.genSalt(10);
@@ -64,9 +64,8 @@ export async function POST(request: Request) {
       allergies: row.allergies || [],
     };
 
-    // Log activity (assuming the user creating this is an admin, but we don't have their ID here easily. 
-    // We'll pass null for userId for now, or we could extract it from a session token if we had one)
-    await logActivity(null, 'CREATE', 'USER', newUser.id, { name: newUser.name, email: newUser.email, role: newUser.role });
+    // Log activity
+    await logActivity(currentUserId || null, 'CREATE', 'USER', newUser.id, { name: newUser.name, email: newUser.email, role: newUser.role });
 
     return NextResponse.json(newUser, { status: 201 });
   } catch (error) {

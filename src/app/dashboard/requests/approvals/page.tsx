@@ -94,7 +94,7 @@ export default function ApprovalsPage() {
       const res = await fetch(`/api/requests/${selectedRequest.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, hrNotes })
+        body: JSON.stringify({ status, hrNotes, userId: user?.id })
       });
 
       if (res.ok) {
