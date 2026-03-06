@@ -187,7 +187,7 @@ export default function ApprovalsPage() {
               <div className="flex justify-between items-start mb-6 pb-6 border-b border-slate-100">
                 <div>
                   <h2 className="text-2xl font-bold text-slate-900">{getTranslatedType(selectedRequest.type)}</h2>
-                  <p className="text-slate-500 mt-1">Submitted by <span className="font-medium text-slate-700">{selectedRequest.userName}</span> ({selectedRequest.userDepartment})</p>
+                  <p className="text-slate-500 mt-1">{t('submittedBy')} <span className="font-medium text-slate-700">{selectedRequest.userName}</span> ({selectedRequest.userDepartment})</p>
                 </div>
                 <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-semibold rounded-full">
                   {selectedRequest.status}
@@ -228,7 +228,7 @@ export default function ApprovalsPage() {
                   rows={3}
                   value={hrNotes}
                   onChange={(e) => setHrNotes(e.target.value)}
-                  placeholder="Add notes before approving or rejecting..."
+                  placeholder={t('addNotesPlaceholder')}
                   className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
