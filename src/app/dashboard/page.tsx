@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -10,6 +10,37 @@ export default function DashboardPage() {
   const { user: authUser } = useAuth();
   const { events, userTrainings, trainingModules, employeesOfTheMonth, users } = useData();
   const { t } = useLanguage();
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      if (!authUser) return;
+
+      try {
+        // Fetch user's pending requests
+        const reqRes = await fetch(`/api/requests?userId=${authUser.id}`);
+        if (reqRes.ok) {
+          const data = await reqRes.json();
+          const pending = data.filter((r: any) => r.status === 'Pending');
+          setPendingRequestsCount(pending.length);
+        }
+
+        // Fetch pending approvals if user has permission
+        if (['HR Admin', 'Supervisor', 'Manager'].includes(authUser.role)) {
+          const appRes = await fetch(`/api/requests?status=Pending`);
+          if (appRes.ok) {
+            const data = await appRes.json();
+            setPendingApprovalsCount(data.length);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch request counts:', error);
+      }
+    };
+
+    fetchCounts();
+  }, [authUser]);
 
   const parseDate = (dateStr: string) => {
     if (!dateStr) return new Date();
@@ -205,6 +236,7 @@ export default function DashboardPage() {
             <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
               <div>
                 <p className="text-sm font-medium text-blue-600">{t('myRequests')}</p>
+                <p className="text-2xl font-bold text-blue-900">{pendingRequestsCount}</p>
                 <p className="text-xs text-blue-500 mt-1">{t('trackRequests')}</p>
               </div>
               <Link href="/dashboard/requests" className="text-sm font-medium text-blue-600 hover:text-blue-800">
@@ -215,6 +247,7 @@ export default function DashboardPage() {
               <div className="flex justify-between items-center p-4 bg-amber-50 rounded-lg">
                 <div>
                   <p className="text-sm font-medium text-amber-600">{t('pendingApprovals')}</p>
+                  <p className="text-2xl font-bold text-amber-900">{pendingApprovalsCount}</p>
                   <p className="text-xs text-amber-500 mt-1">{t('reviewRequests')}</p>
                 </div>
                 <Link href="/dashboard/requests/approvals" className="text-sm font-medium text-amber-600 hover:text-amber-800">

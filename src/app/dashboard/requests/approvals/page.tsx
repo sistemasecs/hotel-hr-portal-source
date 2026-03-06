@@ -16,13 +16,48 @@ export default function ApprovalsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [vacations, setVacations] = useState<EmployeeRequest[]>([]);
+  const [users, setUsers] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (user && (user.role === 'HR Admin' || user.role === 'Supervisor' || user.role === 'Manager')) {
       fetchRequests();
       fetchVacations();
+      fetchUsers();
     }
   }, [user]);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('/api/users');
+      if (res.ok) {
+        const data = await res.json();
+        const userMap: Record<string, string> = {};
+        data.forEach((u: any) => {
+          userMap[u.id] = u.name;
+        });
+        setUsers(userMap);
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
+  };
+
+  const getTranslatedType = (type: string) => {
+    switch (type) {
+      case 'Vacation': return t('reqVacation');
+      case 'Absence': return t('reqAbsence');
+      case 'Absence Proof': return t('reqAbsenceProof');
+      case 'Shift Change': return t('reqShiftChange');
+      case 'Uniform': return t('reqUniform');
+      case 'Without Uniform': return t('reqWithoutUniform');
+      case 'Data Update': return t('reqDataUpdate');
+      case 'Document': return t('reqDocument');
+      case 'Discount': return t('reqDiscount');
+      case 'Responsibility': return t('reqResponsibility');
+      case 'Health Make-up': return t('reqHealthMakeup');
+      default: return type;
+    }
+  };
 
   const fetchRequests = async () => {
     try {
@@ -135,7 +170,7 @@ export default function ApprovalsPage() {
                         <span className="font-medium text-slate-900">{req.userName}</span>
                         <span className="text-xs text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</span>
                       </div>
-                      <div className="text-sm text-slate-600 font-medium">{req.type}</div>
+                      <div className="text-sm text-slate-600 font-medium">{getTranslatedType(req.type)}</div>
                       <div className="text-xs text-slate-500 mt-1 truncate">{req.userDepartment}</div>
                     </button>
                   </li>
@@ -151,7 +186,7 @@ export default function ApprovalsPage() {
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
               <div className="flex justify-between items-start mb-6 pb-6 border-b border-slate-100">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900">{selectedRequest.type} Request</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">{getTranslatedType(selectedRequest.type)}</h2>
                   <p className="text-slate-500 mt-1">Submitted by <span className="font-medium text-slate-700">{selectedRequest.userName}</span> ({selectedRequest.userDepartment})</p>
                 </div>
                 <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-semibold rounded-full">
@@ -166,7 +201,21 @@ export default function ApprovalsPage() {
                     {Object.entries(selectedRequest.data).map(([key, value]) => (
                       <div key={key}>
                         <dt className="text-sm font-medium text-slate-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</dt>
-                        <dd className="mt-1 text-sm text-slate-900 font-medium">{String(value)}</dd>
+                        <dd className="mt-1 text-sm text-slate-900 font-medium">
+                          {key === 'colleagueAgreed' ? (
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              value === true ? 'bg-green-100 text-green-800' :
+                              value === false ? 'bg-red-100 text-red-800' :
+                              'bg-amber-100 text-amber-800'
+                            }`}>
+                              {value === true ? t('agreed') : value === false ? t('declined') : t('pending')}
+                            </span>
+                          ) : key === 'coveringColleagueId' ? (
+                            users[String(value)] || String(value)
+                          ) : (
+                            String(value)
+                          )}
+                        </dd>
                       </div>
                     ))}
                   </dl>
@@ -194,8 +243,9 @@ export default function ApprovalsPage() {
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('Approved')}
-                  disabled={isUpdating}
-                  className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  disabled={isUpdating || (selectedRequest.type === 'Shift Change' && selectedRequest.data.colleagueAgreed !== true)}
+                  className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={selectedRequest.type === 'Shift Change' && selectedRequest.data.colleagueAgreed !== true ? t('cannotApproveUntilAgreed') : ""}
                 >
                   {t('approveRequest')}
                 </button>

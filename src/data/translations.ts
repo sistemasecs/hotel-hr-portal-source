@@ -327,6 +327,25 @@ export const translations = {
     reqHealthMakeup: 'Health Make-up',
     reqHealthMakeupDesc: 'Propose a schedule to make up for health-related time off.',
 
+    // Shift Change Specific
+    requestsToCover: 'Requests to Cover',
+    actionRequired: 'Action Required',
+    requestedCoverShift: 'has requested you to cover their shift.',
+    currentShift: 'Current Shift',
+    newShift: 'New Shift',
+    reason: 'Reason',
+    agreeToCover: 'Agree to Cover',
+    decline: 'Decline',
+    colleagueAgreement: 'Colleague Agreement',
+    agreed: 'Agreed',
+    declined: 'Declined',
+    pending: 'Pending',
+    agreedToCoverMsg: 'You have agreed to cover the shift.',
+    declinedToCoverMsg: 'You have declined to cover the shift.',
+    failedToUpdateAgreement: 'Failed to update agreement status.',
+    errorUpdatingAgreement: 'An error occurred.',
+    cannotApproveUntilAgreed: 'Cannot approve until colleague agrees',
+
     // Form Placeholders & Options
     optionalDetails: 'Optional details...',
     selectType: 'Select type...',
@@ -694,6 +713,25 @@ export const translations = {
     reqResponsibilityDesc: 'Reconoce la responsabilidad por equipo o llaves.',
     reqHealthMakeup: 'Reposición por Salud',
     reqHealthMakeupDesc: 'Propón un horario para reponer tiempo libre por salud.',
+
+    // Shift Change Specific
+    requestsToCover: 'Solicitudes para Cubrir',
+    actionRequired: 'Acción Requerida',
+    requestedCoverShift: 'te ha solicitado cubrir su turno.',
+    currentShift: 'Turno Actual',
+    newShift: 'Nuevo Turno',
+    reason: 'Razón',
+    agreeToCover: 'Aceptar Cubrir',
+    decline: 'Rechazar',
+    colleagueAgreement: 'Acuerdo de Colega',
+    agreed: 'Aceptado',
+    declined: 'Rechazado',
+    pending: 'Pendiente',
+    agreedToCoverMsg: 'Has aceptado cubrir el turno.',
+    declinedToCoverMsg: 'Has rechazado cubrir el turno.',
+    failedToUpdateAgreement: 'Error al actualizar el estado del acuerdo.',
+    errorUpdatingAgreement: 'Ocurrió un error.',
+    cannotApproveUntilAgreed: 'No se puede aprobar hasta que el colega acepte',
 
     // Form Placeholders & Options
     optionalDetails: 'Detalles opcionales...',

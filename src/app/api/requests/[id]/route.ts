@@ -6,32 +6,60 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     try {
         const { id } = await context.params;
         const body = await request.json();
-        const { status, hrNotes } = body;
+        const { status, hrNotes, data } = body;
 
-        if (!status) {
-            return NextResponse.json({ error: 'Status is required' }, { status: 400 });
+        // Allow updating either status or data (for colleague agreement)
+        if (!status && !data) {
+            return NextResponse.json({ error: 'Status or data is required' }, { status: 400 });
         }
 
-        const query = `
-            UPDATE employee_requests
-            SET 
-                status = $1,
-                hr_notes = COALESCE($2, hr_notes),
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $3
-            RETURNING 
-                id, 
-                user_id as "userId", 
-                type, 
-                status, 
-                data, 
-                supervisor_id as "supervisorId", 
-                hr_notes as "hrNotes", 
-                created_at as "createdAt", 
-                updated_at as "updatedAt"
-        `;
+        let query = '';
+        let values = [];
 
-        const result = await pool.query(query, [status, hrNotes || null, id]);
+        if (data) {
+            // Update data JSON (e.g., for colleague agreement)
+            query = `
+                UPDATE employee_requests
+                SET 
+                    data = $1,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $2
+                RETURNING 
+                    id, 
+                    user_id as "userId", 
+                    type, 
+                    status, 
+                    data, 
+                    supervisor_id as "supervisorId", 
+                    hr_notes as "hrNotes", 
+                    created_at as "createdAt", 
+                    updated_at as "updatedAt"
+            `;
+            values = [data, id];
+        } else {
+            // Update status and hrNotes
+            query = `
+                UPDATE employee_requests
+                SET 
+                    status = $1,
+                    hr_notes = COALESCE($2, hr_notes),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $3
+                RETURNING 
+                    id, 
+                    user_id as "userId", 
+                    type, 
+                    status, 
+                    data, 
+                    supervisor_id as "supervisorId", 
+                    hr_notes as "hrNotes", 
+                    created_at as "createdAt", 
+                    updated_at as "updatedAt"
+            `;
+            values = [status, hrNotes || null, id];
+        }
+
+        const result = await pool.query(query, values);
 
         if (result.rows.length === 0) {
             return NextResponse.json({ error: 'Request not found' }, { status: 404 });

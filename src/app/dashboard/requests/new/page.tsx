@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { RequestType } from '@/types';
+import { RequestType, User } from '@/types';
 
 export default function NewRequestPage() {
   const { user } = useAuth();
@@ -12,6 +12,29 @@ export default function NewRequestPage() {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<RequestType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [colleagues, setColleagues] = useState<User[]>([]);
+
+  useEffect(() => {
+    const fetchColleagues = async () => {
+      if (user && selectedType === 'Shift Change') {
+        try {
+          const res = await fetch('/api/users');
+          if (res.ok) {
+            const allUsers: User[] = await res.json();
+            // Filter users in the same department, excluding the current user
+            const deptColleagues = allUsers.filter(
+              (u) => u.department === user.department && u.id !== user.id
+            );
+            setColleagues(deptColleagues);
+          }
+        } catch (error) {
+          console.error('Failed to fetch colleagues:', error);
+        }
+      }
+    };
+
+    fetchColleagues();
+  }, [user, selectedType]);
 
   const REQUEST_TYPES: { type: RequestType; label: string; icon: React.ReactNode; description: string }[] = [
     { 
@@ -172,6 +195,11 @@ export default function NewRequestPage() {
         finalData.fileUrl = fileUrl;
       }
 
+      // If it's a shift change and a colleague is selected, set initial agreement status
+      if (selectedType === 'Shift Change' && finalData.coveringColleagueId) {
+        finalData.colleagueAgreed = 'Pending';
+      }
+
       const res = await fetch('/api/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -255,7 +283,14 @@ export default function NewRequestPage() {
             </div>
             <div className="mt-4">
               <label className="block text-sm font-medium text-slate-700 mb-1">Colleague Covering (if applicable)</label>
-              <input type="text" name="coveringColleague" onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" placeholder="Name of colleague..." />
+              <select name="coveringColleagueId" onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2">
+                <option value="">Select a colleague...</option>
+                {colleagues.map((colleague) => (
+                  <option key={colleague.id} value={colleague.id}>
+                    {colleague.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="mt-4">
               <label className="block text-sm font-medium text-slate-700 mb-1">Reason *</label>
