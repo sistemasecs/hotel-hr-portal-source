@@ -1,12 +1,20 @@
-export type Role = 'Staff' | 'Supervisor' | 'HR Admin';
-export type Department = string;
+export type Role = 'Staff' | 'Supervisor' | 'Manager' | 'HR Admin';
+
+export interface Department {
+  id: string;
+  name: string;
+  managerId?: string | null;
+  parentId?: string | null;
+  areas?: string[];
+}
 
 export interface User {
   id: string;
   name: string;
   email: string;
   role: Role;
-  department: Department;
+  department: string;
+  area?: string | null;
   supervisorId?: string | null;
   avatarUrl?: string;
   avatarFit?: 'cover' | 'contain';
@@ -46,7 +54,7 @@ export interface TrainingModule {
   description: string;
   type: 'Video' | 'Document' | 'Quiz';
   duration: string; // e.g., "15 mins"
-  targetDepartments: Department[];
+  targetDepartments: string[];
   required: boolean;
   contentUrl?: string; // For Video/Document
   questions?: QuizQuestion[]; // For Quiz
@@ -117,6 +125,11 @@ export type RequestType =
   | 'Uniform' 
   | 'Data Update' 
   | 'Document' 
+  | 'Absence Proof'
+  | 'Discount'
+  | 'Responsibility'
+  | 'Without Uniform'
+  | 'Health Make-up'
   | 'Other';
 
 export type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Completed';
@@ -133,4 +146,15 @@ export interface EmployeeRequest {
   hrNotes?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  userId: string | null;
+  userName: string | null;
+  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  entityType: string;
+  entityId: string | null;
+  details: any;
+  createdAt: string;
 }

@@ -76,14 +76,14 @@ export default function CelebrationsPage() {
 
   return (
     <div className="space-y-8">
-      <header className="flex justify-between items-end border-b border-slate-200 pb-6">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-slate-200 pb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">{t('celebrations')}</h1>
           <p className="text-slate-500 mt-2">{t('shareMoments')}</p>
         </div>
         <button
           onClick={() => setIsUploadModalOpen(true)}
-          className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors"
+          className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors w-full sm:w-auto"
         >
           + {t('createEvent')}
         </button>
@@ -219,7 +219,7 @@ export default function CelebrationsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Event Type *</label>
                   <select

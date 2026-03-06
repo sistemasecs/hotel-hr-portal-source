@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function GET() {
   try {
@@ -12,6 +13,7 @@ export async function GET() {
       email: row.email,
       role: row.role,
       department: row.department,
+      area: row.area,
       supervisorId: row.supervisor_id,
       avatarUrl: row.avatar_url,
       birthday: row.birthday.toISOString().split('T')[0],
@@ -31,17 +33,17 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, password, role, department, supervisorId, birthday, hireDate, likes, dislikes, tShirtSize, allergies } = body;
+    const { name, email, password, role, department, area, supervisorId, birthday, hireDate, likes, dislikes, tShirtSize, allergies } = body;
 
     // Hash the password before storing
     const salt = await bcrypt.genSalt(10);
     const passwordHash = password ? await bcrypt.hash(password, salt) : null;
 
     const result = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role, department, supervisor_id, birthday, hire_date, likes, dislikes, t_shirt_size, allergies)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO users (name, email, password_hash, role, department, area, supervisor_id, birthday, hire_date, likes, dislikes, t_shirt_size, allergies)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
-      [name, email, passwordHash, role, department, supervisorId || null, birthday, hireDate, likes || [], dislikes || [], tShirtSize, allergies || []]
+      [name, email, passwordHash, role, department, area || null, supervisorId || null, birthday, hireDate, likes || [], dislikes || [], tShirtSize, allergies || []]
     );
 
     const row = result.rows[0];
@@ -51,6 +53,7 @@ export async function POST(request: Request) {
       email: row.email,
       role: row.role,
       department: row.department,
+      area: row.area,
       supervisorId: row.supervisor_id,
       avatarUrl: row.avatar_url,
       birthday: row.birthday.toISOString().split('T')[0],
@@ -60,6 +63,10 @@ export async function POST(request: Request) {
       tShirtSize: row.t_shirt_size,
       allergies: row.allergies || [],
     };
+
+    // Log activity (assuming the user creating this is an admin, but we don't have their ID here easily. 
+    // We'll pass null for userId for now, or we could extract it from a session token if we had one)
+    await logActivity(null, 'CREATE', 'USER', newUser.id, { name: newUser.name, email: newUser.email, role: newUser.role });
 
     return NextResponse.json(newUser, { status: 201 });
   } catch (error) {

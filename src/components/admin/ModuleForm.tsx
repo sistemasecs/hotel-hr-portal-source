@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { TrainingModule, Department, QuizQuestion } from '@/types';
+import { TrainingModule, QuizQuestion } from '@/types';
 import { useData } from '@/context/DataContext';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -18,13 +18,13 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
   const [description, setDescription] = useState(initialData?.description || '');
   const [type, setType] = useState<'Video' | 'Document' | 'Quiz'>(initialData?.type || 'Video');
   const [duration, setDuration] = useState(initialData?.duration || '');
-  const [targetDepartments, setTargetDepartments] = useState<Department[]>(initialData?.targetDepartments || []);
+  const [targetDepartments, setTargetDepartments] = useState<string[]>(initialData?.targetDepartments || []);
   const [required, setRequired] = useState(initialData?.required || false);
   const [contentUrl, setContentUrl] = useState(initialData?.contentUrl || '');
   const [questions, setQuestions] = useState<QuizQuestion[]>(initialData?.questions || []);
   const [passingScore, setPassingScore] = useState<number>(initialData?.passingScore || 0);
 
-  const handleDepartmentToggle = (dept: Department) => {
+  const handleDepartmentToggle = (dept: string) => {
     setTargetDepartments(prev => 
       prev.includes(dept) ? prev.filter(d => d !== dept) : [...prev, dept]
     );
@@ -158,16 +158,16 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
           <div className="flex flex-wrap gap-2">
             {departments.map(dept => (
               <button
-                key={dept}
+                key={dept.id}
                 type="button"
-                onClick={() => handleDepartmentToggle(dept)}
+                onClick={() => handleDepartmentToggle(dept.name)}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  targetDepartments.includes(dept)
+                  targetDepartments.includes(dept.name)
                     ? 'bg-primary-100 text-primary-800 border border-primary-200'
                     : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
                 }`}
               >
-                {dept}
+                {dept.name}
               </button>
             ))}
           </div>

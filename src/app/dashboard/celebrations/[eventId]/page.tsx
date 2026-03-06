@@ -269,25 +269,32 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
         <span className="text-slate-900 font-medium">{event.title}</span>
       </div>
 
-      <header className="flex justify-between items-end border-b border-slate-200 pb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">{event.title}</h1>
-          {event.description && <p className="text-slate-500 mt-2">{event.description}</p>}
-          <div className="flex items-center space-x-4 mt-3 text-sm text-slate-500">
-            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${event.type === 'Birthday' ? 'bg-pink-100 text-pink-800' :
-                event.type === 'Celebration' ? 'bg-amber-100 text-amber-800' :
-                  event.type === 'Social' ? 'bg-green-100 text-green-800' :
-                    event.type === 'Meeting' ? 'bg-blue-100 text-blue-800' :
-                      'bg-slate-100 text-slate-800'
-              }`}>
-              {event.type}
-            </span>
-            <span>{parseDate(event.date).toLocaleDateString()}</span>
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-slate-200 pb-6 gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6 w-full">
+          {event.coverImageUrl && (
+            <div className="w-full sm:w-32 h-48 sm:h-32 rounded-lg overflow-hidden flex-shrink-0 shadow-sm">
+              <img src={event.coverImageUrl} alt={event.title} className="w-full h-full object-cover" />
+            </div>
+          )}
+          <div className="w-full">
+            <h1 className="text-3xl font-bold text-slate-900">{event.title}</h1>
+            {event.description && <p className="text-slate-500 mt-2">{event.description}</p>}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-3 text-sm text-slate-500">
+              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${event.type === 'Birthday' ? 'bg-pink-100 text-pink-800' :
+                  event.type === 'Celebration' ? 'bg-amber-100 text-amber-800' :
+                    event.type === 'Social' ? 'bg-green-100 text-green-800' :
+                      event.type === 'Meeting' ? 'bg-blue-100 text-blue-800' :
+                        'bg-slate-100 text-slate-800'
+                }`}>
+                {event.type}
+              </span>
+              <span>{parseDate(event.date).toLocaleDateString()}</span>
+            </div>
           </div>
         </div>
         <button
           onClick={() => setIsUploadModalOpen(true)}
-          className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors"
+          className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors w-full sm:w-auto whitespace-nowrap"
         >
           + {t('uploadPhoto')}
         </button>

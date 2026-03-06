@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function GET() {
     try {
@@ -38,10 +39,14 @@ export async function POST(request: Request) {
         }
 
         const row = result.rows[0];
-        return NextResponse.json({
+        const newEvent = {
             ...row,
             coverImageUrl: row.cover_image_url
-        });
+        };
+
+        await logActivity(null, 'CREATE', 'EVENT', newEvent.id, { title: newEvent.title, type: newEvent.type });
+
+        return NextResponse.json(newEvent);
     } catch (error) {
         console.error('Error creating event:', error);
         return NextResponse.json({ error: 'Failed to create event' }, { status: 500 });

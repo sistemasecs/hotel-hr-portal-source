@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function GET() {
     try {
@@ -13,14 +14,17 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
-        const { name } = await request.json();
+        const { name, managerId, parentId, areas } = await request.json();
 
         const result = await pool.query(
-            'INSERT INTO departments (name) VALUES ($1) RETURNING *',
-            [name]
+            'INSERT INTO departments (name, manager_id, parent_id, areas) VALUES ($1, $2, $3, $4) RETURNING *',
+            [name, managerId || null, parentId || null, areas || []]
         );
 
-        return NextResponse.json(result.rows[0]);
+        const newDept = result.rows[0];
+        await logActivity(null, 'CREATE', 'DEPARTMENT', newDept.id, { name: newDept.name });
+
+        return NextResponse.json(newDept);
     } catch (error) {
         console.error('Error creating department:', error);
         // Handle unique constraint violation

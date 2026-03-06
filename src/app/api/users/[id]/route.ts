@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -17,6 +18,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       email: row.email,
       role: row.role,
       department: row.department,
+      area: row.area,
+      supervisorId: row.supervisor_id,
       avatarUrl: row.avatar_url,
       birthday: row.birthday.toISOString().split('T')[0],
       hireDate: row.hire_date.toISOString().split('T')[0],
@@ -48,6 +51,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       email: 'email',
       role: 'role',
       department: 'department',
+      area: 'area',
+      supervisorId: 'supervisor_id',
       avatarUrl: 'avatar_url',
       birthday: 'birthday',
       hireDate: 'hire_date',
@@ -90,6 +95,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       email: row.email,
       role: row.role,
       department: row.department,
+      area: row.area,
+      supervisorId: row.supervisor_id,
       avatarUrl: row.avatar_url,
       birthday: row.birthday.toISOString().split('T')[0],
       hireDate: row.hire_date.toISOString().split('T')[0],
@@ -98,6 +105,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       tShirtSize: row.t_shirt_size,
       allergies: row.allergies || [],
     };
+
+    await logActivity(null, 'UPDATE', 'USER', updatedUser.id, { updatedFields: Object.keys(body) });
 
     return NextResponse.json(updatedUser);
   } catch (error) {
@@ -114,6 +123,8 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     if (result.rows.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    await logActivity(null, 'DELETE', 'USER', id);
 
     return NextResponse.json({ message: 'User deleted successfully' });
   } catch (error) {

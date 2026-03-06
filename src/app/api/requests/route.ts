@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function GET(request: Request) {
     try {
@@ -74,7 +75,11 @@ export async function POST(request: Request) {
         `;
 
         const result = await pool.query(query, [userId, type, data, supervisorId || null]);
-        return NextResponse.json(result.rows[0], { status: 201 });
+        const newRequest = result.rows[0];
+
+        await logActivity(userId, 'CREATE', 'REQUEST', newRequest.id, { type: newRequest.type });
+
+        return NextResponse.json(newRequest, { status: 201 });
     } catch (error) {
         console.error('Error creating request:', error);
         return NextResponse.json({ error: 'Failed to create request' }, { status: 500 });

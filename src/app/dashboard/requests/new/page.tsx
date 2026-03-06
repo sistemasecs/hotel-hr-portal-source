@@ -3,27 +3,147 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { RequestType } from '@/types';
-
-const REQUEST_TYPES: { type: RequestType; label: string; icon: string; description: string }[] = [
-  { type: 'Vacation', label: 'Solicitud de Vacaciones', icon: '🌴', description: 'Request annual leave days.' },
-  { type: 'Absence', label: 'Solicitud de Ausencia', icon: '🤒', description: 'Request time off for personal or medical reasons.' },
-  { type: 'Shift Change', label: 'Cambio de Turno', icon: '🔄', description: 'Request to swap or change your scheduled shift.' },
-  { type: 'Uniform', label: 'Solicitud de Uniforme', icon: '👕', description: 'Request new uniform items.' },
-];
 
 export default function NewRequestPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<RequestType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const REQUEST_TYPES: { type: RequestType; label: string; icon: React.ReactNode; description: string }[] = [
+    { 
+      type: 'Vacation', 
+      label: t('reqVacation'), 
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ), 
+      description: t('reqVacationDesc') 
+    },
+    { 
+      type: 'Absence', 
+      label: t('reqAbsence'), 
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ), 
+      description: t('reqAbsenceDesc') 
+    },
+    { 
+      type: 'Absence Proof', 
+      label: t('reqAbsenceProof'), 
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ), 
+      description: t('reqAbsenceProofDesc') 
+    },
+    { 
+      type: 'Shift Change', 
+      label: t('reqShiftChange'), 
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+        </svg>
+      ), 
+      description: t('reqShiftChangeDesc') 
+    },
+    { 
+      type: 'Uniform', 
+      label: t('reqUniform'), 
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      ), 
+      description: t('reqUniformDesc') 
+    },
+    { 
+      type: 'Without Uniform', 
+      label: t('reqWithoutUniform'), 
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+        </svg>
+      ), 
+      description: t('reqWithoutUniformDesc') 
+    },
+    { 
+      type: 'Data Update', 
+      label: t('reqDataUpdate'), 
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      ), 
+      description: t('reqDataUpdateDesc') 
+    },
+    { 
+      type: 'Document', 
+      label: t('reqDocument'), 
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+        </svg>
+      ), 
+      description: t('reqDocumentDesc') 
+    },
+    { 
+      type: 'Discount', 
+      label: t('reqDiscount'), 
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+      ), 
+      description: t('reqDiscountDesc') 
+    },
+    { 
+      type: 'Responsibility', 
+      label: t('reqResponsibility'), 
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+        </svg>
+      ), 
+      description: t('reqResponsibilityDesc') 
+    },
+    { 
+      type: 'Health Make-up', 
+      label: t('reqHealthMakeup'), 
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ), 
+      description: t('reqHealthMakeupDesc') 
+    },
+  ];
+
   // Form States
   const [formData, setFormData] = useState<any>({});
+  const [file, setFile] = useState<File | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev: any) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData((prev: any) => ({ ...prev, [name]: checked }));
+    } else {
+      setFormData((prev: any) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,13 +152,33 @@ export default function NewRequestPage() {
 
     setIsSubmitting(true);
     try {
+      let fileUrl = null;
+
+      // Upload file if present
+      if (file) {
+        const uploadData = new FormData();
+        uploadData.append('file', file);
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: uploadData });
+        if (uploadRes.ok) {
+          const { url } = await uploadRes.json();
+          fileUrl = url;
+        } else {
+          throw new Error('Failed to upload file');
+        }
+      }
+
+      const finalData = { ...formData };
+      if (fileUrl) {
+        finalData.fileUrl = fileUrl;
+      }
+
       const res = await fetch('/api/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user.id,
           type: selectedType,
-          data: formData,
+          data: finalData,
           supervisorId: user.supervisorId // Assuming user object has this
         })
       });
@@ -155,6 +295,174 @@ export default function NewRequestPage() {
             </div>
           </>
         );
+      case 'Absence Proof':
+        return (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Date of Absence *</label>
+                <input type="date" name="date" required onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Upload Proof (Medical Note, etc.) *</label>
+                <input type="file" required onChange={handleFileChange} className="w-full border border-slate-300 rounded-md p-1.5 text-sm" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Comments</label>
+              <textarea name="comments" rows={2} onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" placeholder="Additional details..."></textarea>
+            </div>
+          </>
+        );
+      case 'Data Update':
+        return (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">New Phone Number</label>
+                <input type="tel" name="phone" onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Marital Status</label>
+                <select name="maritalStatus" onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2">
+                  <option value="">Select...</option>
+                  <option value="Single">Single</option>
+                  <option value="Married">Married</option>
+                  <option value="Divorced">Divorced</option>
+                  <option value="Widowed">Widowed</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">New Address</label>
+              <textarea name="address" rows={2} onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2"></textarea>
+            </div>
+            <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <h4 className="font-medium text-slate-900 mb-3">Emergency Contact</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Name</label>
+                  <input type="text" name="emergencyName" onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Phone</label>
+                  <input type="tel" name="emergencyPhone" onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2 text-sm" />
+                </div>
+              </div>
+            </div>
+          </>
+        );
+      case 'Document':
+        return (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Type of Document *</label>
+                <select name="documentType" required onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2">
+                  <option value="">Select type...</option>
+                  <option value="Employment Letter">Employment Verification Letter</option>
+                  <option value="Pay Stub">Pay Stub Copy</option>
+                  <option value="Recommendation">Letter of Recommendation</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Delivery Method *</label>
+                <select name="deliveryMethod" required onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2">
+                  <option value="">Select method...</option>
+                  <option value="Email">Email (Digital Copy)</option>
+                  <option value="Printed">Printed (Pick up at HR)</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Purpose of Request *</label>
+              <textarea name="purpose" required rows={2} onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" placeholder="e.g., Bank loan application, Visa process..."></textarea>
+            </div>
+          </>
+        );
+      case 'Discount':
+        return (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Service / Product *</label>
+                <input type="text" name="service" required onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" placeholder="e.g., Restaurant meal, Spa service" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Estimated Amount *</label>
+                <input type="number" name="amount" required onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" placeholder="0.00" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className="flex items-start space-x-3 p-4 bg-primary-50 rounded-lg border border-primary-100 cursor-pointer">
+                <input type="checkbox" name="payrollDeduction" required onChange={handleInputChange} className="mt-1 h-4 w-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500" />
+                <span className="text-sm text-slate-700">
+                  I authorize the hotel to deduct the final discounted amount from my next payroll.
+                </span>
+              </label>
+            </div>
+          </>
+        );
+      case 'Responsibility':
+        return (
+          <>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Item or Duty Assumed *</label>
+              <input type="text" name="item" required onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" placeholder="e.g., Master Keys, Cash Register Till, Laptop" />
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Details / Serial Number</label>
+              <textarea name="details" rows={2} onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2"></textarea>
+            </div>
+            <div className="mt-4">
+              <label className="flex items-start space-x-3 p-4 bg-amber-50 rounded-lg border border-amber-100 cursor-pointer">
+                <input type="checkbox" name="agreement" required onChange={handleInputChange} className="mt-1 h-4 w-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500" />
+                <span className="text-sm text-slate-700">
+                  I acknowledge receipt of the above item/duty and accept full responsibility for its care and proper use according to company policies.
+                </span>
+              </label>
+            </div>
+          </>
+        );
+      case 'Without Uniform':
+        return (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
+                <input type="date" name="date" required onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Expected Resolution Date *</label>
+                <input type="date" name="resolutionDate" required onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Reason *</label>
+              <textarea name="reason" required rows={2} onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" placeholder="e.g., Uniform torn, waiting for new size..."></textarea>
+            </div>
+          </>
+        );
+      case 'Health Make-up':
+        return (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Dates Affected *</label>
+                <input type="text" name="datesAffected" required onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" placeholder="e.g., Oct 12 - Oct 14" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Total Hours to Make Up *</label>
+                <input type="number" name="hours" required onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" placeholder="e.g., 16" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Proposed Make-up Schedule *</label>
+              <textarea name="proposedSchedule" required rows={3} onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" placeholder="e.g., Will work 2 extra hours every day next week..."></textarea>
+            </div>
+          </>
+        );
       default:
         return null;
     }
@@ -165,10 +473,10 @@ export default function NewRequestPage() {
       <div className="mb-8">
         <button onClick={() => router.back()} className="text-slate-500 hover:text-slate-700 flex items-center space-x-2 mb-4">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          <span>Back</span>
+          <span>{t('cancel')}</span>
         </button>
-        <h1 className="text-3xl font-bold text-slate-900">New Request</h1>
-        <p className="text-slate-600 mt-2">Select the type of request you want to submit.</p>
+        <h1 className="text-3xl font-bold text-slate-900">{t('newRequest')}</h1>
+        <p className="text-slate-600 mt-2">{t('selectRequestType')}</p>
       </div>
 
       {!selectedType ? (
@@ -182,7 +490,9 @@ export default function NewRequestPage() {
               }}
               className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:border-primary-500 hover:shadow-md transition-all text-left flex items-start space-x-4 group"
             >
-              <div className="text-4xl group-hover:scale-110 transition-transform">{req.icon}</div>
+              <div className="p-3 bg-primary-600 rounded-lg mr-4 group-hover:scale-110 transition-transform shadow-sm">
+                {req.icon}
+              </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900">{req.label}</h3>
                 <p className="text-sm text-slate-500 mt-1">{req.description}</p>
@@ -193,12 +503,14 @@ export default function NewRequestPage() {
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
           <div className="flex items-center justify-between mb-6 pb-6 border-b border-slate-100">
-            <div className="flex items-center space-x-3">
-              <span className="text-3xl">{REQUEST_TYPES.find(r => r.type === selectedType)?.icon}</span>
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-primary-600 rounded-lg shadow-sm">
+                {REQUEST_TYPES.find(r => r.type === selectedType)?.icon}
+              </div>
               <h2 className="text-2xl font-bold text-slate-900">{REQUEST_TYPES.find(r => r.type === selectedType)?.label}</h2>
             </div>
             <button onClick={() => setSelectedType(null)} className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-              Change Type
+              {t('changeType')}
             </button>
           </div>
 
@@ -211,7 +523,7 @@ export default function NewRequestPage() {
                 onClick={() => router.back()}
                 className="px-6 py-2 border border-slate-300 text-slate-700 font-medium rounded-lg hover:bg-slate-50 transition-colors"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="submit"
@@ -221,10 +533,10 @@ export default function NewRequestPage() {
                 {isSubmitting ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Submitting...</span>
+                    <span>{t('submitting')}</span>
                   </>
                 ) : (
-                  <span>Submit Request</span>
+                  <span>{t('submitRequest')}</span>
                 )}
               </button>
             </div>

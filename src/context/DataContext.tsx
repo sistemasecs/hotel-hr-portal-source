@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { User, Event, TrainingModule, UserTraining, CelebrationPhoto, PeerVote, SupervisorScore, EmployeeOfTheMonth } from '../types';
+import { User, Event, TrainingModule, UserTraining, CelebrationPhoto, PeerVote, SupervisorScore, EmployeeOfTheMonth, Department, ActivityLog } from '../types';
 import { mockEvents, mockTrainingModules, mockUserTrainings, mockCelebrationPhotos } from '../data/mockData';
 
 interface DataContextType {
@@ -9,7 +9,7 @@ interface DataContextType {
   events: Event[];
   trainingModules: TrainingModule[];
   userTrainings: UserTraining[];
-  departments: string[];
+  departments: Department[];
   eventTypes: string[];
   assignTraining: (userId: string, moduleId: string) => void;
   updateTrainingStatus: (userId: string, moduleId: string, status: UserTraining['status']) => void;
@@ -18,9 +18,9 @@ interface DataContextType {
   deleteTrainingModule: (id: string) => void;
   addUser: (user: Omit<User, 'id'>) => Promise<void>;
   updateUser: (id: string, user: Partial<User>) => Promise<void>;
-  addDepartment: (department: string) => void;
-  updateDepartment: (oldName: string, newName: string) => void;
-  deleteDepartment: (department: string) => void;
+  addDepartment: (department: Omit<Department, 'id'>) => void;
+  updateDepartment: (id: string, department: Partial<Department>) => void;
+  deleteDepartment: (id: string) => void;
   addEventType: (type: string) => void;
   deleteEventType: (type: string) => void;
   addEvent: (event: Event | Omit<Event, 'id'>) => void;
@@ -39,6 +39,8 @@ interface DataContextType {
   setEmployeeOfTheMonth: (eotm: Omit<EmployeeOfTheMonth, 'id' | 'awardedAt'>) => void;
   hotelLogo: string | null;
   setHotelLogo: (logoUrl: string | null) => void;
+  activityLogs: ActivityLog[];
+  fetchActivityLogs: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -48,13 +50,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [events, setEvents] = useState<Event[]>(mockEvents);
   const [trainingModules, setTrainingModules] = useState<TrainingModule[]>(mockTrainingModules);
   const [userTrainings, setUserTrainings] = useState<UserTraining[]>(mockUserTrainings);
-  const [departments, setDepartments] = useState<string[]>(['Front Desk', 'F&B', 'Maintenance', 'HR', 'Housekeeping']);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [eventTypes, setEventTypes] = useState<string[]>(['Birthday', 'Celebration', 'Social', 'Meeting', 'Other']);
   const [celebrationPhotos, setCelebrationPhotos] = useState<CelebrationPhoto[]>(mockCelebrationPhotos);
   const [peerVotes, setPeerVotes] = useState<PeerVote[]>([]);
   const [supervisorScores, setSupervisorScores] = useState<SupervisorScore[]>([]);
   const [employeesOfTheMonth, setEmployeesOfTheMonth] = useState<EmployeeOfTheMonth[]>([]);
   const [hotelLogo, setHotelLogo] = useState<string | null>('/logo.png');
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+
+  const fetchActivityLogs = async () => {
+    try {
+      const res = await fetch('/api/activity-logs');
+      if (res.ok) {
+        const data = await res.json();
+        setActivityLogs(data);
+      }
+    } catch (error) {
+      console.error('Error fetching activity logs:', error);
+    }
+  };
 
   // Fetch data from database APIs on mount
   useEffect(() => {
@@ -73,7 +88,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (deptRes.ok) {
           const loadedDepartments = await deptRes.json();
           if (loadedDepartments.length > 0) {
-            setDepartments(loadedDepartments.map((d: any) => d.name));
+            setDepartments(loadedDepartments.map((d: any) => ({
+              id: d.id,
+              name: d.name,
+              managerId: d.manager_id,
+              parentId: d.parent_id,
+              areas: d.areas || []
+            })));
           }
         }
 
@@ -242,38 +263,83 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addDepartment = async (department: string) => {
-    if (!departments.includes(department)) {
-      try {
-        const response = await fetch('/api/departments', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: department }),
-        });
-        if (response.ok) {
-          setDepartments(prev => [...prev, department]);
-        }
-      } catch (error) {
-        console.error('Error adding department:', error);
+  const addDepartment = async (department: Omit<Department, 'id'>) => {
+    try {
+      const response = await fetch('/api/departments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: department.name,
+          managerId: department.managerId,
+          parentId: department.parentId,
+          areas: department.areas
+        }),
+      });
+      if (response.ok) {
+        const newDept = await response.json();
+        setDepartments(prev => [...prev, {
+          id: newDept.id,
+          name: newDept.name,
+          managerId: newDept.manager_id,
+          parentId: newDept.parent_id,
+          areas: newDept.areas || []
+        }]);
       }
+    } catch (error) {
+      console.error('Error adding department:', error);
     }
   };
 
-  const updateDepartment = async (oldName: string, newName: string) => {
-    // For a robust implementation, the UI would need the department ID. 
-    // Assuming UI passes ID here, but if it passes oldName we need a mapping.
-    // Simplifying for this demo by updating state optimistically. Real app would do a PUT /api/departments/:id
-    setDepartments(prev => prev.map(dept => (dept === oldName ? newName : dept)));
-    setUsers(prev => prev.map(user => user.department === oldName ? { ...user, department: newName } : user));
-    setTrainingModules(prev => prev.map(module => ({
-      ...module,
-      targetDepartments: module.targetDepartments.map(dept => dept === oldName ? newName : dept)
-    })));
+  const updateDepartment = async (id: string, department: Partial<Department>) => {
+    try {
+      const response = await fetch(`/api/departments/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: department.name,
+          managerId: department.managerId,
+          parentId: department.parentId,
+          areas: department.areas
+        }),
+      });
+      if (response.ok) {
+        const updatedDept = await response.json();
+        setDepartments(prev => prev.map(dept => (dept.id === id ? {
+          id: updatedDept.id,
+          name: updatedDept.name,
+          managerId: updatedDept.manager_id,
+          parentId: updatedDept.parent_id,
+          areas: updatedDept.areas || []
+        } : dept)));
+        
+        // If name changed, update users and modules (optimistic/simplified)
+        if (department.name) {
+          const oldDept = departments.find(d => d.id === id);
+          if (oldDept && oldDept.name !== department.name) {
+            setUsers(prev => prev.map(user => user.department === oldDept.name ? { ...user, department: department.name! } : user));
+            setTrainingModules(prev => prev.map(module => ({
+              ...module,
+              targetDepartments: module.targetDepartments.map(deptName => deptName === oldDept.name ? department.name! : deptName)
+            })));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating department:', error);
+    }
   };
 
-  const deleteDepartment = async (department: string) => {
-    // Similarly, requires department ID. 
-    setDepartments(prev => prev.filter(dept => dept !== department));
+  const deleteDepartment = async (id: string) => {
+    try {
+      const response = await fetch(`/api/departments/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setDepartments(prev => prev.filter(dept => dept.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting department:', error);
+    }
   };
 
   const addEventType = async (type: string) => {
@@ -319,7 +385,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       if (response.ok) {
         const newEvent = await response.json();
-        setEvents(prev => [...prev, { ...newEvent, date: newEvent.date.split('T')[0] }]);
+        setEvents(prev => [...prev, { ...newEvent, date: newEvent.date.split('T')[0], coverImageUrl: newEvent.coverImageUrl || newEvent.cover_image_url }]);
       }
     } catch (error) {
       console.error('Error adding event:', error);
@@ -335,7 +401,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       if (response.ok) {
         const result = await response.json();
-        setEvents(prev => prev.map(event => (event.id === id ? { ...event, ...result, date: result.date.split('T')[0] } : event)));
+        setEvents(prev => prev.map(event => (event.id === id ? { ...event, ...result, date: result.date.split('T')[0], coverImageUrl: result.coverImageUrl || result.cover_image_url } : event)));
       }
     } catch (error) {
       console.error('Error updating event:', error);
@@ -576,6 +642,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setEmployeeOfTheMonth,
         hotelLogo,
         setHotelLogo: handleSetHotelLogo,
+        activityLogs,
+        fetchActivityLogs,
       }}
     >
       {children}

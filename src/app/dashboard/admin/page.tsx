@@ -12,23 +12,149 @@ import Papa from 'papaparse';
 
 function AdminDashboardContent() {
   const { user, isAdmin } = useAuth();
-  const { users, trainingModules, userTrainings, assignTraining, departments, addDepartment, updateDepartment, deleteDepartment, eventTypes, addEventType, deleteEventType, updateUser, addUser, events, addEvent, updateEvent, deleteEvent, deleteTrainingModule, updateTrainingModule, addTrainingModule, peerVotes, supervisorScores, setSupervisorScore, employeesOfTheMonth, setEmployeeOfTheMonth, hotelLogo, setHotelLogo } = useData();
+  const { users, trainingModules, userTrainings, assignTraining, departments, addDepartment, updateDepartment, deleteDepartment, eventTypes, addEventType, deleteEventType, updateUser, addUser, events, addEvent, updateEvent, deleteEvent, deleteTrainingModule, updateTrainingModule, addTrainingModule, peerVotes, supervisorScores, setSupervisorScore, employeesOfTheMonth, setEmployeeOfTheMonth, hotelLogo, setHotelLogo, activityLogs, fetchActivityLogs } = useData();
   const { t } = useLanguage();
   const { primaryColor, setPrimaryColor } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'Directory' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Settings'>('Directory');
+  const [activeTab, setActiveTab] = useState<'Directory' | 'Hierarchy' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Activity' | 'Settings'>('Directory');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
+
+  const [selectedHierarchyDept, setSelectedHierarchyDept] = useState<string | null>(null);
+
+  const renderHierarchyNode = (deptId: string) => {
+    const dept = departments.find(d => d.id === deptId);
+    if (!dept) return null;
+
+    const manager = users.find(u => u.id === dept.managerId);
+    const deptUsers = users.filter(u => u.department === dept.name && u.id !== dept.managerId);
+    const supervisors = deptUsers.filter(u => u.role === 'Supervisor');
+    const staffWithoutSupervisor = deptUsers.filter(u => u.role === 'Staff' && !u.supervisorId);
+    const childDepartments = departments.filter(d => d.parentId === dept.id);
+
+    return (
+      <div key={dept.id} className="flex flex-col items-center relative">
+        <div className="bg-slate-800 text-white px-6 py-2 rounded-t-lg font-semibold w-64 text-center shadow-md">
+          {dept.name}
+        </div>
+        
+        {/* Manager Node */}
+        <div className="bg-primary-50 border-2 border-primary-200 w-64 p-4 rounded-b-lg shadow-sm flex flex-col items-center relative z-10">
+          {manager ? (
+            <>
+              <div className="w-12 h-12 rounded-full bg-primary-200 flex items-center justify-center text-primary-700 font-bold text-lg mb-2 overflow-hidden">
+                {manager.avatarUrl ? <img src={manager.avatarUrl} alt={manager.name} className="w-full h-full object-cover" /> : manager.name.charAt(0)}
+              </div>
+              <div className="font-medium text-slate-900 text-center">{manager.name}</div>
+              <div className="text-xs text-primary-600 font-semibold mt-1">Supervisor</div>
+            </>
+          ) : (
+            <div className="text-slate-400 italic py-4">{t('noSupervisorAssigned')}</div>
+          )}
+        </div>
+
+        {/* Connection Line from Manager */}
+        {(supervisors.length > 0 || staffWithoutSupervisor.length > 0 || childDepartments.length > 0) && (
+          <div className="w-px h-8 bg-slate-300"></div>
+        )}
+
+        {/* Children Container (Supervisors, Direct Staff, Child Departments) */}
+        <div className="flex space-x-4 relative">
+          {/* Horizontal connecting line if multiple branches */}
+          {(supervisors.length + (staffWithoutSupervisor.length > 0 ? 1 : 0) + childDepartments.length) > 1 && (
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[calc(100%-16rem)] h-px bg-slate-300"></div>
+          )}
+
+          {/* Child Departments */}
+          {childDepartments.map(childDept => (
+            <div key={childDept.id} className="flex flex-col items-center relative pt-4">
+              <div className="absolute top-0 left-1/2 w-px h-4 bg-slate-300"></div>
+              {renderHierarchyNode(childDept.id)}
+            </div>
+          ))}
+
+          {/* Supervisors */}
+          {supervisors.map((supervisor, idx) => {
+            const directReports = deptUsers.filter(u => u.supervisorId === supervisor.id);
+            return (
+              <div key={supervisor.id} className="flex flex-col items-center relative pt-4">
+                <div className="absolute top-0 left-1/2 w-px h-4 bg-slate-300"></div>
+                <div className="bg-white border border-slate-200 w-48 p-3 rounded-lg shadow-sm flex flex-col items-center z-10">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold mb-2 overflow-hidden">
+                    {supervisor.avatarUrl ? <img src={supervisor.avatarUrl} alt={supervisor.name} className="w-full h-full object-cover" /> : supervisor.name.charAt(0)}
+                  </div>
+                  <div className="font-medium text-slate-800 text-sm text-center">{supervisor.name}</div>
+                  <div className="text-xs text-slate-500 mt-1">Supervisor</div>
+                  {supervisor.area && <div className="text-[10px] bg-slate-100 px-2 py-0.5 rounded mt-1 text-slate-600">{supervisor.area}</div>}
+                </div>
+
+                {/* Direct Reports to Supervisor */}
+                {directReports.length > 0 && (
+                  <>
+                    <div className="w-px h-6 bg-slate-300"></div>
+                    <div className="flex flex-col space-y-2 relative">
+                      {directReports.map(staff => (
+                        <div key={staff.id} className="bg-slate-50 border border-slate-100 w-40 p-2 rounded shadow-sm flex items-center space-x-2 relative ml-4">
+                          <div className="absolute -left-4 top-1/2 w-4 h-px bg-slate-300"></div>
+                          <div className="absolute -left-4 top-0 bottom-1/2 w-px bg-slate-300"></div>
+                          <div className="w-6 h-6 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center text-slate-500 text-xs overflow-hidden">
+                            {staff.avatarUrl ? <img src={staff.avatarUrl} alt={staff.name} className="w-full h-full object-cover" /> : staff.name.charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-medium text-slate-700 truncate">{staff.name}</div>
+                            {staff.area && <div className="text-[9px] text-slate-400 truncate">{staff.area}</div>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Staff reporting directly to Manager */}
+          {staffWithoutSupervisor.length > 0 && (
+            <div className="flex flex-col items-center relative pt-4">
+              <div className="absolute top-0 left-1/2 w-px h-4 bg-slate-300"></div>
+              <div className="bg-slate-50 border border-slate-200 w-48 p-3 rounded-lg shadow-sm flex flex-col items-center z-10">
+                <div className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">Direct Reports</div>
+                <div className="flex flex-col space-y-2 w-full">
+                  {staffWithoutSupervisor.map(staff => (
+                    <div key={staff.id} className="bg-white border border-slate-100 p-2 rounded shadow-sm flex items-center space-x-2">
+                      <div className="w-6 h-6 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center text-slate-500 text-xs overflow-hidden">
+                        {staff.avatarUrl ? <img src={staff.avatarUrl} alt={staff.name} className="w-full h-full object-cover" /> : staff.name.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium text-slate-700 truncate">{staff.name}</div>
+                        {staff.area && <div className="text-[9px] text-slate-400 truncate">{staff.area}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // Read tab from URL on mount and when searchParams change
   useEffect(() => {
     const tab = searchParams.get('tab');
-    const validTabs = ['Directory', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Settings'];
+    const validTabs = ['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Activity', 'Settings'];
     if (tab && validTabs.includes(tab)) {
       setActiveTab(tab as any);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (activeTab === 'Activity') {
+      fetchActivityLogs();
+    }
+  }, [activeTab]);
 
   // Edit/Add User State
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -43,7 +169,8 @@ function AdminDashboardContent() {
 
   // Department State
   const [newDeptName, setNewDeptName] = useState('');
-  const [editingDept, setEditingDept] = useState<{ oldName: string, newName: string } | null>(null);
+  const [newDeptParentId, setNewDeptParentId] = useState<string | null>(null);
+  const [editingDept, setEditingDept] = useState<{ id: string, newName: string, managerId: string | null, parentId: string | null, areas: string } | null>(null);
 
   // Event Types State
   const [newEventTypeName, setNewEventTypeName] = useState('');
@@ -85,7 +212,7 @@ function AdminDashboardContent() {
     setEditingUser(null);
     setEditUserForm({
       role: 'Staff',
-      department: departments[0] || '',
+      department: departments[0]?.name || '',
       birthday: '',
       hireDate: new Date().toISOString().split('T')[0],
     });
@@ -123,8 +250,9 @@ function AdminDashboardContent() {
 
   const handleAddDepartment = () => {
     if (newDeptName.trim()) {
-      addDepartment(newDeptName.trim());
+      addDepartment({ name: newDeptName.trim(), managerId: null, parentId: newDeptParentId, areas: [] });
       setNewDeptName('');
+      setNewDeptParentId(null);
     }
   };
 
@@ -137,7 +265,13 @@ function AdminDashboardContent() {
 
   const handleSaveDepartment = () => {
     if (editingDept && editingDept.newName.trim()) {
-      updateDepartment(editingDept.oldName, editingDept.newName.trim());
+      const areasArray = editingDept.areas.split(',').map(a => a.trim()).filter(a => a !== '');
+      updateDepartment(editingDept.id, { 
+        name: editingDept.newName.trim(),
+        managerId: editingDept.managerId,
+        parentId: editingDept.parentId,
+        areas: areasArray
+      });
       setEditingDept(null);
     }
   };
@@ -390,23 +524,25 @@ function AdminDashboardContent() {
           <h1 className="text-3xl font-bold text-slate-900">{t('hrCommandCenter')}</h1>
           <p className="text-slate-500 mt-2">{t('manageStaff')}</p>
         </div>
-        <div className="flex space-x-2">
-          {['Directory', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Settings'].map(tab => (
+        <div className="flex space-x-2 overflow-x-auto pb-2">
+          {['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Activity', 'Settings'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${activeTab === tab
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${activeTab === tab
                 ? 'bg-primary-600 text-white'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                 }`}
             >
               {tab === 'Directory' ? t('staffDirectory') :
+                tab === 'Hierarchy' ? t('hierarchy') :
                 tab === 'Training' ? t('complianceOverview') :
                   tab === 'Departments' ? t('manageDepartments') :
                     tab === 'Events' ? t('cultureHubEvents') :
                       tab === 'Modules' ? t('learningModules') :
                         tab === 'Recognition' ? 'Recognition' :
-                          'Settings'}
+                          tab === 'Activity' ? t('activityLog') :
+                            'Settings'}
             </button>
           ))}
         </div>
@@ -703,6 +839,7 @@ function AdminDashboardContent() {
                 >
                   <option value="Staff">Staff</option>
                   <option value="Supervisor">Supervisor</option>
+                  <option value="Manager">Manager</option>
                   <option value="HR Admin">HR Admin</option>
                 </select>
               </div>
@@ -711,15 +848,32 @@ function AdminDashboardContent() {
                 <select
                   required
                   value={editUserForm.department || ''}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, department: e.target.value })}
+                  onChange={(e) => {
+                    setEditUserForm({ ...editUserForm, department: e.target.value, area: '' });
+                  }}
                   className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="" disabled>Select Department</option>
                   {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
+                    <option key={dept.id} value={dept.name}>{dept.name}</option>
                   ))}
                 </select>
               </div>
+              {editUserForm.department && departments.find(d => d.name === editUserForm.department)?.areas && departments.find(d => d.name === editUserForm.department)!.areas!.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Area</label>
+                  <select
+                    value={editUserForm.area || ''}
+                    onChange={(e) => setEditUserForm({ ...editUserForm, area: e.target.value })}
+                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="">Select Area (Optional)</option>
+                    {departments.find(d => d.name === editUserForm.department)?.areas?.map(area => (
+                      <option key={area} value={area}>{area}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Birthday *</label>
                 <input
@@ -804,6 +958,35 @@ function AdminDashboardContent() {
               >
                 {editingUser ? 'Save Changes' : 'Add Employee'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Hierarchy' && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-slate-800">{t('hierarchy')}</h2>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-slate-700">{t('viewDepartment')}</label>
+              <select
+                value={selectedHierarchyDept || ''}
+                onChange={(e) => setSelectedHierarchyDept(e.target.value || null)}
+                className="border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="">{t('entireOrganization')}</option>
+                {departments.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="overflow-x-auto pb-8">
+            <div className="flex space-x-8 min-w-max justify-center">
+              {selectedHierarchyDept 
+                ? renderHierarchyNode(selectedHierarchyDept)
+                : departments.filter(d => !d.parentId).map(dept => renderHierarchyNode(dept.id))
+              }
             </div>
           </div>
         </div>
@@ -906,6 +1089,16 @@ function AdminDashboardContent() {
                 placeholder={t('newDepartmentName')}
                 className="border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
               />
+              <select
+                value={newDeptParentId || ''}
+                onChange={(e) => setNewDeptParentId(e.target.value || null)}
+                className="border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="">No Parent (Top Level)</option>
+                {departments.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
               <button
                 onClick={handleAddDepartment}
                 disabled={!newDeptName.trim()}
@@ -920,28 +1113,86 @@ function AdminDashboardContent() {
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                   <th className="p-4 font-semibold">{t('departmentName')}</th>
+                  <th className="p-4 font-semibold">{t('parentDept')}</th>
+                  <th className="p-4 font-semibold">{t('manager')}</th>
+                  <th className="p-4 font-semibold">{t('areas')}</th>
                   <th className="p-4 font-semibold">{t('employees')}</th>
                   <th className="p-4 font-semibold text-right">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {departments.map(dept => {
-                  const employeeCount = users.filter(u => u.department === dept).length;
-                  const isEditing = editingDept?.oldName === dept;
+                  const employeeCount = users.filter(u => u.department === dept.name).length;
+                  const isEditing = editingDept?.id === dept.id;
 
                   return (
-                    <tr key={dept} className="hover:bg-slate-50 transition-colors">
+                    <tr key={dept.id} className="hover:bg-slate-50 transition-colors">
                       <td className="p-4">
                         {isEditing ? (
                           <input
                             type="text"
                             value={editingDept.newName}
                             onChange={(e) => setEditingDept({ ...editingDept, newName: e.target.value })}
-                            className="border border-slate-300 rounded-md shadow-sm p-1 text-sm focus:ring-primary-500 focus:border-primary-500"
+                            className="border border-slate-300 rounded-md shadow-sm p-1 text-sm focus:ring-primary-500 focus:border-primary-500 w-full"
                             autoFocus
                           />
                         ) : (
-                          <span className="text-sm font-medium text-slate-900">{dept}</span>
+                          <span className="text-sm font-medium text-slate-900">{dept.name}</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        {isEditing ? (
+                          <select
+                            value={editingDept.parentId || ''}
+                            onChange={(e) => setEditingDept({ ...editingDept, parentId: e.target.value || null })}
+                            className="border border-slate-300 rounded-md shadow-sm p-1 text-sm focus:ring-primary-500 focus:border-primary-500 w-full"
+                          >
+                            <option value="">None (Top Level)</option>
+                            {departments.filter(d => d.id !== dept.id).map(d => (
+                              <option key={d.id} value={d.id}>{d.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-sm text-slate-600">
+                            {dept.parentId ? (departments.find(d => d.id === dept.parentId)?.name || 'None') : 'None'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        {isEditing ? (
+                          <select
+                            value={editingDept.managerId || ''}
+                            onChange={(e) => setEditingDept({ ...editingDept, managerId: e.target.value || null })}
+                            className="border border-slate-300 rounded-md shadow-sm p-1 text-sm focus:ring-primary-500 focus:border-primary-500 w-full"
+                          >
+                            <option value="">{t('noManager')}</option>
+                            {users.filter(u => u.department === dept.name).map(u => (
+                              <option key={u.id} value={u.id}>{u.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-sm text-slate-600">
+                            {dept.managerId ? users.find(u => u.id === dept.managerId)?.name || 'Unknown' : '-'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editingDept.areas}
+                            onChange={(e) => setEditingDept({ ...editingDept, areas: e.target.value })}
+                            placeholder="Comma separated areas"
+                            className="border border-slate-300 rounded-md shadow-sm p-1 text-sm focus:ring-primary-500 focus:border-primary-500 w-full"
+                          />
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {dept.areas?.map(area => (
+                              <span key={area} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded border border-slate-200">
+                                {area}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </td>
                       <td className="p-4 text-sm text-slate-600">{employeeCount}</td>
@@ -964,15 +1215,15 @@ function AdminDashboardContent() {
                         ) : (
                           <>
                             <button
-                              onClick={() => setEditingDept({ oldName: dept, newName: dept })}
+                              onClick={() => setEditingDept({ id: dept.id, newName: dept.name, managerId: dept.managerId || null, parentId: dept.parentId || null, areas: dept.areas?.join(', ') || '' })}
                               className="text-primary-600 hover:text-primary-900 text-sm font-medium"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => {
-                                if (window.confirm(`Are you sure you want to delete the ${dept} department?`)) {
-                                  deleteDepartment(dept);
+                                if (window.confirm(`Are you sure you want to delete the ${dept.name} department?`)) {
+                                  deleteDepartment(dept.id);
                                 }
                               }}
                               className="text-red-600 hover:text-red-900 text-sm font-medium"
@@ -1422,6 +1673,73 @@ function AdminDashboardContent() {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Activity Log Tab */}
+      {activeTab === 'Activity' && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-800">{t('activityLog')}</h2>
+              <p className="text-sm text-slate-500 mt-1">View a history of all changes made in the portal.</p>
+            </div>
+            <button
+              onClick={() => fetchActivityLogs()}
+              className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-200 transition-colors"
+            >
+              Refresh
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                  <th className="p-4 font-semibold">Date & Time</th>
+                  <th className="p-4 font-semibold">User</th>
+                  <th className="p-4 font-semibold">Action</th>
+                  <th className="p-4 font-semibold">Entity Type</th>
+                  <th className="p-4 font-semibold">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {activityLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-slate-500">
+                      No activity logs found.
+                    </td>
+                  </tr>
+                ) : (
+                  activityLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-4 text-sm text-slate-600 whitespace-nowrap">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </td>
+                      <td className="p-4 text-sm font-medium text-slate-900">
+                        {log.userName || 'System / Unknown'}
+                      </td>
+                      <td className="p-4">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          log.action === 'CREATE' ? 'bg-emerald-100 text-emerald-800' :
+                          log.action === 'UPDATE' ? 'bg-blue-100 text-blue-800' :
+                          log.action === 'DELETE' ? 'bg-rose-100 text-rose-800' :
+                          'bg-slate-100 text-slate-800'
+                        }`}>
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="p-4 text-sm text-slate-600">
+                        {log.entityType}
+                      </td>
+                      <td className="p-4 text-sm text-slate-500 max-w-xs truncate" title={JSON.stringify(log.details)}>
+                        {log.details ? JSON.stringify(log.details) : '-'}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

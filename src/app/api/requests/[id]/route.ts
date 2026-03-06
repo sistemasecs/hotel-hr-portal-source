@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
     try {
@@ -36,7 +37,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             return NextResponse.json({ error: 'Request not found' }, { status: 404 });
         }
 
-        return NextResponse.json(result.rows[0]);
+        const updatedRequest = result.rows[0];
+        await logActivity(null, 'UPDATE', 'REQUEST', updatedRequest.id, { status: updatedRequest.status });
+
+        return NextResponse.json(updatedRequest);
     } catch (error) {
         console.error('Error updating request:', error);
         return NextResponse.json({ error: 'Failed to update request' }, { status: 500 });

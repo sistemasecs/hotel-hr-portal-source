@@ -118,6 +118,16 @@ async function initDb() {
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         expires_at TIMESTAMP WITH TIME ZONE NOT NULL
       );
+
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        action VARCHAR(50) NOT NULL,
+        entity_type VARCHAR(50) NOT NULL,
+        entity_id VARCHAR(255),
+        details JSONB,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
     `);
     console.log('Database initialized successfully');
   } catch (error) {

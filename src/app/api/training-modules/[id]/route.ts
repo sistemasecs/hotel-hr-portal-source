@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
     const client = await pool.connect();
@@ -34,7 +35,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
         await client.query('COMMIT');
 
-        return NextResponse.json({
+        const updatedModule = {
             id: result.rows[0].id,
             title: result.rows[0].title,
             description: result.rows[0].description,
@@ -44,7 +45,11 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
             required: result.rows[0].required,
             contentUrl: result.rows[0].content_url,
             passingScore: result.rows[0].passing_score,
-        });
+        };
+
+        await logActivity(null, 'UPDATE', 'TRAINING_MODULE', updatedModule.id, { title: updatedModule.title });
+
+        return NextResponse.json(updatedModule);
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Error updating training module:', error);
@@ -63,6 +68,8 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
         if (result.rowCount === 0) {
             return NextResponse.json({ error: 'Training module not found' }, { status: 404 });
         }
+
+        await logActivity(null, 'DELETE', 'TRAINING_MODULE', id);
 
         return NextResponse.json({ success: true, id: result.rows[0].id });
     } catch (error) {

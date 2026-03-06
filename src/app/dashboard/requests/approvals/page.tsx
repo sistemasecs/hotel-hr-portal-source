@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { EmployeeRequest } from '@/types';
 
 export default function ApprovalsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [requests, setRequests] = useState<EmployeeRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<EmployeeRequest | null>(null);
@@ -13,7 +15,7 @@ export default function ApprovalsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    if (user && (user.role === 'HR Admin' || user.role === 'Supervisor')) {
+    if (user && (user.role === 'HR Admin' || user.role === 'Supervisor' || user.role === 'Manager')) {
       fetchRequests();
     }
   }, [user]);
@@ -59,28 +61,28 @@ export default function ApprovalsPage() {
     }
   };
 
-  if (!user || (user.role !== 'HR Admin' && user.role !== 'Supervisor')) {
-    return <div className="p-8 text-center text-red-600">Access Denied. You must be an HR Admin or Supervisor to view this page.</div>;
+  if (!user || (user.role !== 'HR Admin' && user.role !== 'Supervisor' && user.role !== 'Manager')) {
+    return <div className="p-8 text-center text-red-600">Access Denied. You must be an HR Admin, Manager, or Supervisor to view this page.</div>;
   }
 
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Pending Approvals</h1>
-        <p className="text-slate-600 mt-2">Review and manage employee requests.</p>
+        <h1 className="text-3xl font-bold text-slate-900">{t('pendingApprovals')}</h1>
+        <p className="text-slate-600 mt-2">{t('reviewRequests')}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* List of Requests */}
         <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-200px)]">
           <div className="p-4 border-b border-slate-100 bg-slate-50">
-            <h2 className="font-semibold text-slate-800">Pending Requests ({requests.length})</h2>
+            <h2 className="font-semibold text-slate-800">{t('pendingRequests')} ({requests.length})</h2>
           </div>
           <div className="overflow-y-auto flex-grow">
             {isLoading ? (
-              <div className="p-8 text-center text-slate-500">Loading...</div>
+              <div className="p-8 text-center text-slate-500">{t('loading')}</div>
             ) : requests.length === 0 ? (
-              <div className="p-8 text-center text-slate-500">No pending requests.</div>
+              <div className="p-8 text-center text-slate-500">{t('noRequestsYet')}</div>
             ) : (
               <ul className="divide-y divide-slate-100">
                 {requests.map(req => (
@@ -121,7 +123,7 @@ export default function ApprovalsPage() {
               </div>
 
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4">Request Details</h3>
+                <h3 className="text-lg font-semibold text-slate-800 mb-4">{t('requestDetails')}</h3>
                 <div className="bg-slate-50 rounded-lg p-6 border border-slate-100">
                   <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-6">
                     {Object.entries(selectedRequest.data).map(([key, value]) => (
@@ -135,7 +137,7 @@ export default function ApprovalsPage() {
               </div>
 
               <div className="mb-8">
-                <label className="block text-sm font-medium text-slate-700 mb-2">HR / Supervisor Notes (Optional)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">{t('hrNotesOptional')}</label>
                 <textarea
                   rows={3}
                   value={hrNotes}
@@ -151,14 +153,14 @@ export default function ApprovalsPage() {
                   disabled={isUpdating}
                   className="px-6 py-2 bg-white border border-red-300 text-red-700 font-medium rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
                 >
-                  Reject Request
+                  {t('rejectRequest')}
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('Approved')}
                   disabled={isUpdating}
                   className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                 >
-                  Approve Request
+                  {t('approveRequest')}
                 </button>
               </div>
             </div>
@@ -167,8 +169,8 @@ export default function ApprovalsPage() {
               <svg className="w-16 h-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
-              <h3 className="text-xl font-medium text-slate-900 mb-2">Select a Request</h3>
-              <p className="text-slate-500">Choose a request from the list to review its details and take action.</p>
+              <h3 className="text-xl font-medium text-slate-900 mb-2">{t('selectRequest')}</h3>
+              <p className="text-slate-500">{t('selectRequestDesc')}</p>
             </div>
           )}
         </div>

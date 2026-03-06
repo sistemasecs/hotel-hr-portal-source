@@ -53,6 +53,16 @@ export default function DashboardPage() {
       desc: t('manageEmployeeProfiles') 
     },
     { 
+      name: t('hierarchy'), 
+      tab: 'Hierarchy', 
+      icon: (
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+      ), 
+      desc: t('viewOrganizationChart') 
+    },
+    { 
       name: t('complianceOverview'), 
       tab: 'Training', 
       icon: (
@@ -117,7 +127,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center space-x-6 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+      <header className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 bg-white p-6 rounded-xl shadow-sm border border-slate-100 text-center sm:text-left">
         {currentUser.avatarUrl ? (
           <img 
             src={currentUser.avatarUrl} 
@@ -125,12 +135,12 @@ export default function DashboardPage() {
             className={`w-20 h-20 rounded-full border-4 border-white shadow-sm ${currentUser.avatarFit === 'contain' ? 'object-contain bg-slate-100' : 'object-cover'}`}
           />
         ) : (
-          <div className="w-20 h-20 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-3xl font-bold border-4 border-white shadow-sm">
+          <div className="w-20 h-20 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-3xl font-bold border-4 border-white shadow-sm mx-auto sm:mx-0">
             {currentUser.name.charAt(0)}
           </div>
         )}
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">{t('welcomeBack')}, {currentUser.name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t('welcomeBack')}, {currentUser.name}</h1>
           <p className="text-slate-500 mt-1 font-medium">{currentUser.role} • {currentUser.department}</p>
           <p className="text-slate-400 text-sm mt-1">{t('heresWhatsHappening')}</p>
         </div>
@@ -138,11 +148,11 @@ export default function DashboardPage() {
 
       {/* Employee of the Month Banner */}
       {currentEotmUser && (
-        <div className="bg-gradient-to-r from-primary-600 to-primary-800 rounded-xl shadow-lg p-6 text-white flex items-center justify-between overflow-hidden relative">
+        <div className="bg-gradient-to-r from-primary-600 to-primary-800 rounded-xl shadow-lg p-6 text-white flex flex-col sm:flex-row items-center justify-between overflow-hidden relative gap-6 text-center sm:text-left">
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
           <div className="absolute right-20 -bottom-10 w-32 h-32 bg-primary-400 opacity-20 rounded-full blur-xl"></div>
           
-          <div className="relative z-10 flex items-center space-x-6">
+          <div className="relative z-10 flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
             {currentEotmUser.avatarUrl ? (
               <img 
                 src={currentEotmUser.avatarUrl} 
@@ -150,12 +160,12 @@ export default function DashboardPage() {
                 className={`w-20 h-20 rounded-full shadow-inner border-4 border-primary-300 ${currentEotmUser.avatarFit === 'contain' ? 'object-contain bg-white' : 'object-cover'}`}
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-white text-primary-600 flex items-center justify-center text-3xl font-bold shadow-inner border-4 border-primary-300">
+              <div className="w-20 h-20 rounded-full bg-white text-primary-600 flex items-center justify-center text-3xl font-bold shadow-inner border-4 border-primary-300 mx-auto sm:mx-0">
                 {currentEotmUser.name.charAt(0)}
               </div>
             )}
             <div>
-              <div className="flex items-center space-x-2 mb-1">
+              <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 mb-1">
                 <span className="bg-amber-400 text-amber-900 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                   Employee of the Month
                 </span>
@@ -194,21 +204,21 @@ export default function DashboardPage() {
             </div>
             <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
               <div>
-                <p className="text-sm font-medium text-blue-600">My Requests</p>
-                <p className="text-xs text-blue-500 mt-1">Submit and track HR requests</p>
+                <p className="text-sm font-medium text-blue-600">{t('myRequests')}</p>
+                <p className="text-xs text-blue-500 mt-1">{t('trackRequests')}</p>
               </div>
               <Link href="/dashboard/requests" className="text-sm font-medium text-blue-600 hover:text-blue-800">
-                View &rarr;
+                {t('viewAll')} &rarr;
               </Link>
             </div>
-            {(currentUser.role === 'HR Admin' || currentUser.role === 'Supervisor') && (
+            {(currentUser.role === 'HR Admin' || currentUser.role === 'Supervisor' || currentUser.role === 'Manager') && (
               <div className="flex justify-between items-center p-4 bg-amber-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-amber-600">Pending Approvals</p>
-                  <p className="text-xs text-amber-500 mt-1">Review employee requests</p>
+                  <p className="text-sm font-medium text-amber-600">{t('pendingApprovals')}</p>
+                  <p className="text-xs text-amber-500 mt-1">{t('reviewRequests')}</p>
                 </div>
                 <Link href="/dashboard/requests/approvals" className="text-sm font-medium text-amber-600 hover:text-amber-800">
-                  Review &rarr;
+                  {t('viewAll')} &rarr;
                 </Link>
               </div>
             )}
@@ -261,9 +271,9 @@ export default function DashboardPage() {
               <Link 
                 key={link.tab} 
                 href={`/dashboard/admin?tab=${link.tab}`}
-                className="flex items-start p-4 rounded-lg border border-slate-200 hover:border-primary-300 hover:bg-primary-50 transition-all group"
+                className="flex flex-col sm:flex-row items-center sm:items-start p-4 rounded-lg border border-slate-200 hover:border-primary-300 hover:bg-primary-50 transition-all group text-center sm:text-left"
               >
-                <div className="p-2 bg-primary-600 rounded-lg mr-3 group-hover:scale-110 transition-transform shadow-sm">
+                <div className="p-2 bg-primary-600 rounded-lg mb-3 sm:mb-0 sm:mr-3 group-hover:scale-110 transition-transform shadow-sm">
                   {link.icon}
                 </div>
                 <div>

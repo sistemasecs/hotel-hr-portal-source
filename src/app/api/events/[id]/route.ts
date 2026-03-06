@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
     try {
@@ -35,10 +36,14 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         }
 
         const row = result.rows[0];
-        return NextResponse.json({
+        const updatedEvent = {
             ...row,
             coverImageUrl: row.cover_image_url
-        });
+        };
+
+        await logActivity(null, 'UPDATE', 'EVENT', updatedEvent.id, { updatedFields: Object.keys(updates) });
+
+        return NextResponse.json(updatedEvent);
     } catch (error) {
         console.error('Error updating event:', error);
         return NextResponse.json({ error: 'Failed to update event' }, { status: 500 });
@@ -53,6 +58,8 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
         if (result.rowCount === 0) {
             return NextResponse.json({ error: 'Event not found' }, { status: 404 });
         }
+
+        await logActivity(null, 'DELETE', 'EVENT', id);
 
         return NextResponse.json({ success: true, id: result.rows[0].id });
     } catch (error) {

@@ -1,22 +1,29 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await context.params;
-        const { name } = await request.json();
+        const { name, managerId, parentId, areas } = await request.json();
 
         if (!name) {
             return NextResponse.json({ error: 'Name is required' }, { status: 400 });
         }
 
-        const result = await pool.query('UPDATE departments SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
+        const result = await pool.query(
+            'UPDATE departments SET name = $1, manager_id = $2, parent_id = $3, areas = $4 WHERE id = $5 RETURNING *', 
+            [name, managerId || null, parentId || null, areas || [], id]
+        );
 
         if (result.rowCount === 0) {
             return NextResponse.json({ error: 'Department not found' }, { status: 404 });
         }
 
-        return NextResponse.json(result.rows[0]);
+        const updatedDept = result.rows[0];
+        await logActivity(null, 'UPDATE', 'DEPARTMENT', updatedDept.id, { name: updatedDept.name });
+
+        return NextResponse.json(updatedDept);
     } catch (error) {
         console.error('Error updating department:', error);
         // @ts-ignore
@@ -35,6 +42,8 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
         if (result.rowCount === 0) {
             return NextResponse.json({ error: 'Department not found' }, { status: 404 });
         }
+
+        await logActivity(null, 'DELETE', 'DEPARTMENT', id);
 
         return NextResponse.json({ success: true, id: result.rows[0].id });
     } catch (error) {

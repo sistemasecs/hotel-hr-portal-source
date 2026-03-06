@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function GET() {
     try {
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
 
         await client.query('COMMIT');
 
-        return NextResponse.json({
+        const newModule = {
             id: newModuleId,
             title: moduleResult.rows[0].title,
             description: moduleResult.rows[0].description,
@@ -110,7 +111,11 @@ export async function POST(request: Request) {
             contentUrl: moduleResult.rows[0].content_url,
             passingScore: moduleResult.rows[0].passing_score,
             questions: questionsResult.length > 0 ? questionsResult : undefined
-        });
+        };
+
+        await logActivity(null, 'CREATE', 'TRAINING_MODULE', newModule.id, { title: newModule.title, type: newModule.type });
+
+        return NextResponse.json(newModule);
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Error creating training module:', error);

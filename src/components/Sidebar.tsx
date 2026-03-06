@@ -65,20 +65,56 @@ export default function Sidebar() {
         </svg>
       )
     },
+    { 
+      name: t('requests'), 
+      href: '/dashboard/requests',
+      icon: (
+        <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+      )
+    },
   ];
 
   const adminSubLinks = [
     { name: t('staffDirectory'), tab: 'Directory' },
+    { name: t('hierarchy'), tab: 'Hierarchy' },
     { name: t('complianceOverview'), tab: 'Training' },
     { name: t('manageDepartments'), tab: 'Departments' },
     { name: t('cultureHubEvents'), tab: 'Events' },
     { name: t('learningModules'), tab: 'Modules' },
     { name: t('recognition'), tab: 'Recognition' },
+    { name: t('activityLog'), tab: 'Activity' },
     { name: t('settings'), tab: 'Settings' },
   ];
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
-    <div className="w-64 bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0">
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-slate-900 text-white rounded-md shadow-md"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {isMobileMenuOpen ? (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          ) : (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          )}
+        </svg>
+      </button>
+
+      {/* Overlay for mobile */}
+      {isMobileMenuOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      <div className={`w-64 bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0 z-40 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
       <div className="p-6 border-b border-slate-800">
         <h1 className="text-xl font-bold tracking-tight">El Carmen Hotel</h1>
         <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">{t('employeePortal')}</p>
@@ -190,5 +226,6 @@ export default function Sidebar() {
         </button>
       </div>
     </div>
+    </>
   );
 }
