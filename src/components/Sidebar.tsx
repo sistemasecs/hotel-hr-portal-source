@@ -90,12 +90,16 @@ export default function Sidebar() {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const handleLinkClick = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <>
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-slate-900 text-white rounded-md shadow-md"
+        className="md:hidden fixed top-4 right-4 z-50 p-2 bg-slate-900 text-white rounded-md shadow-md"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {isMobileMenuOpen ? (
@@ -122,6 +126,7 @@ export default function Sidebar() {
       
       <Link 
         href="/dashboard/profile"
+        onClick={handleLinkClick}
         className="block p-6 border-b border-slate-800 hover:bg-slate-800 transition-colors group"
       >
         <div className="flex items-center space-x-3">
@@ -150,6 +155,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={handleLinkClick}
               className={`flex items-center px-4 py-3 rounded-md text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-primary-600 text-white'
@@ -201,6 +207,7 @@ export default function Sidebar() {
                     <Link
                       key={link.tab}
                       href={`/dashboard/admin?tab=${link.tab}`}
+                      onClick={handleLinkClick}
                       className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                         isActive
                           ? 'bg-primary-600/20 text-primary-400'
