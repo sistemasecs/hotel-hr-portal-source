@@ -351,6 +351,8 @@ export const translations = {
     failedToUpdateAgreement: 'Failed to update agreement status.',
     errorUpdatingAgreement: 'An error occurred.',
     cannotApproveUntilAgreed: 'Cannot approve until colleague agrees',
+    awardEotm: 'Award EOTM',
+    awarded: 'Awarded',
 
     // Form Placeholders & Options
     optionalDetails: 'Optional details...',
@@ -744,6 +746,8 @@ export const translations = {
     failedToUpdateAgreement: 'Error al actualizar el estado del acuerdo.',
     errorUpdatingAgreement: 'Ocurrió un error.',
     cannotApproveUntilAgreed: 'No se puede aprobar hasta que el colega acepte',
+    awardEotm: 'Otorgar EDM',
+    awarded: 'Otorgado',
 
     // Form Placeholders & Options
     optionalDetails: 'Detalles opcionales...',

@@ -1668,7 +1668,7 @@ function AdminDashboardContent() {
                           : 'bg-primary-600 text-white hover:bg-primary-700'
                           }`}
                       >
-                        {currentEotm?.userId === entry.user.id ? 'Awarded' : 'Award EOTM'}
+                        {currentEotm?.userId === entry.user.id ? t('awarded') : t('awardEotm')}
                       </button>
                     </td>
                   </tr>
