@@ -223,7 +223,7 @@ function AdminDashboardContent() {
     if (editingUser) {
       updateUser(editingUser.id, editUserForm);
     } else {
-      if (editUserForm.name && editUserForm.email && editUserForm.password && editUserForm.role && editUserForm.department && editUserForm.birthday && editUserForm.hireDate) {
+      if (editUserForm.name && editUserForm.email && editUserForm.role && editUserForm.department && editUserForm.birthday && editUserForm.hireDate) {
         addUser(editUserForm as Omit<User, 'id'>);
       } else {
         alert('Please fill in all required fields.');
@@ -399,12 +399,12 @@ function AdminDashboardContent() {
   const currentEotm = employeesOfTheMonth.find(e => e.month === currentMonthStr);
 
   const handleAwardEotm = (userId: string) => {
-    if (window.confirm('Are you sure you want to award Employee of the Month to this user?')) {
+    if (window.confirm('¿Estás seguro de que quieres otorgar el premio de EDM a este usuario?')) {
       setEmployeeOfTheMonth({
         userId,
         month: currentMonthStr
       });
-      alert('Employee of the Month awarded successfully!');
+      alert('¡Premio de EDM otorgado con éxito!');
     }
   };
 
@@ -446,7 +446,7 @@ function AdminDashboardContent() {
           const invalid: any[] = [];
 
           newUsers.forEach(userData => {
-            if (userData.name && userData.email && userData.password && userData.role && userData.department && userData.birthday && userData.hireDate) {
+            if (userData.name && userData.email && userData.role && userData.department && userData.birthday && userData.hireDate) {
               valid.push(userData);
             } else {
               invalid.push(userData);
@@ -1578,26 +1578,26 @@ function AdminDashboardContent() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-semibold text-slate-800">Employee of the Month Leaderboard</h2>
+              <h2 className="text-xl font-semibold text-slate-800">Tablero de EDM</h2>
               <p className="text-sm text-slate-500 mt-1">
-                Points: Trainings (10pts) + Peer Votes (5pts) + Supervisor Score (1-100pts)
+                Puntos: Entrenamientos (10pts) + Votos de Compañeros (5pts) + Puntos del Supervisor (1-100pts)
               </p>
             </div>
             <div className="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1.5 rounded-md">
-              Current Month: {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
+              Mes Actual: {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                  <th className="p-4 font-semibold">Rank</th>
+                  <th className="p-4 font-semibold">Posición</th>
                   <th className="p-4 font-semibold">{t('employees')}</th>
-                  <th className="p-4 font-semibold text-center">Trainings (x10)</th>
-                  <th className="p-4 font-semibold text-center">Peer Votes (x5)</th>
-                  <th className="p-4 font-semibold text-center">Supervisor Score</th>
-                  <th className="p-4 font-semibold text-center">Total Points</th>
-                  <th className="p-4 font-semibold text-right">Action</th>
+                  <th className="p-4 font-semibold text-center">Entrenamientos (x10)</th>
+                  <th className="p-4 font-semibold text-center">Votos de Compañeros (x5)</th>
+                  <th className="p-4 font-semibold text-center">Puntos del Supervisor</th>
+                  <th className="p-4 font-semibold text-center">Puntaje Total</th>
+                  <th className="p-4 font-semibold text-right">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1624,7 +1624,7 @@ function AdminDashboardContent() {
                             {entry.user.name}
                             {currentEotm?.userId === entry.user.id && (
                               <span className="ml-2 text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-bold">
-                                WINNER
+                                GANADOR
                               </span>
                             )}
                           </p>
@@ -1652,7 +1652,7 @@ function AdminDashboardContent() {
                           onClick={() => handleSaveScore(entry.user.id)}
                           className="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-1 rounded transition-colors"
                         >
-                          Save
+                          Guardar
                         </button>
                       </div>
                     </td>

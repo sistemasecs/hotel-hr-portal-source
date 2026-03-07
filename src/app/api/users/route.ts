@@ -33,17 +33,22 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, password, role, department, area, supervisorId, birthday, hireDate, likes, dislikes, tShirtSize, allergies, currentUserId } = body;
+    const { name, email, password, role, department, area, supervisorId, avatarUrl, birthday, hireDate, likes, dislikes, tShirtSize, allergies, currentUserId } = body;
 
     // Hash the password before storing
     const salt = await bcrypt.genSalt(10);
-    const passwordHash = password ? await bcrypt.hash(password, salt) : null;
+    let passwordToHash = password;
+    if (!passwordToHash) {
+      const currentYear = new Date().getFullYear();
+      passwordToHash = `Carmen#${currentYear}`;
+    }
+    const passwordHash = await bcrypt.hash(passwordToHash, salt);
 
     const result = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role, department, area, supervisor_id, birthday, hire_date, likes, dislikes, t_shirt_size, allergies)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      `INSERT INTO users (name, email, password_hash, role, department, area, supervisor_id, avatar_url, birthday, hire_date, likes, dislikes, t_shirt_size, allergies)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
-      [name, email, passwordHash, role, department, area || null, supervisorId || null, birthday, hireDate, likes || [], dislikes || [], tShirtSize, allergies || []]
+      [name, email, passwordHash, role, department, area || null, supervisorId || null, avatarUrl || null, birthday, hireDate, likes || [], dislikes || [], tShirtSize, allergies || []]
     );
 
     const row = result.rows[0];

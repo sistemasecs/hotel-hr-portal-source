@@ -177,7 +177,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Employee of the Month Banner */}
+      {/* EDM Banner */}
       {currentEotmUser && (
         <div className="bg-gradient-to-r from-primary-600 to-primary-800 rounded-xl shadow-lg p-6 text-white flex flex-col sm:flex-row items-center justify-between overflow-hidden relative gap-6 text-center sm:text-left">
           <div className="absolute -right-10 -top-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
@@ -198,7 +198,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 mb-1">
                 <span className="bg-amber-400 text-amber-900 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Employee of the Month
+                  EDM
                 </span>
                 <span className="text-primary-200 text-sm font-medium">
                   {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
