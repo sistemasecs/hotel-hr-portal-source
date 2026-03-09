@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { User, Event, TrainingModule, UserTraining, CelebrationPhoto, PeerVote, SupervisorScore, EmployeeOfTheMonth, Department, ActivityLog } from '../types';
+import { User, Event, EventType, TrainingModule, UserTraining, CelebrationPhoto, PeerVote, SupervisorScore, EmployeeOfTheMonth, Department, ActivityLog } from '../types';
 import { mockEvents, mockTrainingModules, mockUserTrainings, mockCelebrationPhotos } from '../data/mockData';
 
 interface DataContextType {
@@ -10,7 +10,7 @@ interface DataContextType {
   trainingModules: TrainingModule[];
   userTrainings: UserTraining[];
   departments: Department[];
-  eventTypes: string[];
+  eventTypes: EventType[];
   assignTraining: (userId: string, moduleId: string) => void;
   updateTrainingStatus: (userId: string, moduleId: string, status: UserTraining['status']) => void;
   addTrainingModule: (module: Omit<TrainingModule, 'id'>) => void;
@@ -21,8 +21,9 @@ interface DataContextType {
   addDepartment: (department: Omit<Department, 'id'>) => void;
   updateDepartment: (id: string, department: Partial<Department>) => void;
   deleteDepartment: (id: string) => void;
-  addEventType: (type: string) => void;
-  deleteEventType: (type: string) => void;
+  addEventType: (name: string) => Promise<void>;
+  updateEventType: (id: string, name: string) => Promise<void>;
+  deleteEventType: (id: string) => Promise<void>;
   addEvent: (event: Event | Omit<Event, 'id'>) => void;
   updateEvent: (id: string, event: Partial<Event>) => void;
   deleteEvent: (id: string) => void;
@@ -51,7 +52,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [trainingModules, setTrainingModules] = useState<TrainingModule[]>(mockTrainingModules);
   const [userTrainings, setUserTrainings] = useState<UserTraining[]>(mockUserTrainings);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [eventTypes, setEventTypes] = useState<string[]>(['Birthday', 'Celebration', 'Social', 'Meeting', 'Other']);
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [celebrationPhotos, setCelebrationPhotos] = useState<CelebrationPhoto[]>(mockCelebrationPhotos);
   const [peerVotes, setPeerVotes] = useState<PeerVote[]>([]);
   const [supervisorScores, setSupervisorScores] = useState<SupervisorScore[]>([]);
@@ -80,7 +81,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (configRes.ok) {
           const config = await configRes.json();
           if (config.hotelLogo) setHotelLogo(config.hotelLogo);
-          if (config.eventTypes) setEventTypes(config.eventTypes);
+        }
+
+        // Fetch Event Types
+        const eventTypesRes = await fetch('/api/event-types');
+        if (eventTypesRes.ok) {
+          const eventTypesData = await eventTypesRes.json();
+          setEventTypes(eventTypesData);
         }
 
         // Fetch Departments
@@ -270,7 +277,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await fetch('/api/departments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           name: department.name,
           managerId: department.managerId,
           parentId: department.parentId,
@@ -313,7 +320,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           parentId: updatedDept.parent_id,
           areas: updatedDept.areas || []
         } : dept)));
-        
+
         // If name changed, update users and modules (optimistic/simplified)
         if (department.name) {
           const oldDept = departments.find(d => d.id === id);
@@ -344,34 +351,45 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addEventType = async (type: string) => {
-    if (!eventTypes.includes(type)) {
-      const newEventTypes = [...eventTypes, type];
-      try {
-        const response = await fetch('/api/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ eventTypes: newEventTypes })
-        });
-        if (response.ok) {
-          setEventTypes(newEventTypes);
-        }
-      } catch (error) {
-        console.error('Error adding event type:', error);
+  const addEventType = async (name: string) => {
+    try {
+      const response = await fetch('/api/event-types', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (response.ok) {
+        const newType = await response.json();
+        setEventTypes(prev => [...prev, newType]);
       }
+    } catch (error) {
+      console.error('Error adding event type:', error);
     }
   };
 
-  const deleteEventType = async (type: string) => {
-    const newEventTypes = eventTypes.filter(t => t !== type);
+  const updateEventType = async (id: string, name: string) => {
     try {
-      const response = await fetch('/api/config', {
-        method: 'POST',
+      const response = await fetch(`/api/event-types/${id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventTypes: newEventTypes })
+        body: JSON.stringify({ name }),
       });
       if (response.ok) {
-        setEventTypes(newEventTypes);
+        const updatedType = await response.json();
+        setEventTypes(prev => prev.map(t => t.id === id ? updatedType : t));
+      }
+    } catch (error) {
+      console.error('Error updating event type:', error);
+    }
+  };
+
+  const deleteEventType = async (id: string) => {
+    try {
+      const response = await fetch(`/api/event-types/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setEventTypes(prev => prev.filter(t => t.id !== id));
       }
     } catch (error) {
       console.error('Error deleting event type:', error);
@@ -627,6 +645,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateDepartment,
         deleteDepartment,
         addEventType,
+        updateEventType,
         deleteEventType,
         addEvent,
         updateEvent,

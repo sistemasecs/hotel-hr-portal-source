@@ -12,7 +12,7 @@ export default function CelebrationsPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [filter, setFilter] = useState<string>('All');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadForm, setUploadForm] = useState<Partial<Event>>({
@@ -21,8 +21,8 @@ export default function CelebrationsPage() {
   });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  const filteredEvents = filter === 'All' 
-    ? allEvents 
+  const filteredEvents = filter === 'All'
+    ? allEvents
     : allEvents.filter(e => e.type === filter);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,7 +36,7 @@ export default function CelebrationsPage() {
         alert(t('fileTooLarge'));
         return;
       }
-      
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewImage(reader.result as string);
@@ -91,23 +91,22 @@ export default function CelebrationsPage() {
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2">
-        {['All', ...eventTypes].map((type) => (
+        {['All', ...eventTypes.map(t => t.name)].map((type) => (
           <button
             key={type}
             onClick={() => setFilter(type)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              filter === type
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${filter === type
                 ? 'bg-primary-600 text-white'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
+              }`}
           >
-            {type === 'All' ? t('allEventsFilter') : 
-             type === 'Birthday' ? t('birthdayEvent') :
-             type === 'Celebration' ? t('celebrationEvent') :
-             type === 'Social' ? t('socialEvent') :
-             type === 'Meeting' ? t('meetingEvent') :
-             type === 'Other' ? t('otherEvent') :
-             type}
+            {type === 'All' ? t('allEventsFilter') :
+              type === 'Birthday' ? t('birthdayEvent') :
+                type === 'Celebration' ? t('celebrationEvent') :
+                  type === 'Social' ? t('socialEvent') :
+                    type === 'Meeting' ? t('meetingEvent') :
+                      type === 'Other' ? t('otherEvent') :
+                        type}
           </button>
         ))}
       </div>
@@ -132,19 +131,18 @@ export default function CelebrationsPage() {
                   )}
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity" />
                   <div className="absolute top-2 right-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      event.type === 'Birthday' ? 'bg-pink-100 text-pink-800' :
-                      event.type === 'Celebration' ? 'bg-amber-100 text-amber-800' :
-                      event.type === 'Social' ? 'bg-green-100 text-green-800' :
-                      event.type === 'Meeting' ? 'bg-blue-100 text-blue-800' :
-                      'bg-slate-100 text-slate-800'
-                    }`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${event.type === 'Birthday' ? 'bg-pink-100 text-pink-800' :
+                        event.type === 'Celebration' ? 'bg-amber-100 text-amber-800' :
+                          event.type === 'Social' ? 'bg-green-100 text-green-800' :
+                            event.type === 'Meeting' ? 'bg-blue-100 text-blue-800' :
+                              'bg-slate-100 text-slate-800'
+                      }`}>
                       {event.type === 'Birthday' ? t('birthdayEvent') :
-                       event.type === 'Celebration' ? t('celebrationEvent') :
-                       event.type === 'Social' ? t('socialEvent') :
-                       event.type === 'Meeting' ? t('meetingEvent') :
-                       event.type === 'Other' ? t('otherEvent') :
-                       event.type}
+                        event.type === 'Celebration' ? t('celebrationEvent') :
+                          event.type === 'Social' ? t('socialEvent') :
+                            event.type === 'Meeting' ? t('meetingEvent') :
+                              event.type === 'Other' ? t('otherEvent') :
+                                event.type}
                     </span>
                   </div>
                 </div>
@@ -194,7 +192,7 @@ export default function CelebrationsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-slate-900 mb-4">Create Event</h2>
-            
+
             <div className="space-y-4">
               {/* Image Preview / Upload */}
               <div>
@@ -229,7 +227,7 @@ export default function CelebrationsPage() {
                   >
                     <option value="" disabled>Select Type</option>
                     {eventTypes.map(type => (
-                      <option key={type} value={type}>{type}</option>
+                      <option key={type.id} value={type.name}>{type.name}</option>
                     ))}
                   </select>
                 </div>

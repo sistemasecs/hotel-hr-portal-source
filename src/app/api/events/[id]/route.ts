@@ -27,7 +27,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         }
 
         values.push(id);
-        const query = `UPDATE events SET ${updateClauses.join(', ')} WHERE id = ${paramIndex} RETURNING *`;
+        const query = `UPDATE events SET ${updateClauses.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
 
         const result = await pool.query(query, values);
 

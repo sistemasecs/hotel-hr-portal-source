@@ -21,22 +21,11 @@ export async function POST(request: Request) {
         const event = await request.json();
         const { title, date, time, type, description, location, coverImageUrl } = event;
 
-        // Check if the id was passed (e.g. from mock data or local generation)
-        // If not, postgres gen_random_uuid() handles it
-        const id = event.id && event.id.includes('-') ? event.id : undefined;
-
-        let result;
-        if (id) {
-            result = await pool.query(
-                'INSERT INTO events (id, title, date, time, type, description, location, cover_image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-                [id, title, date, time, type, description, location, coverImageUrl]
-            );
-        } else {
-            result = await pool.query(
-                'INSERT INTO events (title, date, time, type, description, location, cover_image_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-                [title, date, time, type, description, location, coverImageUrl]
-            );
-        }
+        // We rely on the database to generate the UUID for us
+        const result = await pool.query(
+            'INSERT INTO events (title, date, time, type, description, location, cover_image_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+            [title, date, time, type, description, location, coverImageUrl]
+        );
 
         const row = result.rows[0];
         const newEvent = {

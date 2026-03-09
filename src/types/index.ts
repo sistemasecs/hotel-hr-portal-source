@@ -37,6 +37,11 @@ export interface Event {
   coverImageUrl?: string; // Optional cover image for the event's photo album
 }
 
+export interface EventType {
+  id: string;
+  name: string;
+}
+
 export interface QuizOption {
   text: string;
   score: number;
@@ -118,13 +123,13 @@ export interface EmployeeOfTheMonth {
   awardedAt: string; // ISO timestamp
 }
 
-export type RequestType = 
-  | 'Vacation' 
-  | 'Absence' 
-  | 'Shift Change' 
-  | 'Uniform' 
-  | 'Data Update' 
-  | 'Document' 
+export type RequestType =
+  | 'Vacation'
+  | 'Absence'
+  | 'Shift Change'
+  | 'Uniform'
+  | 'Data Update'
+  | 'Document'
   | 'Absence Proof'
   | 'Discount'
   | 'Responsibility'

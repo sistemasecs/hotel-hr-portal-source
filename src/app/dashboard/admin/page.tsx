@@ -12,7 +12,7 @@ import Papa from 'papaparse';
 
 function AdminDashboardContent() {
   const { user, isAdmin } = useAuth();
-  const { users, trainingModules, userTrainings, assignTraining, departments, addDepartment, updateDepartment, deleteDepartment, eventTypes, addEventType, deleteEventType, updateUser, addUser, events, addEvent, updateEvent, deleteEvent, deleteTrainingModule, updateTrainingModule, addTrainingModule, peerVotes, supervisorScores, setSupervisorScore, employeesOfTheMonth, setEmployeeOfTheMonth, hotelLogo, setHotelLogo, activityLogs, fetchActivityLogs } = useData();
+  const { users, trainingModules, userTrainings, assignTraining, departments, addDepartment, updateDepartment, deleteDepartment, eventTypes, addEventType, updateEventType, deleteEventType, updateUser, addUser, events, addEvent, updateEvent, deleteEvent, deleteTrainingModule, updateTrainingModule, addTrainingModule, peerVotes, supervisorScores, setSupervisorScore, employeesOfTheMonth, setEmployeeOfTheMonth, hotelLogo, setHotelLogo, activityLogs, fetchActivityLogs } = useData();
   const { t } = useLanguage();
   const { primaryColor, setPrimaryColor } = useTheme();
   const router = useRouter();
@@ -38,7 +38,7 @@ function AdminDashboardContent() {
         <div className="bg-slate-800 text-white px-6 py-2 rounded-t-lg font-semibold w-64 text-center shadow-md">
           {dept.name}
         </div>
-        
+
         {/* Manager Node */}
         <div className="bg-primary-50 border-2 border-primary-200 w-64 p-4 rounded-b-lg shadow-sm flex flex-col items-center relative z-10">
           {manager ? (
@@ -174,6 +174,7 @@ function AdminDashboardContent() {
 
   // Event Types State
   const [newEventTypeName, setNewEventTypeName] = useState('');
+  const [editingEventType, setEditingEventType] = useState<{ id: string, newName: string } | null>(null);
 
   // Event State
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -263,10 +264,17 @@ function AdminDashboardContent() {
     }
   };
 
+  const handleSaveEventType = () => {
+    if (editingEventType && editingEventType.newName.trim()) {
+      updateEventType(editingEventType.id, editingEventType.newName.trim());
+      setEditingEventType(null);
+    }
+  };
+
   const handleSaveDepartment = () => {
     if (editingDept && editingDept.newName.trim()) {
       const areasArray = editingDept.areas.split(',').map(a => a.trim()).filter(a => a !== '');
-      updateDepartment(editingDept.id, { 
+      updateDepartment(editingDept.id, {
         name: editingDept.newName.trim(),
         managerId: editingDept.managerId,
         parentId: editingDept.parentId,
@@ -298,24 +306,12 @@ function AdminDashboardContent() {
     }
 
     const cleanTitle = editEventForm.title.trim();
-
-    // Generate ID based on title + month + year
-    const [y, m, d] = editEventForm.date.split('-');
-    const localDate = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-    const monthYear = localDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-
-    // Create a URL-friendly ID: "summer-party-july-2026"
-    const generatedId = `${cleanTitle}-${monthYear}`
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-') // replace non-alphanumeric with hyphens
-      .replace(/(^-|-$)/g, ''); // remove leading/trailing hyphens
-
     const eventToSave = { ...editEventForm, title: cleanTitle };
 
     if (editingEvent) {
       updateEvent(editingEvent.id, eventToSave);
     } else {
-      addEvent({ ...eventToSave, id: generatedId } as Event);
+      addEvent(eventToSave as any);
     }
 
     setIsEventModalOpen(false);
@@ -536,13 +532,13 @@ function AdminDashboardContent() {
             >
               {tab === 'Directory' ? t('staffDirectory') :
                 tab === 'Hierarchy' ? t('hierarchy') :
-                tab === 'Training' ? t('complianceOverview') :
-                  tab === 'Departments' ? t('manageDepartments') :
-                    tab === 'Events' ? t('cultureHubEvents') :
-                      tab === 'Modules' ? t('learningModules') :
-                        tab === 'Recognition' ? 'Recognition' :
-                          tab === 'Activity' ? t('activityLog') :
-                            'Settings'}
+                  tab === 'Training' ? t('complianceOverview') :
+                    tab === 'Departments' ? t('manageDepartments') :
+                      tab === 'Events' ? t('cultureHubEvents') :
+                        tab === 'Modules' ? t('learningModules') :
+                          tab === 'Recognition' ? 'Recognition' :
+                            tab === 'Activity' ? t('activityLog') :
+                              'Settings'}
             </button>
           ))}
         </div>
@@ -983,7 +979,7 @@ function AdminDashboardContent() {
           </div>
           <div className="overflow-x-auto pb-8">
             <div className="flex space-x-8 min-w-max justify-center">
-              {selectedHierarchyDept 
+              {selectedHierarchyDept
                 ? renderHierarchyNode(selectedHierarchyDept)
                 : departments.filter(d => !d.parentId).map(dept => renderHierarchyNode(dept.id))
               }
@@ -1343,24 +1339,67 @@ function AdminDashboardContent() {
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {eventTypes.map(type => (
-                  <div key={type} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <span className="font-medium text-slate-700">{type}</span>
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Are you sure you want to delete the event type "${type}"?`)) {
-                          deleteEventType(type);
-                        }
-                      }}
-                      className="text-red-500 hover:text-red-700 p-1"
-                      title="Delete Event Type"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
+                {eventTypes.map(type => {
+                  const isEditing = editingEventType?.id === type.id;
+                  return (
+                    <div key={type.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editingEventType?.newName || ''}
+                          onChange={(e) => editingEventType && setEditingEventType({ ...editingEventType, newName: e.target.value })}
+                          className="border border-slate-300 rounded-md shadow-sm p-1 text-sm focus:ring-primary-500 focus:border-primary-500 flex-1 mr-2"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="font-medium text-slate-700">{type.name}</span>
+                      )}
+                      <div className="flex space-x-2">
+                        {isEditing ? (
+                          <>
+                            <button
+                              onClick={handleSaveEventType}
+                              className="text-emerald-600 hover:text-emerald-900 text-sm font-medium"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingEventType(null)}
+                              className="text-slate-600 hover:text-slate-900 text-sm font-medium"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setEditingEventType({ id: type.id, newName: type.name })}
+                              className="text-primary-600 hover:text-primary-900 p-1"
+                              title="Edit Event Type"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to delete the event type "${type.name}"?`)) {
+                                  deleteEventType(type.id);
+                                }
+                              }}
+                              className="text-red-500 hover:text-red-700 p-1"
+                              title="Delete Event Type"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1403,7 +1442,7 @@ function AdminDashboardContent() {
                 >
                   <option value="" disabled>Select Type</option>
                   {eventTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
+                    <option key={type.id} value={type.name}>{type.name}</option>
                   ))}
                 </select>
               </div>
@@ -1722,12 +1761,11 @@ function AdminDashboardContent() {
                         {log.userName || 'System / Unknown'}
                       </td>
                       <td className="p-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          log.action === 'CREATE' ? 'bg-emerald-100 text-emerald-800' :
-                          log.action === 'UPDATE' ? 'bg-blue-100 text-blue-800' :
-                          log.action === 'DELETE' ? 'bg-rose-100 text-rose-800' :
-                          'bg-slate-100 text-slate-800'
-                        }`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${log.action === 'CREATE' ? 'bg-emerald-100 text-emerald-800' :
+                            log.action === 'UPDATE' ? 'bg-blue-100 text-blue-800' :
+                              log.action === 'DELETE' ? 'bg-rose-100 text-rose-800' :
+                                'bg-slate-100 text-slate-800'
+                          }`}>
                           {log.action}
                         </span>
                       </td>
