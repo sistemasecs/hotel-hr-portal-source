@@ -7,26 +7,50 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get('userId');
         const status = searchParams.get('status');
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
+        const departmentId = searchParams.get('departmentId');
 
-        let query = 'SELECT * FROM shifts';
+        let query = `
+            SELECT s.*, u.name as user_name, d.name as department_name 
+            FROM shifts s
+            JOIN users u ON s.user_id = u.id
+            LEFT JOIN departments d ON u.department = d.name
+        `;
         let values: any[] = [];
         let conditions = [];
 
         if (userId) {
-            conditions.push(`user_id = $${values.length + 1}`);
+            conditions.push(`s.user_id = $${values.length + 1}`);
             values.push(userId);
         }
 
         if (status) {
-            conditions.push(`status = $${values.length + 1}`);
+            conditions.push(`s.status = $${values.length + 1}`);
             values.push(status);
+        }
+
+        if (startDate) {
+            conditions.push(`s.start_time >= $${values.length + 1}`);
+            values.push(startDate);
+        }
+
+        if (endDate) {
+            conditions.push(`s.end_time <= $${values.length + 1}`);
+            values.push(endDate);
+        }
+
+        if (departmentId) {
+            // Join with departments to filter by ID
+            conditions.push(`d.id = $${values.length + 1}`);
+            values.push(departmentId);
         }
 
         if (conditions.length > 0) {
             query += ' WHERE ' + conditions.join(' AND ');
         }
 
-        query += ' ORDER BY start_time ASC';
+        query += ' ORDER BY s.start_time ASC';
 
         const result = await pool.query(query, values);
         return NextResponse.json(result.rows);

@@ -55,6 +55,9 @@ interface DataContextType {
   addShift: (shift: Omit<Shift, 'id'>) => Promise<void>;
   fetchUserShifts: (userId: string) => Promise<void>;
   fetchAttendanceLogs: (userId?: string) => Promise<void>;
+  updateShift: (id: string, shift: Partial<Shift>) => Promise<void>;
+  deleteShift: (id: string) => Promise<void>;
+  fetchShifts: (filters: { userId?: string, departmentId?: string, startDate?: string, endDate?: string }) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -739,6 +742,51 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateShift = async (id: string, updatedShift: Partial<Shift>) => {
+    try {
+      const response = await fetch(`/api/shifts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedShift),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setShifts(prev => prev.map(s => s.id === id ? { ...s, ...result } : s));
+      }
+    } catch (error) {
+      console.error('Error updating shift:', error);
+    }
+  };
+
+  const deleteShift = async (id: string) => {
+    try {
+      const response = await fetch(`/api/shifts/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setShifts(prev => prev.filter(s => s.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting shift:', error);
+    }
+  };
+
+  const fetchShifts = async (filters: { userId?: string, departmentId?: string, startDate?: string, endDate?: string }) => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.userId) params.append('userId', filters.userId);
+      if (filters.departmentId) params.append('departmentId', filters.departmentId);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+
+      const response = await fetch(`/api/shifts?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setShifts(data);
+      }
+    } catch (error) {
+      console.error('Error fetching shifts:', error);
+    }
+  };
+
   const fetchAttendanceLogs = async (userId?: string) => {
     try {
       const url = userId ? `/api/attendance?userId=${userId}` : '/api/attendance';
@@ -801,6 +849,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addShift,
         fetchUserShifts,
         fetchAttendanceLogs,
+        updateShift,
+        deleteShift,
+        fetchShifts,
       }}
     >
       {children}

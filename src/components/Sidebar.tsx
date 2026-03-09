@@ -27,8 +27,8 @@ export default function Sidebar() {
   const currentUser = users.find(u => u.id === authUser.id) || authUser;
 
   const navItems = [
-    { 
-      name: t('dashboard'), 
+    {
+      name: t('dashboard'),
       href: '/dashboard',
       icon: (
         <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -36,8 +36,8 @@ export default function Sidebar() {
         </svg>
       )
     },
-    { 
-      name: t('cultureHub'), 
+    {
+      name: t('cultureHub'),
       href: '/dashboard/culture',
       icon: (
         <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,8 +45,8 @@ export default function Sidebar() {
         </svg>
       )
     },
-    { 
-      name: t('celebrations'), 
+    {
+      name: t('celebrations'),
       href: '/dashboard/celebrations',
       icon: (
         <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,8 +54,8 @@ export default function Sidebar() {
         </svg>
       )
     },
-    { 
-      name: t('learningCenter'), 
+    {
+      name: t('learningCenter'),
       href: '/dashboard/learning',
       icon: (
         <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,12 +65,21 @@ export default function Sidebar() {
         </svg>
       )
     },
-    { 
-      name: t('requests'), 
+    {
+      name: t('requests'),
       href: '/dashboard/requests',
       icon: (
         <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+        </svg>
+      )
+    },
+    {
+      name: t('schedules'),
+      href: '/dashboard/schedules',
+      icon: (
+        <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       )
     },
@@ -112,127 +121,124 @@ export default function Sidebar() {
 
       {/* Overlay for mobile */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       <div className={`w-64 bg-slate-900 text-white flex flex-col h-screen fixed left-0 top-0 z-40 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-      <div className="p-6 border-b border-slate-800">
-        <h1 className="text-xl font-bold tracking-tight">El Carmen Hotel</h1>
-        <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">{t('employeePortal')}</p>
-      </div>
-      
-      <Link 
-        href="/dashboard/profile"
-        onClick={handleLinkClick}
-        className="block p-6 border-b border-slate-800 hover:bg-slate-800 transition-colors group"
-      >
-        <div className="flex items-center space-x-3">
-          {currentUser.avatarUrl ? (
-            <img 
-              src={currentUser.avatarUrl} 
-              alt={currentUser.name} 
-              className={`w-10 h-10 rounded-full ${currentUser.avatarFit === 'contain' ? 'object-contain bg-slate-100' : 'object-cover'}`}
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-sm font-bold group-hover:bg-primary-500 transition-colors">
-              {currentUser.name.charAt(0)}
-            </div>
-          )}
-          <div>
-            <p className="text-sm font-medium group-hover:text-primary-300 transition-colors">{currentUser.name}</p>
-            <p className="text-xs text-slate-400">{currentUser.role} • {currentUser.department}</p>
-          </div>
+        <div className="p-6 border-b border-slate-800">
+          <h1 className="text-xl font-bold tracking-tight">El Carmen Hotel</h1>
+          <p className="text-xs text-slate-400 uppercase tracking-widest mt-1">{t('employeePortal')}</p>
         </div>
-      </Link>
 
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard');
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              onClick={handleLinkClick}
-              className={`flex items-center px-4 py-3 rounded-md text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary-600 text-white'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              {item.icon}
-              {item.name}
-            </Link>
-          );
-        })}
-
-        {/* HR Admin Dropdown */}
-        {isAdmin && (
-          <div className="pt-2">
-            <button
-              onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-md text-sm font-medium transition-colors ${
-                pathname.startsWith('/dashboard/admin') && !isAdminMenuOpen
-                  ? 'bg-primary-600 text-white'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center">
-                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span>{t('hrAdmin')}</span>
-              </div>
-              <svg
-                className={`w-4 h-4 transition-transform duration-200 ${isAdminMenuOpen ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {/* Dropdown Content */}
-            {isAdminMenuOpen && (
-              <div className="mt-1 pl-4 space-y-1 border-l-2 border-slate-800 ml-4">
-                {adminSubLinks.map((link) => {
-                  const currentTab = searchParams.get('tab') || 'Directory';
-                  const isActive = pathname === '/dashboard/admin' && currentTab === link.tab;
-                  
-                  return (
-                    <Link
-                      key={link.tab}
-                      href={`/dashboard/admin?tab=${link.tab}`}
-                      onClick={handleLinkClick}
-                      className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-primary-600/20 text-primary-400'
-                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                      }`}
-                    >
-                      {link.name}
-                    </Link>
-                  );
-                })}
+        <Link
+          href="/dashboard/profile"
+          onClick={handleLinkClick}
+          className="block p-6 border-b border-slate-800 hover:bg-slate-800 transition-colors group"
+        >
+          <div className="flex items-center space-x-3">
+            {currentUser.avatarUrl ? (
+              <img
+                src={currentUser.avatarUrl}
+                alt={currentUser.name}
+                className={`w-10 h-10 rounded-full ${currentUser.avatarFit === 'contain' ? 'object-contain bg-slate-100' : 'object-cover'}`}
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-sm font-bold group-hover:bg-primary-500 transition-colors">
+                {currentUser.name.charAt(0)}
               </div>
             )}
+            <div>
+              <p className="text-sm font-medium group-hover:text-primary-300 transition-colors">{currentUser.name}</p>
+              <p className="text-xs text-slate-400">{currentUser.role} • {currentUser.department}</p>
+            </div>
           </div>
-        )}
-      </nav>
+        </Link>
 
-      <div className="p-4 border-t border-slate-800">
-        <button
-          onClick={logout}
-          className="w-full text-left px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors"
-        >
-          {t('signOut')}
-        </button>
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard');
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={handleLinkClick}
+                className={`flex items-center px-4 py-3 rounded-md text-sm font-medium transition-colors ${isActive
+                    ? 'bg-primary-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+              >
+                {item.icon}
+                {item.name}
+              </Link>
+            );
+          })}
+
+          {/* HR Admin Dropdown */}
+          {isAdmin && (
+            <div className="pt-2">
+              <button
+                onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-md text-sm font-medium transition-colors ${pathname.startsWith('/dashboard/admin') && !isAdminMenuOpen
+                    ? 'bg-primary-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`}
+              >
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>{t('hrAdmin')}</span>
+                </div>
+                <svg
+                  className={`w-4 h-4 transition-transform duration-200 ${isAdminMenuOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Dropdown Content */}
+              {isAdminMenuOpen && (
+                <div className="mt-1 pl-4 space-y-1 border-l-2 border-slate-800 ml-4">
+                  {adminSubLinks.map((link) => {
+                    const currentTab = searchParams.get('tab') || 'Directory';
+                    const isActive = pathname === '/dashboard/admin' && currentTab === link.tab;
+
+                    return (
+                      <Link
+                        key={link.tab}
+                        href={`/dashboard/admin?tab=${link.tab}`}
+                        onClick={handleLinkClick}
+                        className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${isActive
+                            ? 'bg-primary-600/20 text-primary-400'
+                            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                          }`}
+                      >
+                        {link.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </nav>
+
+        <div className="p-4 border-t border-slate-800">
+          <button
+            onClick={logout}
+            className="w-full text-left px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors"
+          >
+            {t('signOut')}
+          </button>
+        </div>
       </div>
-    </div>
     </>
   );
 }
