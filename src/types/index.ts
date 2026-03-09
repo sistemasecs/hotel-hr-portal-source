@@ -163,3 +163,22 @@ export interface ActivityLog {
   details: any;
   createdAt: string;
 }
+export interface Shift {
+  id: string;
+  user_id: string;
+  start_time: string;
+  end_time: string;
+  status: 'Scheduled' | 'Clocked-in' | 'Completed' | 'Absent';
+  type: string;
+}
+
+export interface AttendanceLog {
+  id: string;
+  user_id: string;
+  shift_id: string | null;
+  type: 'CLOCK_IN' | 'CLOCK_OUT';
+  timestamp: string;
+  latitude: number;
+  longitude: number;
+  is_verified: boolean;
+}

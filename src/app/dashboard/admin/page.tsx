@@ -12,12 +12,12 @@ import Papa from 'papaparse';
 
 function AdminDashboardContent() {
   const { user, isAdmin } = useAuth();
-  const { users, trainingModules, userTrainings, assignTraining, departments, addDepartment, updateDepartment, deleteDepartment, eventTypes, addEventType, updateEventType, deleteEventType, updateUser, addUser, events, addEvent, updateEvent, deleteEvent, deleteTrainingModule, updateTrainingModule, addTrainingModule, peerVotes, supervisorScores, setSupervisorScore, employeesOfTheMonth, setEmployeeOfTheMonth, hotelLogo, setHotelLogo, activityLogs, fetchActivityLogs } = useData();
+  const { users, trainingModules, userTrainings, assignTraining, departments, addDepartment, updateDepartment, deleteDepartment, eventTypes, addEventType, updateEventType, deleteEventType, updateUser, addUser, events, addEvent, updateEvent, deleteEvent, deleteTrainingModule, updateTrainingModule, addTrainingModule, peerVotes, supervisorScores, setSupervisorScore, employeesOfTheMonth, setEmployeeOfTheMonth, hotelLogo, setHotelLogo, updateHotelConfig, activityLogs, fetchActivityLogs, shifts, attendanceLogs, hotelConfig, fetchAttendanceLogs, addShift } = useData();
   const { t } = useLanguage();
   const { primaryColor, setPrimaryColor } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'Directory' | 'Hierarchy' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Activity' | 'Settings'>('Directory');
+  const [activeTab, setActiveTab] = useState<'Directory' | 'Hierarchy' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Attendance' | 'Activity' | 'Settings'>('Directory');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
 
@@ -144,7 +144,7 @@ function AdminDashboardContent() {
   // Read tab from URL on mount and when searchParams change
   useEffect(() => {
     const tab = searchParams.get('tab');
-    const validTabs = ['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Activity', 'Settings'];
+    const validTabs = ['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Attendance', 'Activity', 'Settings'];
     if (tab && validTabs.includes(tab)) {
       setActiveTab(tab as any);
     }
@@ -153,6 +153,9 @@ function AdminDashboardContent() {
   useEffect(() => {
     if (activeTab === 'Activity') {
       fetchActivityLogs();
+    }
+    if (activeTab === 'Attendance') {
+      fetchAttendanceLogs();
     }
   }, [activeTab]);
 
@@ -184,6 +187,15 @@ function AdminDashboardContent() {
   // Learning Module State
   const [isModuleFormOpen, setIsModuleFormOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<TrainingModule | undefined>(undefined);
+
+  // Attendance/Shift State
+  const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
+  const [newShiftForm, setNewShiftForm] = useState({
+    userId: '',
+    startTime: '',
+    endTime: '',
+    type: 'Morning'
+  });
 
   // Redirect if not admin
   React.useEffect(() => {
@@ -521,7 +533,7 @@ function AdminDashboardContent() {
           <p className="text-slate-500 mt-2">{t('manageStaff')}</p>
         </div>
         <div className="flex space-x-2 overflow-x-auto pb-2">
-          {['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Activity', 'Settings'].map(tab => (
+          {['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Attendance', 'Activity', 'Settings'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
@@ -537,8 +549,9 @@ function AdminDashboardContent() {
                       tab === 'Events' ? t('cultureHubEvents') :
                         tab === 'Modules' ? t('learningModules') :
                           tab === 'Recognition' ? 'Recognition' :
-                            tab === 'Activity' ? t('activityLog') :
-                              'Settings'}
+                            tab === 'Attendance' ? 'Attendance' :
+                              tab === 'Activity' ? t('activityLog') :
+                                'Settings'}
             </button>
           ))}
         </div>
@@ -1717,6 +1730,173 @@ function AdminDashboardContent() {
           </div>
         </div>
       )}
+      {/* Attendance & Scheduling Tab */}
+      {activeTab === 'Attendance' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-800">Attendance Log</h2>
+                <p className="text-sm text-slate-500 mt-1">Real-time status of staff check-ins and check-outs.</p>
+              </div>
+              <button
+                onClick={() => fetchAttendanceLogs()}
+                className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-200 transition-colors"
+              >
+                Refresh
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                    <th className="p-4 font-semibold">User</th>
+                    <th className="p-4 font-semibold">Time</th>
+                    <th className="p-4 font-semibold">Type</th>
+                    <th className="p-4 font-semibold">Location</th>
+                    <th className="p-4 font-semibold">Verification</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {attendanceLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-slate-500">No attendance logs found.</td>
+                    </tr>
+                  ) : (
+                    attendanceLogs.map((log) => {
+                      const logUser = users.find(u => u.id === log.user_id);
+                      return (
+                        <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-4">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mr-3 overflow-hidden">
+                                {logUser?.avatarUrl ? <img src={logUser.avatarUrl} alt="" className="w-full h-full object-cover" /> : <span className="text-xs text-slate-400">?</span>}
+                              </div>
+                              <span className="text-sm font-medium text-slate-900">{logUser?.name || 'Unknown User'}</span>
+                            </div>
+                          </td>
+                          <td className="p-4 text-sm text-slate-600">
+                            {new Date(log.timestamp).toLocaleString()}
+                          </td>
+                          <td className="p-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${log.type === 'CLOCK_IN' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                              {log.type === 'CLOCK_IN' ? 'Clock In' : 'Clock Out'}
+                            </span>
+                          </td>
+                          <td className="p-4 text-xs text-slate-500">
+                            {log.latitude.toFixed(4)}, {log.longitude.toFixed(4)}
+                          </td>
+                          <td className="p-4">
+                            {log.is_verified ? (
+                              <span className="flex items-center text-emerald-600 text-xs font-bold">
+                                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                                Verified
+                              </span>
+                            ) : (
+                              <span className="flex items-center text-rose-600 text-xs font-bold">
+                                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                                Out of Range
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-slate-800">Shift Management</h2>
+              <button
+                onClick={() => setIsShiftModalOpen(true)}
+                className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-primary-700 transition-all"
+              >
+                + Schedule Shift
+              </button>
+            </div>
+            {/* Shift List could go here, for now keeping it simple */}
+            <p className="text-sm text-slate-500 italic">Advanced shift calendar coming soon. You can currently schedule individual shifts for staff members.</p>
+          </div>
+
+          {/* New Shift Modal */}
+          {isShiftModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                  <h3 className="text-lg font-bold text-slate-900">Schedule New Shift</h3>
+                  <button onClick={() => setIsShiftModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Select Employee</label>
+                    <select
+                      value={newShiftForm.userId}
+                      onChange={(e) => setNewShiftForm({ ...newShiftForm, userId: e.target.value })}
+                      className="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    >
+                      <option value="">Select an employee...</option>
+                      {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.department})</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Start Time</label>
+                      <input
+                        type="datetime-local"
+                        value={newShiftForm.startTime}
+                        onChange={(e) => setNewShiftForm({ ...newShiftForm, startTime: e.target.value })}
+                        className="w-full border border-slate-200 rounded-lg p-2 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">End Time</label>
+                      <input
+                        type="datetime-local"
+                        value={newShiftForm.endTime}
+                        onChange={(e) => setNewShiftForm({ ...newShiftForm, endTime: e.target.value })}
+                        className="w-full border border-slate-200 rounded-lg p-2 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Shift Type</label>
+                    <select
+                      value={newShiftForm.type}
+                      onChange={(e) => setNewShiftForm({ ...newShiftForm, type: e.target.value })}
+                      className="w-full border border-slate-200 rounded-lg p-2 text-sm"
+                    >
+                      <option value="Morning">Morning</option>
+                      <option value="Afternoon">Afternoon</option>
+                      <option value="Night">Night</option>
+                      <option value="Custom">Custom</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
+                  <button onClick={() => setIsShiftModalOpen(false)} className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800">Cancel</button>
+                  <button
+                    onClick={async () => {
+                      if (!newShiftForm.userId || !newShiftForm.startTime || !newShiftForm.endTime) return;
+                      await addShift(newShiftForm as any);
+                      setIsShiftModalOpen(false);
+                      setNewShiftForm({ userId: '', startTime: '', endTime: '', type: 'Morning' });
+                    }}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-primary-700 transition-all"
+                  >
+                    Save Shift
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Activity Log Tab */}
       {activeTab === 'Activity' && (
@@ -1762,9 +1942,9 @@ function AdminDashboardContent() {
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${log.action === 'CREATE' ? 'bg-emerald-100 text-emerald-800' :
-                            log.action === 'UPDATE' ? 'bg-blue-100 text-blue-800' :
-                              log.action === 'DELETE' ? 'bg-rose-100 text-rose-800' :
-                                'bg-slate-100 text-slate-800'
+                          log.action === 'UPDATE' ? 'bg-blue-100 text-blue-800' :
+                            log.action === 'DELETE' ? 'bg-rose-100 text-rose-800' :
+                              'bg-slate-100 text-slate-800'
                           }`}>
                           {log.action}
                         </span>
@@ -1859,6 +2039,56 @@ function AdminDashboardContent() {
                       </button>
                     )}
                   </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+              <div className="p-6 border-b border-slate-100">
+                <h2 className="text-xl font-semibold text-slate-800">Geofencing & Attendance</h2>
+                <p className="text-sm text-slate-500 mt-1">Configure hotel location for distance-based check-in verification.</p>
+              </div>
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Hotel Latitude</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={hotelConfig.hotelLatitude || ''}
+                      onChange={(e) => updateHotelConfig({ hotelLatitude: parseFloat(e.target.value) })}
+                      className="w-full border border-slate-200 rounded-lg p-2 text-sm"
+                      placeholder="e.g. 19.432608"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Hotel Longitude</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={hotelConfig.hotelLongitude || ''}
+                      onChange={(e) => updateHotelConfig({ hotelLongitude: parseFloat(e.target.value) })}
+                      className="w-full border border-slate-200 rounded-lg p-2 text-sm"
+                      placeholder="e.g. -99.133209"
+                    />
+                  </div>
+                </div>
+                <div className="max-w-xs">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Geofence Radius (meters)</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="number"
+                      value={hotelConfig.hotelGeofenceRadius || 200}
+                      onChange={(e) => updateHotelConfig({ hotelGeofenceRadius: parseInt(e.target.value) })}
+                      className="flex-1 border border-slate-200 rounded-lg p-2 text-sm"
+                    />
+                    <span className="text-slate-500 text-sm">m</span>
+                  </div>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 rounded-lg p-4">
+                  <p className="text-xs text-amber-800 flex items-start">
+                    <svg className="w-4 h-4 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Staff checking in outside this radius will be marked as "Out of Range" in reports. Settings are saved automatically.
+                  </p>
                 </div>
               </div>
             </div>

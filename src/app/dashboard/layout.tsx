@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Sidebar from '@/components/Sidebar';
+import PresenceBar from '@/components/attendance/PresenceBar';
 
 export default function DashboardLayout({
   children,
@@ -24,11 +25,14 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Sidebar />
-      <main className="flex-1 md:ml-64 overflow-y-auto p-4 md:p-8 w-full">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col md:ml-64 overflow-hidden">
+        <PresenceBar />
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 w-full">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

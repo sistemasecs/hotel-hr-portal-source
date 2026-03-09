@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { User, Event, EventType, TrainingModule, UserTraining, CelebrationPhoto, PeerVote, SupervisorScore, EmployeeOfTheMonth, Department, ActivityLog } from '../types';
+import { User, Event, EventType, TrainingModule, UserTraining, CelebrationPhoto, PeerVote, SupervisorScore, EmployeeOfTheMonth, Department, ActivityLog, Shift, AttendanceLog } from '../types';
 import { mockEvents, mockTrainingModules, mockUserTrainings, mockCelebrationPhotos } from '../data/mockData';
 
 interface DataContextType {
@@ -11,6 +11,13 @@ interface DataContextType {
   userTrainings: UserTraining[];
   departments: Department[];
   eventTypes: EventType[];
+  shifts: Shift[];
+  attendanceLogs: AttendanceLog[];
+  hotelConfig: {
+    hotelLatitude: number | null;
+    hotelLongitude: number | null;
+    hotelGeofenceRadius: number | null;
+  };
   assignTraining: (userId: string, moduleId: string) => void;
   updateTrainingStatus: (userId: string, moduleId: string, status: UserTraining['status']) => void;
   addTrainingModule: (module: Omit<TrainingModule, 'id'>) => void;
@@ -40,8 +47,14 @@ interface DataContextType {
   setEmployeeOfTheMonth: (eotm: Omit<EmployeeOfTheMonth, 'id' | 'awardedAt'>) => void;
   hotelLogo: string | null;
   setHotelLogo: (logoUrl: string | null) => void;
+  updateHotelConfig: (config: Partial<DataContextType['hotelConfig']>) => Promise<void>;
   activityLogs: ActivityLog[];
   fetchActivityLogs: () => Promise<void>;
+  clockIn: (userId: string, latitude: number, longitude: number, shiftId?: string) => Promise<void>;
+  clockOut: (userId: string, latitude: number, longitude: number, shiftId?: string) => Promise<void>;
+  addShift: (shift: Omit<Shift, 'id'>) => Promise<void>;
+  fetchUserShifts: (userId: string) => Promise<void>;
+  fetchAttendanceLogs: (userId?: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -59,6 +72,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [employeesOfTheMonth, setEmployeesOfTheMonth] = useState<EmployeeOfTheMonth[]>([]);
   const [hotelLogo, setHotelLogo] = useState<string | null>('/logo.png');
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
+  const [hotelConfig, setHotelConfig] = useState<{
+    hotelLatitude: number | null;
+    hotelLongitude: number | null;
+    hotelGeofenceRadius: number | null;
+  }>({
+    hotelLatitude: null,
+    hotelLongitude: null,
+    hotelGeofenceRadius: null,
+  });
 
   const fetchActivityLogs = async () => {
     try {
@@ -81,6 +105,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (configRes.ok) {
           const config = await configRes.json();
           if (config.hotelLogo) setHotelLogo(config.hotelLogo);
+          setHotelConfig({
+            hotelLatitude: config.hotelLatitude,
+            hotelLongitude: config.hotelLongitude,
+            hotelGeofenceRadius: config.hotelGeofenceRadius,
+          });
         }
 
         // Fetch Event Types
@@ -625,6 +654,104 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateHotelConfig = async (newConfig: Partial<DataContextType['hotelConfig']>) => {
+    try {
+      const response = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hotelLatitude: newConfig.hotelLatitude,
+          hotelLongitude: newConfig.hotelLongitude,
+          hotelGeofenceRadius: newConfig.hotelGeofenceRadius
+        })
+      });
+      if (response.ok) {
+        setHotelConfig(prev => ({ ...prev, ...newConfig }));
+      }
+    } catch (error) {
+      console.error('Error updating hotel config:', error);
+    }
+  };
+
+  const clockIn = async (userId: string, latitude: number, longitude: number, shiftId?: string) => {
+    try {
+      const response = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, type: 'CLOCK_IN', latitude, longitude, shiftId }),
+      });
+      if (response.ok) {
+        const newLog = await response.json();
+        setAttendanceLogs(prev => [newLog, ...prev]);
+        if (shiftId) {
+          setShifts(prev => prev.map(s => s.id === shiftId ? { ...s, status: 'Clocked-in' } : s));
+        }
+      }
+    } catch (error) {
+      console.error('Error clocking in:', error);
+    }
+  };
+
+  const clockOut = async (userId: string, latitude: number, longitude: number, shiftId?: string) => {
+    try {
+      const response = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, type: 'CLOCK_OUT', latitude, longitude, shiftId }),
+      });
+      if (response.ok) {
+        const newLog = await response.json();
+        setAttendanceLogs(prev => [newLog, ...prev]);
+        if (shiftId) {
+          setShifts(prev => prev.map(s => s.id === shiftId ? { ...s, status: 'Completed' } : s));
+        }
+      }
+    } catch (error) {
+      console.error('Error clocking out:', error);
+    }
+  };
+
+  const addShift = async (shift: Omit<Shift, 'id'>) => {
+    try {
+      const response = await fetch('/api/shifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shift),
+      });
+      if (response.ok) {
+        const newShift = await response.json();
+        setShifts(prev => [...prev, newShift]);
+      }
+    } catch (error) {
+      console.error('Error adding shift:', error);
+    }
+  };
+
+  const fetchUserShifts = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/shifts?userId=${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setShifts(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user shifts:', error);
+    }
+  };
+
+  const fetchAttendanceLogs = async (userId?: string) => {
+    try {
+      const url = userId ? `/api/attendance?userId=${userId}` : '/api/attendance';
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setAttendanceLogs(data);
+      }
+    } catch (error) {
+      console.error('Error fetching attendance logs:', error);
+    }
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -663,8 +790,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setEmployeeOfTheMonth,
         hotelLogo,
         setHotelLogo: handleSetHotelLogo,
+        updateHotelConfig,
         activityLogs,
         fetchActivityLogs,
+        shifts,
+        attendanceLogs,
+        hotelConfig,
+        clockIn,
+        clockOut,
+        addShift,
+        fetchUserShifts,
+        fetchAttendanceLogs,
       }}
     >
       {children}

@@ -3,11 +3,14 @@ import pool from '@/lib/db';
 
 export async function GET() {
     try {
-        const result = await pool.query("SELECT key, value FROM hotel_config WHERE key IN ('hotel_logo', 'event_types')");
+        const result = await pool.query("SELECT key, value FROM hotel_config WHERE key IN ('hotel_logo', 'event_types', 'hotel_latitude', 'hotel_longitude', 'hotel_geofence_radius')");
 
         const config: Record<string, any> = {
             hotelLogo: null,
-            eventTypes: null
+            eventTypes: null,
+            hotelLatitude: null,
+            hotelLongitude: null,
+            hotelGeofenceRadius: null
         };
 
         result.rows.forEach(row => {
@@ -19,6 +22,9 @@ export async function GET() {
                     config.eventTypes = row.value;
                 }
             }
+            if (row.key === 'hotel_latitude') config.hotelLatitude = parseFloat(row.value);
+            if (row.key === 'hotel_longitude') config.hotelLongitude = parseFloat(row.value);
+            if (row.key === 'hotel_geofence_radius') config.hotelGeofenceRadius = parseInt(row.value);
         });
 
         return NextResponse.json(config);
@@ -31,7 +37,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { hotelLogo, eventTypes } = body;
+        const { hotelLogo, eventTypes, hotelLatitude, hotelLongitude, hotelGeofenceRadius } = body;
 
         if (hotelLogo !== undefined) {
             if (hotelLogo === null) {
@@ -56,7 +62,28 @@ export async function POST(request: Request) {
             }
         }
 
-        return NextResponse.json({ success: true, hotelLogo, eventTypes });
+        if (hotelLatitude !== undefined) {
+            await pool.query(
+                "INSERT INTO hotel_config (key, value) VALUES ('hotel_latitude', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                [hotelLatitude.toString()]
+            );
+        }
+
+        if (hotelLongitude !== undefined) {
+            await pool.query(
+                "INSERT INTO hotel_config (key, value) VALUES ('hotel_longitude', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                [hotelLongitude.toString()]
+            );
+        }
+
+        if (hotelGeofenceRadius !== undefined) {
+            await pool.query(
+                "INSERT INTO hotel_config (key, value) VALUES ('hotel_geofence_radius', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                [hotelGeofenceRadius.toString()]
+            );
+        }
+
+        return NextResponse.json({ success: true, hotelLogo, eventTypes, hotelLatitude, hotelLongitude, hotelGeofenceRadius });
     } catch (error) {
         console.error('Error updating hotel config:', error);
         return NextResponse.json({ error: 'Failed to update config' }, { status: 500 });
