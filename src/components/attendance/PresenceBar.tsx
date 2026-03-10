@@ -4,10 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useData } from '@/context/DataContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { Shift } from '@/types';
+import WorkTimer from './WorkTimer';
 
 export default function PresenceBar() {
     const { user } = useAuth();
-    const { clockIn, clockOut, shifts, fetchUserShifts, hotelConfig } = useData();
+    const { clockIn, clockOut, shifts, fetchUserShifts, activeShift } = useData();
     const { t } = useLanguage();
     const [loading, setLoading] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
@@ -18,8 +20,7 @@ export default function PresenceBar() {
         }
     }, [user?.id]);
 
-    const activeShift = shifts.find(s => s.status === 'Clocked-in');
-    const upcomingShift = shifts.find(s => s.status === 'Scheduled');
+    const upcomingShift = shifts.find((s: Shift) => s.status === 'Scheduled');
 
     const handleClockAction = (type: 'CLOCK_IN' | 'CLOCK_OUT') => {
         if (!navigator.geolocation) {
@@ -56,16 +57,22 @@ export default function PresenceBar() {
 
     return (
         <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm sticky top-0 z-30">
-            <div className="flex items-center space-x-4">
-                <div className={`w-3 h-3 rounded-full ${activeShift ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-                <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                        {activeShift ? 'Currently Working' : 'Not Clocked In'}
-                    </p>
-                    {upcomingShift && !activeShift && (
-                        <p className="text-xs text-slate-500">Next shift: {new Date(upcomingShift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                    )}
+            <div className="flex items-center space-x-6">
+                <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${activeShift ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`} />
+                    <div>
+                        <p className="text-sm font-semibold text-slate-900 leading-tight">
+                            {activeShift ? 'Currently Working' : 'Not Clocked In'}
+                        </p>
+                        {upcomingShift && !activeShift && (
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Next shift: {new Date(upcomingShift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        )}
+                    </div>
                 </div>
+
+                {activeShift && (
+                    <WorkTimer startTime={activeShift.actual_start_time || activeShift.start_time} />
+                )}
             </div>
 
             <div className="flex items-center space-x-4">

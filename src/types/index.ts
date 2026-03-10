@@ -168,8 +168,18 @@ export interface Shift {
   user_id: string;
   start_time: string;
   end_time: string;
+  actual_start_time?: string | null;
   status: 'Scheduled' | 'Clocked-in' | 'Completed' | 'Absent';
   type: string;
+}
+
+export interface ShiftType {
+  id: string;
+  name: string;
+  department_id: string;
+  start_time_default?: string | null;
+  end_time_default?: string | null;
+  color?: string | null;
 }
 
 export interface AttendanceLog {

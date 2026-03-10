@@ -4,12 +4,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '@/context/DataContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { Shift, User } from '@/types';
+import { Shift, User, ShiftType } from '@/types';
+import ShiftTypesManager from '@/components/admin/ShiftTypesManager';
+import { Settings } from 'lucide-react';
 
 export default function SchedulesPage() {
     const { user, isAdmin } = useAuth();
-    const { shifts, users, fetchShifts, addShift, updateShift, deleteShift, departments } = useData();
+    const { shifts, users, fetchShifts, addShift, updateShift, deleteShift, departments, shiftTypes, fetchShiftTypes } = useData();
     const { t, language } = useLanguage();
+
+    const [showShiftTypes, setShowShiftTypes] = useState(false);
 
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDept, setSelectedDept] = useState<string>('');
@@ -19,7 +23,7 @@ export default function SchedulesPage() {
         userId: '',
         startTime: '',
         endTime: '',
-        type: 'Morning' as const
+        type: ''
     });
 
     // Calculate week range
@@ -110,6 +114,33 @@ export default function SchedulesPage() {
         }
     };
 
+    const handleShiftTypeChange = (typeId: string) => {
+        const type = shiftTypes.find(t => t.id === typeId);
+        if (type) {
+            const startDate = shiftForm.startTime ? new Date(shiftForm.startTime) : new Date();
+            const endDate = new Date(startDate);
+
+            if (type.start_time_default) {
+                const [h, m] = type.start_time_default.split(':');
+                startDate.setHours(parseInt(h), parseInt(m), 0, 0);
+            }
+
+            if (type.end_time_default) {
+                const [h, m] = type.end_time_default.split(':');
+                endDate.setHours(parseInt(h), parseInt(m), 0, 0);
+                // If end time is before start time, assume next day
+                if (endDate < startDate) endDate.setDate(endDate.getDate() + 1);
+            }
+
+            setShiftForm({
+                ...shiftForm,
+                type: type.name,
+                startTime: startDate.toISOString().slice(0, 16),
+                endTime: endDate.toISOString().slice(0, 16)
+            });
+        }
+    };
+
     if (!user) return null;
 
     return (
@@ -147,6 +178,13 @@ export default function SchedulesPage() {
                             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </select>
                         <button
+                            onClick={() => setShowShiftTypes(!showShiftTypes)}
+                            className={`p-2 rounded-lg border transition-all ${showShiftTypes ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                            title="Manage Shift Types"
+                        >
+                            <Settings className="w-5 h-5" />
+                        </button>
+                        <button
                             onClick={() => handleOpenAddModal()}
                             className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-primary-700 transition-all"
                         >
@@ -155,6 +193,12 @@ export default function SchedulesPage() {
                     </div>
                 )}
             </div>
+
+            {isAdmin && showShiftTypes && selectedDept && (
+                <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                    <ShiftTypesManager departmentId={selectedDept} />
+                </div>
+            )}
 
             {/* Main Schedule View */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -195,9 +239,9 @@ export default function SchedulesPage() {
                                                 return (
                                                     <td key={i} className="p-2 border-l border-slate-100 min-h-[80px] group relative">
                                                         {dayShifts.map(shift => (
-                                                            <div key={shift.id} className="bg-primary-50 border border-primary-100 rounded-lg p-2 mb-1 text-xs shadow-sm">
+                                                            <div key={shift.id} className="border border-slate-200 rounded-lg p-2 mb-1 text-xs shadow-sm bg-white" style={{ borderLeft: `4px solid ${shiftTypes.find(t => t.name === shift.type)?.color || '#3b82f6'}` }}>
                                                                 <div className="flex justify-between items-start mb-1">
-                                                                    <span className="font-bold text-primary-900">{shift.type}</span>
+                                                                    <span className="font-bold text-slate-800">{shift.type}</span>
                                                                     <div className="hidden group-hover:flex space-x-1">
                                                                         <button onClick={() => { setEditingShift(shift); setShiftForm({ userId: shift.user_id, startTime: shift.start_time.slice(0, 16), endTime: shift.end_time.slice(0, 16), type: shift.type as any }); setIsShiftModalOpen(true); }} className="text-slate-400 hover:text-primary-600"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
                                                                         <button onClick={() => handleDeleteShift(shift.id)} className="text-slate-400 hover:text-rose-600"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
@@ -230,7 +274,7 @@ export default function SchedulesPage() {
                                                         {dayShifts.map(shift => (
                                                             <div key={shift.id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm mb-4">
                                                                 <div className="flex items-center space-x-2 mb-2">
-                                                                    <div className="w-2 h-2 rounded-full bg-primary-500" />
+                                                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: shiftTypes.find(t => t.name === shift.type)?.color || '#3b82f6' }} />
                                                                     <span className="font-bold text-slate-900 text-sm">{shift.type}</span>
                                                                 </div>
                                                                 <p className="text-slate-600 font-medium">
@@ -316,16 +360,29 @@ export default function SchedulesPage() {
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Shift Type</label>
                                 <select
-                                    value={shiftForm.type}
-                                    onChange={(e) => setShiftForm({ ...shiftForm, type: e.target.value as any })}
-                                    className="w-full border border-slate-200 rounded-lg p-2 text-sm"
+                                    value={shiftTypes.find(t => t.name === shiftForm.type)?.id || ''}
+                                    onChange={(e) => handleShiftTypeChange(e.target.value)}
+                                    className="w-full border border-slate-200 rounded-lg p-2 text-sm focus:ring-primary-500"
                                 >
-                                    <option value="Morning">Morning</option>
-                                    <option value="Afternoon">Afternoon</option>
-                                    <option value="Night">Night</option>
-                                    <option value="Custom">Custom</option>
+                                    <option value="">Select a type...</option>
+                                    {shiftTypes.filter(t => !selectedDept || t.department_id === selectedDept).map(t => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                    <option value="custom">Custom (Specify in Time)</option>
                                 </select>
                             </div>
+                            {shiftForm.type === 'custom' && (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Custom Name</label>
+                                    <input
+                                        type="text"
+                                        value={shiftForm.type}
+                                        onChange={(e) => setShiftForm({ ...shiftForm, type: e.target.value })}
+                                        className="w-full border border-slate-200 rounded-lg p-2 text-sm"
+                                        placeholder="e.g. Special Event"
+                                    />
+                                </div>
+                            )}
                         </div>
                         <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
                             {editingShift && (

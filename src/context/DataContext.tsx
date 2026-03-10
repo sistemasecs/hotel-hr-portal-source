@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { User, Event, EventType, TrainingModule, UserTraining, CelebrationPhoto, PeerVote, SupervisorScore, EmployeeOfTheMonth, Department, ActivityLog, Shift, AttendanceLog } from '../types';
+import { User, Event, EventType, TrainingModule, UserTraining, CelebrationPhoto, PeerVote, SupervisorScore, EmployeeOfTheMonth, Department, ActivityLog, Shift, AttendanceLog, ShiftType } from '../types';
 import { mockEvents, mockTrainingModules, mockUserTrainings, mockCelebrationPhotos } from '../data/mockData';
 
 interface DataContextType {
@@ -13,6 +13,8 @@ interface DataContextType {
   eventTypes: EventType[];
   shifts: Shift[];
   attendanceLogs: AttendanceLog[];
+  shiftTypes: ShiftType[];
+  activeShift: Shift | null;
   hotelConfig: {
     hotelLatitude: number | null;
     hotelLongitude: number | null;
@@ -58,6 +60,10 @@ interface DataContextType {
   updateShift: (id: string, shift: Partial<Shift>) => Promise<void>;
   deleteShift: (id: string) => Promise<void>;
   fetchShifts: (filters: { userId?: string, departmentId?: string, startDate?: string, endDate?: string }) => Promise<void>;
+  addShiftType: (type: Omit<ShiftType, 'id'>) => Promise<void>;
+  updateShiftType: (id: string, type: Partial<ShiftType>) => Promise<void>;
+  deleteShiftType: (id: string) => Promise<void>;
+  fetchShiftTypes: (departmentId?: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -77,6 +83,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
+  const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([]);
+  const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [hotelConfig, setHotelConfig] = useState<{
     hotelLatitude: number | null;
     hotelLongitude: number | null;
@@ -176,6 +184,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setPeerVotes(gamificationData.peerVotes);
           setSupervisorScores(gamificationData.supervisorScores);
           setEmployeesOfTheMonth(gamificationData.employeesOfTheMonth);
+        }
+
+        // Fetch all shift types
+        const shiftTypesRes = await fetch('/api/shift-types');
+        if (shiftTypesRes.ok) {
+          const shiftTypesData = await shiftTypesRes.json();
+          setShiftTypes(shiftTypesData);
         }
 
       } catch (error) {
@@ -686,8 +701,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.ok) {
         const newLog = await response.json();
         setAttendanceLogs(prev => [newLog, ...prev]);
+
+        // Fetch the updated shift to get actual_start_time and set as active
         if (shiftId) {
-          setShifts(prev => prev.map(s => s.id === shiftId ? { ...s, status: 'Clocked-in' } : s));
+          const shiftRes = await fetch(`/api/shifts/${shiftId}`);
+          if (shiftRes.ok) {
+            const updatedShift = await shiftRes.json();
+            setShifts(prev => prev.map(s => s.id === shiftId ? updatedShift : s));
+            setActiveShift(updatedShift);
+          }
         }
       }
     } catch (error) {
@@ -707,6 +729,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAttendanceLogs(prev => [newLog, ...prev]);
         if (shiftId) {
           setShifts(prev => prev.map(s => s.id === shiftId ? { ...s, status: 'Completed' } : s));
+          if (activeShift?.id === shiftId) {
+            setActiveShift(null);
+          }
         }
       }
     } catch (error) {
@@ -736,6 +761,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.ok) {
         const data = await response.json();
         setShifts(data);
+
+        // Identify active shift
+        const active = data.find((s: Shift) => s.status === 'Clocked-in');
+        if (active) setActiveShift(active);
       }
     } catch (error) {
       console.error('Error fetching user shifts:', error);
@@ -800,6 +829,62 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const fetchShiftTypes = async (departmentId?: string) => {
+    try {
+      const url = departmentId ? `/api/shift-types?departmentId=${departmentId}` : '/api/shift-types';
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setShiftTypes(data);
+      }
+    } catch (error) {
+      console.error('Error fetching shift types:', error);
+    }
+  };
+
+  const addShiftType = async (type: Omit<ShiftType, 'id'>) => {
+    try {
+      const response = await fetch('/api/shift-types', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(type),
+      });
+      if (response.ok) {
+        const newType = await response.json();
+        setShiftTypes(prev => [...prev, newType]);
+      }
+    } catch (error) {
+      console.error('Error adding shift type:', error);
+    }
+  };
+
+  const updateShiftType = async (id: string, updatedType: Partial<ShiftType>) => {
+    try {
+      const response = await fetch(`/api/shift-types/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedType),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        setShiftTypes(prev => prev.map(t => t.id === id ? { ...t, ...result } : t));
+      }
+    } catch (error) {
+      console.error('Error updating shift type:', error);
+    }
+  };
+
+  const deleteShiftType = async (id: string) => {
+    try {
+      const response = await fetch(`/api/shift-types/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setShiftTypes(prev => prev.filter(t => t.id !== id));
+      }
+    } catch (error) {
+      console.error('Error deleting shift type:', error);
+    }
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -852,6 +937,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateShift,
         deleteShift,
         fetchShifts,
+        shiftTypes,
+        activeShift,
+        addShiftType,
+        updateShiftType,
+        deleteShiftType,
+        fetchShiftTypes,
       }}
     >
       {children}
