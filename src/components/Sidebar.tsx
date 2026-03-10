@@ -93,7 +93,7 @@ export default function Sidebar() {
     { name: t('cultureHubEvents'), tab: 'Events' },
     { name: t('learningModules'), tab: 'Modules' },
     { name: t('recognition'), tab: 'Recognition' },
-    { name: 'Attendance', tab: 'Attendance' },
+    { name: t('attendance'), tab: 'Attendance' },
     { name: t('activityLog'), tab: 'Activity' },
     { name: t('settings'), tab: 'Settings' },
   ];

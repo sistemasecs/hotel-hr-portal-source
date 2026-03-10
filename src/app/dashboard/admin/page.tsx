@@ -550,10 +550,10 @@ function AdminDashboardContent() {
                     tab === 'Departments' ? t('manageDepartments') :
                       tab === 'Events' ? t('cultureHubEvents') :
                         tab === 'Modules' ? t('learningModules') :
-                          tab === 'Recognition' ? 'Recognition' :
-                            tab === 'Attendance' ? 'Attendance' :
+                          tab === 'Recognition' ? t('recognition') :
+                            tab === 'Attendance' ? t('attendance') :
                               tab === 'Activity' ? t('activityLog') :
-                                'Settings'}
+                                t('settings')}
             </button>
           ))}
         </div>
