@@ -30,9 +30,9 @@ export default function AttendanceReports() {
         setLoading(true);
         setError(null);
         try {
-            // Use safer date construction
-            const startStr = `${startDate}T00:00:00.000Z`;
-            const endStr = `${endDate}T23:59:59.999Z`;
+            // Use Guatemala timezone offset (-06:00) instead of UTC (Z)
+            const startStr = `${startDate}T00:00:00.000-06:00`;
+            const endStr = `${endDate}T23:59:59.999-06:00`;
 
             const data = await fetchWorkedHoursReport(startStr, endStr, selectedDept);
             if (Array.isArray(data)) {

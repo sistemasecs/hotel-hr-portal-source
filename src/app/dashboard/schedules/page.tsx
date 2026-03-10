@@ -248,7 +248,7 @@ export default function SchedulesPage() {
                                                                     </div>
                                                                 </div>
                                                                 <p className="text-primary-700">
-                                                                    {new Date(shift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                    {new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', timeZone: 'America/Guatemala', hour12: true }).format(new Date(shift.start_time))} - {new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', timeZone: 'America/Guatemala', hour12: true }).format(new Date(shift.end_time))}
                                                                 </p>
                                                             </div>
                                                         ))}
@@ -278,7 +278,7 @@ export default function SchedulesPage() {
                                                                     <span className="font-bold text-slate-900 text-sm">{shift.type}</span>
                                                                 </div>
                                                                 <p className="text-slate-600 font-medium">
-                                                                    {new Date(shift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                    {new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', timeZone: 'America/Guatemala', hour12: true }).format(new Date(shift.start_time))} - {new Intl.DateTimeFormat([], { hour: '2-digit', minute: '2-digit', timeZone: 'America/Guatemala', hour12: true }).format(new Date(shift.end_time))}
                                                                 </p>
                                                                 <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                                                                     <span>Status</span>

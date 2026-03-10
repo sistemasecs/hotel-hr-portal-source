@@ -2106,8 +2106,23 @@ function AdminDashboardContent() {
                           onChange={(e) => updateHotelConfig({ hotelGeofenceRadius: parseInt(e.target.value) })}
                           className="flex-1 border border-slate-200 rounded-lg p-2 text-sm"
                         />
-                        <span className="text-slate-500 text-sm">m</span>
                       </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Clock-in Window (Minutes)</label>
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="number"
+                          value={hotelConfig.clockInWindowMinutes || 30}
+                          onChange={(e) => updateHotelConfig({ clockInWindowMinutes: parseInt(e.target.value) })}
+                          className="w-24 border border-slate-200 rounded-lg p-2 text-sm"
+                          min="0"
+                        />
+                        <span className="text-slate-500 text-sm">minutes</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-1 italic">
+                        Allow staff to clock in within this many minutes before/after their scheduled shift.
+                      </p>
                     </div>
                   </div>
 

@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { Shift } from '@/types';
 import WorkTimer from './WorkTimer';
+import LiveClock from './LiveClock';
 
 export default function PresenceBar() {
     const { user } = useAuth();
@@ -31,15 +32,29 @@ export default function PresenceBar() {
         // Window check for Clock In
         if (type === 'CLOCK_IN' && upcomingShift && hotelConfig.clockInWindowMinutes) {
             const shiftStart = new Date(upcomingShift.start_time).getTime();
+
+            // Get current time in Guatemala (GMT-6)
+            // Note: Date.now() is UTC. We need to compare it with the shiftStart which is also interpreted as UTC by new Date(iso)
+            // However, the shift data in DB might be stored as "2024-03-09T08:00:00" without Z.
+            // Let's ensure we compare consistently.
             const now = new Date().getTime();
             const windowMs = hotelConfig.clockInWindowMinutes * 60 * 1000;
             const diff = Math.abs(now - shiftStart);
 
             if (diff > windowMs) {
                 const minutesLeft = Math.ceil((diff - windowMs) / 60000);
+
+                // Helper to format the shift time in Guatemala timezone for the message
+                const shiftTimeStr = new Intl.DateTimeFormat(language === 'es' ? 'es-GT' : 'en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'America/Guatemala',
+                    hour12: true
+                }).format(new Date(upcomingShift.start_time));
+
                 const message = language === 'es'
-                    ? `Solo puedes marcar entrada dentro de los ${hotelConfig.clockInWindowMinutes} minutos de tu horario. Faltan aproximadamente ${minutesLeft} minutos.`
-                    : `You can only clock in within ${hotelConfig.clockInWindowMinutes} minutes of your shift. Please wait another ${minutesLeft} minutes.`;
+                    ? `Solo puedes marcar entrada dentro de los ${hotelConfig.clockInWindowMinutes} minutos de tu horario (${shiftTimeStr}). Faltan aprox. ${minutesLeft} minutos.`
+                    : `You can only clock in within ${hotelConfig.clockInWindowMinutes} minutes of your shift (${shiftTimeStr}). Please wait about ${minutesLeft} minutes.`;
 
                 setStatusMessage({ text: message, type: 'error' });
                 return;
@@ -76,17 +91,26 @@ export default function PresenceBar() {
     return (
         <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm sticky top-0 z-30">
             <div className="flex items-center space-x-6">
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 pr-6 border-r border-slate-100">
                     <div className={`w-3 h-3 rounded-full ${activeShift ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`} />
                     <div>
                         <p className="text-sm font-semibold text-slate-900 leading-tight">
                             {activeShift ? 'Currently Working' : 'Not Clocked In'}
                         </p>
                         {upcomingShift && !activeShift && (
-                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Next shift: {new Date(upcomingShift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                                Next shift: {new Intl.DateTimeFormat([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    timeZone: 'America/Guatemala',
+                                    hour12: true
+                                }).format(new Date(upcomingShift.start_time))}
+                            </p>
                         )}
                     </div>
                 </div>
+
+                <LiveClock />
 
                 {activeShift && (
                     <WorkTimer startTime={activeShift.actual_start_time || activeShift.start_time} />
@@ -96,8 +120,8 @@ export default function PresenceBar() {
             <div className="flex items-center space-x-4">
                 {statusMessage && (
                     <span className={`text-xs font-medium px-2 py-1 rounded ${statusMessage.type === 'error' ? 'text-red-500 bg-red-50' :
-                            statusMessage.type === 'success' ? 'text-emerald-500 bg-emerald-50' :
-                                'text-blue-500 bg-blue-50'
+                        statusMessage.type === 'success' ? 'text-emerald-500 bg-emerald-50' :
+                            'text-blue-500 bg-blue-50'
                         }`}>
                         {statusMessage.text}
                     </span>
