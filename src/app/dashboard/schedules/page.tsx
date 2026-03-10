@@ -7,6 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Shift, User, ShiftType } from '@/types';
 import ShiftTypesManager from '@/components/admin/ShiftTypesManager';
 import { Settings } from 'lucide-react';
+import { formatToGuatemalaDateTimeLocal, parseGuatemalaDateTimeLocal } from '@/lib/dateUtils';
 
 export default function SchedulesPage() {
     const { user, isAdmin } = useAuth();
@@ -41,9 +42,13 @@ export default function SchedulesPage() {
 
     useEffect(() => {
         if (user) {
+            // Standardize range to Guatemala timezone offsets
+            const startDate = `${weekRange.start.toISOString().split('T')[0]}T00:00:00.000-06:00`;
+            const endDate = `${weekRange.end.toISOString().split('T')[0]}T23:59:59.999-06:00`;
+
             const filters: any = {
-                startDate: weekRange.start.toISOString(),
-                endDate: weekRange.end.toISOString()
+                startDate,
+                endDate
             };
 
             if (isAdmin && selectedDept) {
@@ -89,8 +94,8 @@ export default function SchedulesPage() {
 
         setShiftForm({
             userId: userId || (isAdmin ? '' : user?.id || ''),
-            startTime: start.toISOString().slice(0, 16),
-            endTime: end.toISOString().slice(0, 16),
+            startTime: formatToGuatemalaDateTimeLocal(start),
+            endTime: formatToGuatemalaDateTimeLocal(end),
             type: 'Morning'
         });
         setEditingShift(null);
@@ -100,10 +105,16 @@ export default function SchedulesPage() {
     const handleSaveShift = async () => {
         if (!shiftForm.userId || !shiftForm.startTime || !shiftForm.endTime) return;
 
+        const payload = {
+            ...shiftForm,
+            startTime: parseGuatemalaDateTimeLocal(shiftForm.startTime),
+            endTime: parseGuatemalaDateTimeLocal(shiftForm.endTime)
+        };
+
         if (editingShift) {
-            await updateShift(editingShift.id, shiftForm);
+            await updateShift(editingShift.id, payload as any);
         } else {
-            await addShift(shiftForm as any);
+            await addShift(payload as any);
         }
         setIsShiftModalOpen(false);
     };
@@ -117,7 +128,9 @@ export default function SchedulesPage() {
     const handleShiftTypeChange = (typeId: string) => {
         const type = shiftTypes.find(t => t.id === typeId);
         if (type) {
-            const startDate = shiftForm.startTime ? new Date(shiftForm.startTime) : new Date();
+            // Parse existing startTime as Guatemala time to preserve the date part correctly
+            const currentStartStr = shiftForm.startTime ? parseGuatemalaDateTimeLocal(shiftForm.startTime) : new Date().toISOString();
+            const startDate = new Date(currentStartStr);
             const endDate = new Date(startDate);
 
             if (type.start_time_default) {
@@ -135,8 +148,8 @@ export default function SchedulesPage() {
             setShiftForm({
                 ...shiftForm,
                 type: type.name,
-                startTime: startDate.toISOString().slice(0, 16),
-                endTime: endDate.toISOString().slice(0, 16)
+                startTime: formatToGuatemalaDateTimeLocal(startDate),
+                endTime: formatToGuatemalaDateTimeLocal(endDate)
             });
         }
     };
@@ -243,7 +256,16 @@ export default function SchedulesPage() {
                                                                 <div className="flex justify-between items-start mb-1">
                                                                     <span className="font-bold text-slate-800">{shift.type}</span>
                                                                     <div className="hidden group-hover:flex space-x-1">
-                                                                        <button onClick={() => { setEditingShift(shift); setShiftForm({ userId: shift.user_id, startTime: shift.start_time.slice(0, 16), endTime: shift.end_time.slice(0, 16), type: shift.type as any }); setIsShiftModalOpen(true); }} className="text-slate-400 hover:text-primary-600"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                                                                        <button onClick={() => {
+                                                                            setEditingShift(shift);
+                                                                            setShiftForm({
+                                                                                userId: shift.user_id,
+                                                                                startTime: formatToGuatemalaDateTimeLocal(shift.start_time),
+                                                                                endTime: formatToGuatemalaDateTimeLocal(shift.end_time),
+                                                                                type: shift.type as any
+                                                                            });
+                                                                            setIsShiftModalOpen(true);
+                                                                        }} className="text-slate-400 hover:text-primary-600"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
                                                                         <button onClick={() => handleDeleteShift(shift.id)} className="text-slate-400 hover:text-rose-600"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
                                                                     </div>
                                                                 </div>
