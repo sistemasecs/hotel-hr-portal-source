@@ -47,7 +47,7 @@ export default function AttendanceReports() {
                     onClick={() => {
                         const csvContent = "data:text/csv;charset=utf-8,"
                             + "Employee,Department,Total Hours\n"
-                            + reportData.map(r => `"${r.user_name}","${r.department}",${r.total_hours.toFixed(2)}`).join("\n");
+                            + reportData.map(r => `"${r.user_name}","${r.department}",${(r.total_hours || 0).toFixed(2)}`).join("\n");
                         const encodedUri = encodeURI(csvContent);
                         const link = document.createElement("a");
                         link.setAttribute("href", encodedUri);
@@ -111,24 +111,24 @@ export default function AttendanceReports() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {reportData.length > 0 ? reportData.map((row, i) => (
-                            <tr key={row.user_id} className="hover:bg-slate-50/50 transition-colors">
+                        {reportData && reportData.length > 0 ? reportData.map((r, i) => (
+                            <tr key={r.user_id || i} className="hover:bg-slate-50/50 transition-colors">
                                 <td className="p-4">
                                     <div className="flex items-center font-bold text-slate-900">
-                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mr-3 text-[10px] text-slate-500">
-                                            {row.user_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mr-3 text-[10px] text-slate-500 uppercase">
+                                            {r.user_name ? r.user_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2) : '??'}
                                         </div>
-                                        {row.user_name}
+                                        {r.user_name || 'Unknown'}
                                     </div>
                                 </td>
                                 <td className="p-4">
                                     <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[10px] font-bold uppercase">
-                                        {row.department}
+                                        {r.department || '-'}
                                     </span>
                                 </td>
                                 <td className="p-4 text-right">
                                     <span className="text-lg font-bold text-slate-900">
-                                        {row.total_hours.toFixed(2)}
+                                        {(r.total_hours || 0).toFixed(2)}
                                     </span>
                                     <span className="text-xs text-slate-400 ml-1">hrs</span>
                                 </td>

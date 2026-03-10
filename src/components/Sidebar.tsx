@@ -93,6 +93,7 @@ export default function Sidebar() {
     { name: t('cultureHubEvents'), tab: 'Events' },
     { name: t('learningModules'), tab: 'Modules' },
     { name: t('recognition'), tab: 'Recognition' },
+    { name: 'Attendance', tab: 'Attendance' },
     { name: t('activityLog'), tab: 'Activity' },
     { name: t('settings'), tab: 'Settings' },
   ];
@@ -166,8 +167,8 @@ export default function Sidebar() {
                 href={item.href}
                 onClick={handleLinkClick}
                 className={`flex items-center px-4 py-3 rounded-md text-sm font-medium transition-colors ${isActive
-                    ? 'bg-primary-600 text-white'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
               >
                 {item.icon}
@@ -182,8 +183,8 @@ export default function Sidebar() {
               <button
                 onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-md text-sm font-medium transition-colors ${pathname.startsWith('/dashboard/admin') && !isAdminMenuOpen
-                    ? 'bg-primary-600 text-white'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
               >
                 <div className="flex items-center">
@@ -216,8 +217,8 @@ export default function Sidebar() {
                         href={`/dashboard/admin?tab=${link.tab}`}
                         onClick={handleLinkClick}
                         className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${isActive
-                            ? 'bg-primary-600/20 text-primary-400'
-                            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                          ? 'bg-primary-600/20 text-primary-400'
+                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                           }`}
                       >
                         {link.name}
