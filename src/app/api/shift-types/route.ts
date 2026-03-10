@@ -27,20 +27,20 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { name, departmentId, startTimeDefault, endTimeDefault, color } = await request.json();
+        const { name, department_id, start_time_default, end_time_default, color } = await request.json();
 
-        if (!name || !departmentId) {
+        if (!name || !department_id) {
             return NextResponse.json({ error: 'Name and Department ID are required' }, { status: 400 });
         }
 
         const result = await pool.query(
             `INSERT INTO shift_types (name, department_id, start_time_default, end_time_default, color)
              VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-            [name, departmentId, startTimeDefault || null, endTimeDefault || null, color || '#3b82f6']
+            [name, department_id, start_time_default || null, end_time_default || null, color || '#3b82f6']
         );
 
         const newType = result.rows[0];
-        await logActivity(null, 'CREATE', 'SHIFT_TYPE', newType.id, { name, departmentId });
+        await logActivity(null, 'CREATE', 'SHIFT_TYPE', newType.id, { name, department_id });
 
         return NextResponse.json(newType);
     } catch (error) {

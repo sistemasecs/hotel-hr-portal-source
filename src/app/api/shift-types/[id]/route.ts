@@ -5,13 +5,13 @@ import { logActivity } from '@/lib/activityLogger';
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
-        const { name, startTimeDefault, endTimeDefault, color } = await request.json();
+        const { name, start_time_default, end_time_default, color } = await request.json();
 
         const result = await pool.query(
             `UPDATE shift_types 
              SET name = $1, start_time_default = $2, end_time_default = $3, color = $4
              WHERE id = $5 RETURNING *`,
-            [name, startTimeDefault, endTimeDefault, color, id]
+            [name, start_time_default, end_time_default, color, id]
         );
 
         if (result.rows.length === 0) {
