@@ -19,6 +19,7 @@ interface DataContextType {
     hotelLatitude: number | null;
     hotelLongitude: number | null;
     hotelGeofenceRadius: number | null;
+    clockInWindowMinutes: number | null;
   };
   assignTraining: (userId: string, moduleId: string) => void;
   updateTrainingStatus: (userId: string, moduleId: string, status: UserTraining['status']) => void;
@@ -60,6 +61,7 @@ interface DataContextType {
   updateShift: (id: string, shift: Partial<Shift>) => Promise<void>;
   deleteShift: (id: string) => Promise<void>;
   fetchShifts: (filters: { userId?: string, departmentId?: string, startDate?: string, endDate?: string }) => Promise<void>;
+  fetchWorkedHoursReport: (startDate: string, endDate: string, departmentId?: string) => Promise<any[]>;
   addShiftType: (type: Omit<ShiftType, 'id'>) => Promise<void>;
   updateShiftType: (id: string, type: Partial<ShiftType>) => Promise<void>;
   deleteShiftType: (id: string) => Promise<void>;
@@ -89,10 +91,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hotelLatitude: number | null;
     hotelLongitude: number | null;
     hotelGeofenceRadius: number | null;
+    clockInWindowMinutes: number | null;
   }>({
     hotelLatitude: null,
     hotelLongitude: null,
     hotelGeofenceRadius: null,
+    clockInWindowMinutes: null,
   });
 
   const fetchActivityLogs = async () => {
@@ -116,11 +120,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (configRes.ok) {
           const config = await configRes.json();
           if (config.hotelLogo) setHotelLogo(config.hotelLogo);
-          setHotelConfig({
-            hotelLatitude: config.hotelLatitude,
-            hotelLongitude: config.hotelLongitude,
-            hotelGeofenceRadius: config.hotelGeofenceRadius,
-          });
+          const newConfig: DataContextType['hotelConfig'] = {
+            hotelLatitude: null,
+            hotelLongitude: null,
+            hotelGeofenceRadius: null,
+            clockInWindowMinutes: null,
+          };
+
+          // Assuming config is an array of { key: string, value: string } or similar
+          // If config is a direct object with properties, this loop needs adjustment
+          // For now, assuming the API returns an object with direct properties
+          if (config.hotelLatitude !== undefined) newConfig.hotelLatitude = parseFloat(config.hotelLatitude);
+          if (config.hotelLongitude !== undefined) newConfig.hotelLongitude = parseFloat(config.hotelLongitude);
+          if (config.hotelGeofenceRadius !== undefined) newConfig.hotelGeofenceRadius = parseFloat(config.hotelGeofenceRadius);
+          if (config.clockInWindowMinutes !== undefined) newConfig.clockInWindowMinutes = parseInt(config.clockInWindowMinutes);
+
+          setHotelConfig(newConfig);
         }
 
         // Fetch Event Types
@@ -680,7 +695,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({
           hotelLatitude: newConfig.hotelLatitude,
           hotelLongitude: newConfig.hotelLongitude,
-          hotelGeofenceRadius: newConfig.hotelGeofenceRadius
+          hotelGeofenceRadius: newConfig.hotelGeofenceRadius,
+          clockInWindowMinutes: newConfig.clockInWindowMinutes,
         })
       });
       if (response.ok) {
@@ -816,6 +832,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const fetchWorkedHoursReport = async (startDate: string, endDate: string, departmentId?: string) => {
+    try {
+      const params = new URLSearchParams({ startDate, endDate });
+      if (departmentId) params.append('departmentId', departmentId);
+
+      const response = await fetch(`/api/reports/worked-hours?${params.toString()}`);
+      if (response.ok) {
+        return await response.json();
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching worked hours report:', error);
+      return [];
+    }
+  };
+
   const fetchAttendanceLogs = async (userId?: string) => {
     try {
       const url = userId ? `/api/attendance?userId=${userId}` : '/api/attendance';
@@ -943,6 +975,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateShiftType,
         deleteShiftType,
         fetchShiftTypes,
+        fetchWorkedHoursReport,
       }}
     >
       {children}

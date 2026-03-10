@@ -9,10 +9,10 @@ import WorkTimer from './WorkTimer';
 
 export default function PresenceBar() {
     const { user } = useAuth();
-    const { clockIn, clockOut, shifts, fetchUserShifts, activeShift } = useData();
-    const { t } = useLanguage();
+    const { clockIn, clockOut, shifts, fetchUserShifts, activeShift, hotelConfig } = useData();
+    const { t, language } = useLanguage();
     const [loading, setLoading] = useState(false);
-    const [locationError, setLocationError] = useState<string | null>(null);
+    const [statusMessage, setStatusMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null);
 
     useEffect(() => {
         if (user?.id) {
@@ -24,12 +24,30 @@ export default function PresenceBar() {
 
     const handleClockAction = (type: 'CLOCK_IN' | 'CLOCK_OUT') => {
         if (!navigator.geolocation) {
-            setLocationError("Geolocation is not supported by your browser");
+            setStatusMessage({ text: "Geolocation is not supported by your browser", type: 'error' });
             return;
         }
 
+        // Window check for Clock In
+        if (type === 'CLOCK_IN' && upcomingShift && hotelConfig.clockInWindowMinutes) {
+            const shiftStart = new Date(upcomingShift.start_time).getTime();
+            const now = new Date().getTime();
+            const windowMs = hotelConfig.clockInWindowMinutes * 60 * 1000;
+            const diff = Math.abs(now - shiftStart);
+
+            if (diff > windowMs) {
+                const minutesLeft = Math.ceil((diff - windowMs) / 60000);
+                const message = language === 'es'
+                    ? `Solo puedes marcar entrada dentro de los ${hotelConfig.clockInWindowMinutes} minutos de tu horario. Faltan aproximadamente ${minutesLeft} minutos.`
+                    : `You can only clock in within ${hotelConfig.clockInWindowMinutes} minutes of your shift. Please wait another ${minutesLeft} minutes.`;
+
+                setStatusMessage({ text: message, type: 'error' });
+                return;
+            }
+        }
+
         setLoading(true);
-        setLocationError(null);
+        setStatusMessage(null);
 
         navigator.geolocation.getCurrentPosition(
             async (position) => {
@@ -46,7 +64,7 @@ export default function PresenceBar() {
             },
             (error) => {
                 console.error("Error getting location:", error);
-                setLocationError("Please enable location services to clock in/out");
+                setStatusMessage({ text: "Please enable location services to clock in/out", type: 'error' });
                 setLoading(false);
             },
             { enableHighAccuracy: true }
@@ -76,9 +94,12 @@ export default function PresenceBar() {
             </div>
 
             <div className="flex items-center space-x-4">
-                {locationError && (
-                    <span className="text-xs text-red-500 font-medium bg-red-50 px-2 py-1 rounded">
-                        {locationError}
+                {statusMessage && (
+                    <span className={`text-xs font-medium px-2 py-1 rounded ${statusMessage.type === 'error' ? 'text-red-500 bg-red-50' :
+                            statusMessage.type === 'success' ? 'text-emerald-500 bg-emerald-50' :
+                                'text-blue-500 bg-blue-50'
+                        }`}>
+                        {statusMessage.text}
                     </span>
                 )}
 
