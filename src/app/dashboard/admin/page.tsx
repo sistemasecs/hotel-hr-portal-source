@@ -10,6 +10,12 @@ import { User, Event, TrainingModule } from '@/types';
 import ModuleForm from '@/components/admin/ModuleForm';
 import AttendanceReports from '@/components/admin/AttendanceReports';
 import Papa from 'papaparse';
+import dynamic from 'next/dynamic';
+
+const MapPicker = dynamic(() => import('@/components/admin/MapPicker'), {
+  ssr: false,
+  loading: () => <div className="w-full h-[300px] bg-slate-100 animate-pulse rounded-lg flex items-center justify-center text-slate-400">Loading Map...</div>
+});
 
 function AdminDashboardContent() {
   const { user, isAdmin } = useAuth();
@@ -2068,39 +2074,50 @@ function AdminDashboardContent() {
               </div>
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Hotel Latitude</label>
-                    <input
-                      type="number"
-                      step="0.000001"
-                      value={hotelConfig.hotelLatitude || ''}
-                      onChange={(e) => updateHotelConfig({ hotelLatitude: parseFloat(e.target.value) })}
-                      className="w-full border border-slate-200 rounded-lg p-2 text-sm"
-                      placeholder="e.g. 19.432608"
-                    />
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Hotel Latitude</label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        value={hotelConfig.hotelLatitude || ''}
+                        onChange={(e) => updateHotelConfig({ hotelLatitude: parseFloat(e.target.value) })}
+                        className="w-full border border-slate-200 rounded-lg p-2 text-sm"
+                        placeholder="e.g. 19.432608"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Hotel Longitude</label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        value={hotelConfig.hotelLongitude || ''}
+                        onChange={(e) => updateHotelConfig({ hotelLongitude: parseFloat(e.target.value) })}
+                        className="w-full border border-slate-200 rounded-lg p-2 text-sm"
+                        placeholder="e.g. -99.133209"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Geofence Radius (meters)</label>
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="number"
+                          value={hotelConfig.hotelGeofenceRadius || 200}
+                          onChange={(e) => updateHotelConfig({ hotelGeofenceRadius: parseInt(e.target.value) })}
+                          className="flex-1 border border-slate-200 rounded-lg p-2 text-sm"
+                        />
+                        <span className="text-slate-500 text-sm">m</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Hotel Longitude</label>
-                    <input
-                      type="number"
-                      step="0.000001"
-                      value={hotelConfig.hotelLongitude || ''}
-                      onChange={(e) => updateHotelConfig({ hotelLongitude: parseFloat(e.target.value) })}
-                      className="w-full border border-slate-200 rounded-lg p-2 text-sm"
-                      placeholder="e.g. -99.133209"
+
+                  <div className="flex flex-col">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Visual Location Picker</label>
+                    <MapPicker
+                      latitude={hotelConfig.hotelLatitude}
+                      longitude={hotelConfig.hotelLongitude}
+                      onLocationSelect={(lat, lng) => updateHotelConfig({ hotelLatitude: lat, hotelLongitude: lng })}
                     />
-                  </div>
-                </div>
-                <div className="max-w-xs">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Geofence Radius (meters)</label>
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="number"
-                      value={hotelConfig.hotelGeofenceRadius || 200}
-                      onChange={(e) => updateHotelConfig({ hotelGeofenceRadius: parseInt(e.target.value) })}
-                      className="flex-1 border border-slate-200 rounded-lg p-2 text-sm"
-                    />
-                    <span className="text-slate-500 text-sm">m</span>
                   </div>
                 </div>
                 <div className="bg-amber-50 border border-amber-100 rounded-lg p-4">
