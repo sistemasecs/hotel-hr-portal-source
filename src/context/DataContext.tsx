@@ -23,6 +23,7 @@ interface DataContextType {
   };
   assignTraining: (userId: string, moduleId: string) => void;
   updateTrainingStatus: (userId: string, moduleId: string, status: UserTraining['status']) => void;
+  isUserOnboarded: (user: User) => boolean;
   addTrainingModule: (module: Omit<TrainingModule, 'id'>) => void;
   updateTrainingModule: (id: string, module: Partial<TrainingModule>) => void;
   deleteTrainingModule: (id: string) => void;
@@ -546,6 +547,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const isUserOnboarded = (userToCheck: User) => {
+    // 1. Get all modules required for onboarding that target this user's department
+    const requiredModules = trainingModules.filter(
+      (m) => m.isOnboardingRequirement && m.targetDepartments.includes(userToCheck.department)
+    );
+
+    if (requiredModules.length === 0) return true; // No onboarding required
+
+    // 2. Check if the user has completed all of them
+    const userCompletedModuleIds = userTrainings
+      .filter((ut) => ut.userId === userToCheck.id && ut.status === 'Completed')
+      .map((ut) => ut.moduleId);
+
+    return requiredModules.every((rm) => userCompletedModuleIds.includes(rm.id));
+  };
+
   const assignTraining = async (userId: string, moduleId: string) => {
     if (userTrainings.some(ut => ut.userId === userId && ut.moduleId === moduleId)) {
       return;
@@ -946,6 +963,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         eventTypes,
         assignTraining,
         updateTrainingStatus,
+        isUserOnboarded,
         addTrainingModule,
         updateTrainingModule,
         deleteTrainingModule,

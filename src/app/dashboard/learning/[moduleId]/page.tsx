@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useRouter, useParams } from 'next/navigation';
+import SecureDocumentViewer from '@/components/learning/SecureDocumentViewer';
 
 export default function ModulePlayerPage() {
   const { user } = useAuth();
@@ -104,14 +105,20 @@ export default function ModulePlayerPage() {
           {module.type === 'Video' || module.type === 'Document' ? (
             <div className="space-y-6">
               {module.contentUrl ? (
-                <div className="aspect-video w-full bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
-                  <iframe
-                    src={module.contentUrl}
-                    className="w-full h-full"
-                    allowFullScreen
-                    title={module.title}
-                  />
-                </div>
+                module.type === 'Document' ? (
+                  <div className="w-full bg-slate-100/50 rounded-lg overflow-hidden border border-slate-200 py-6">
+                    <SecureDocumentViewer fileUrl={module.contentUrl} />
+                  </div>
+                ) : (
+                  <div className="aspect-video w-full bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+                    <iframe
+                      src={module.contentUrl}
+                      className="w-full h-full"
+                      allowFullScreen
+                      title={module.title}
+                    />
+                  </div>
+                )
               ) : (
                 <div className="aspect-video w-full bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200">
                   <p className="text-slate-500">No content URL provided for this module.</p>

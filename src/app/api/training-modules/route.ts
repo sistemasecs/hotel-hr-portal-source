@@ -29,6 +29,7 @@ export async function GET() {
                 required: module.required,
                 contentUrl: module.content_url,
                 passingScore: module.passing_score,
+                isOnboardingRequirement: module.is_onboarding_requirement,
                 questions: moduleQuestions.length > 0 ? moduleQuestions : undefined,
             };
         });
@@ -55,18 +56,18 @@ export async function POST(request: Request) {
         if (id) {
             moduleResult = await client.query(
                 `INSERT INTO training_modules 
-         (id, title, description, type, duration, target_departments, required, content_url, passing_score) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+         (id, title, description, type, duration, target_departments, required, content_url, passing_score, is_onboarding_requirement) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
                 [id, module.title, module.description, module.type, module.duration, module.targetDepartments || [],
-                    module.required || false, module.contentUrl, module.passingScore]
+                    module.required || false, module.contentUrl, module.passingScore, module.isOnboardingRequirement || false]
             );
         } else {
             moduleResult = await client.query(
                 `INSERT INTO training_modules 
-         (title, description, type, duration, target_departments, required, content_url, passing_score) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+         (title, description, type, duration, target_departments, required, content_url, passing_score, is_onboarding_requirement) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
                 [module.title, module.description, module.type, module.duration, module.targetDepartments || [],
-                module.required || false, module.contentUrl, module.passingScore]
+                module.required || false, module.contentUrl, module.passingScore, module.isOnboardingRequirement || false]
             );
         }
 
@@ -110,6 +111,7 @@ export async function POST(request: Request) {
             required: moduleResult.rows[0].required,
             contentUrl: moduleResult.rows[0].content_url,
             passingScore: moduleResult.rows[0].passing_score,
+            isOnboardingRequirement: moduleResult.rows[0].is_onboarding_requirement,
             questions: questionsResult.length > 0 ? questionsResult : undefined
         };
 

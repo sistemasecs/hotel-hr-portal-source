@@ -64,6 +64,7 @@ export interface TrainingModule {
   contentUrl?: string; // For Video/Document
   questions?: QuizQuestion[]; // For Quiz
   passingScore?: number; // For Quiz
+  isOnboardingRequirement?: boolean;
 }
 
 export interface UserTraining {

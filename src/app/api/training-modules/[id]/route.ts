@@ -10,8 +10,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         const { id } = await context.params;
         const module = await request.json();
 
-        const result = await client.query(
-            `UPDATE training_modules SET 
+    const result = await client.query(
+        `UPDATE training_modules SET 
          title = COALESCE($1, title), 
          description = COALESCE($2, description), 
          type = COALESCE($3, type), 
@@ -19,11 +19,12 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
          target_departments = COALESCE($5, target_departments), 
          required = COALESCE($6, required), 
          content_url = COALESCE($7, content_url), 
-         passing_score = COALESCE($8, passing_score)
-       WHERE id = $9 RETURNING *`,
-            [module.title, module.description, module.type, module.duration,
-            module.targetDepartments, module.required, module.contentUrl, module.passingScore, id]
-        );
+         passing_score = COALESCE($8, passing_score),
+         is_onboarding_requirement = COALESCE($9, is_onboarding_requirement)
+       WHERE id = $10 RETURNING *`,
+        [module.title, module.description, module.type, module.duration,
+        module.targetDepartments, module.required, module.contentUrl, module.passingScore, module.isOnboardingRequirement, id]
+    );
 
         if (result.rowCount === 0) {
             await client.query('ROLLBACK');
@@ -45,6 +46,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
             required: result.rows[0].required,
             contentUrl: result.rows[0].content_url,
             passingScore: result.rows[0].passing_score,
+            isOnboardingRequirement: result.rows[0].is_onboarding_requirement,
         };
 
         await logActivity(null, 'UPDATE', 'TRAINING_MODULE', updatedModule.id, { title: updatedModule.title });

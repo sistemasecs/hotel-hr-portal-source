@@ -20,6 +20,7 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
   const [duration, setDuration] = useState(initialData?.duration || '');
   const [targetDepartments, setTargetDepartments] = useState<string[]>(initialData?.targetDepartments || []);
   const [required, setRequired] = useState(initialData?.required || false);
+  const [isOnboardingRequirement, setIsOnboardingRequirement] = useState(initialData?.isOnboardingRequirement || false);
   const [contentUrl, setContentUrl] = useState(initialData?.contentUrl || '');
   const [questions, setQuestions] = useState<QuizQuestion[]>(initialData?.questions || []);
   const [passingScore, setPassingScore] = useState<number>(initialData?.passingScore || 0);
@@ -77,6 +78,7 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
       duration,
       targetDepartments,
       required,
+      isOnboardingRequirement,
       contentUrl: type !== 'Quiz' ? contentUrl : undefined,
       questions: type === 'Quiz' ? questions : undefined,
       passingScore: type === 'Quiz' ? passingScore : undefined,
@@ -141,7 +143,7 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
           </select>
         </div>
 
-        <div className="space-y-2 flex items-center h-full pt-6">
+        <div className="space-y-4 flex flex-col justify-center pt-6">
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
               type="checkbox"
@@ -150,6 +152,15 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
               className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
             />
             <span className="text-sm font-medium text-slate-700">{t('requiredTraining')}</span>
+          </label>
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isOnboardingRequirement}
+              onChange={(e) => setIsOnboardingRequirement(e.target.checked)}
+              className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+            />
+            <span className="text-sm font-medium text-slate-700">Is Onboarding Requirement?</span>
           </label>
         </div>
 
