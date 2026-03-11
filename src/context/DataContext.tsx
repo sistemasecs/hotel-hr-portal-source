@@ -60,7 +60,8 @@ interface DataContextType {
   fetchAttendanceLogs: (userId?: string) => Promise<void>;
   updateShift: (id: string, shift: Partial<Shift>) => Promise<void>;
   deleteShift: (id: string) => Promise<void>;
-  fetchShifts: (filters: { userId?: string, departmentId?: string, startDate?: string, endDate?: string }) => Promise<void>;
+  fetchShifts: (filters: { userId?: string, departmentId?: string, startDate?: string, endDate?: string, status?: string }) => Promise<void>;
+  approveShift: (id: string) => Promise<void>;
   fetchWorkedHoursReport: (startDate: string, endDate: string, departmentId?: string) => Promise<any[]>;
   addShiftType: (type: Omit<ShiftType, 'id'>) => Promise<void>;
   updateShiftType: (id: string, type: Partial<ShiftType>) => Promise<void>;
@@ -814,13 +815,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const fetchShifts = async (filters: { userId?: string, departmentId?: string, startDate?: string, endDate?: string }) => {
+  const fetchShifts = async (filters: { userId?: string, departmentId?: string, startDate?: string, endDate?: string, status?: string }) => {
     try {
       const params = new URLSearchParams();
       if (filters.userId) params.append('userId', filters.userId);
       if (filters.departmentId) params.append('departmentId', filters.departmentId);
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.status) params.append('status', filters.status);
 
       const response = await fetch(`/api/shifts?${params.toString()}`);
       if (response.ok) {
@@ -917,6 +919,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const approveShift = async (id: string) => {
+    try {
+      const response = await fetch(`/api/shifts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Completed' }),
+      });
+      if (response.ok) {
+        const updatedShift = await response.json();
+        setShifts(prev => prev.map(s => s.id === id ? updatedShift : s));
+      }
+    } catch (error) {
+      console.error('Error approving shift:', error);
+    }
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -976,6 +994,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteShiftType,
         fetchShiftTypes,
         fetchWorkedHoursReport,
+        approveShift,
       }}
     >
       {children}

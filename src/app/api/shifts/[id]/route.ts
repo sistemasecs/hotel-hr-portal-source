@@ -2,6 +2,25 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { logActivity } from '@/lib/activityLogger';
 
+export async function GET(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await params;
+        const result = await pool.query('SELECT * FROM shifts WHERE id = $1', [id]);
+
+        if (result.rows.length === 0) {
+            return NextResponse.json({ error: 'Shift not found' }, { status: 404 });
+        }
+
+        return NextResponse.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error fetching shift:', error);
+        return NextResponse.json({ error: 'Failed to fetch shift' }, { status: 500 });
+    }
+}
+
 export async function PUT(
     request: Request,
     { params }: { params: Promise<{ id: string }> }

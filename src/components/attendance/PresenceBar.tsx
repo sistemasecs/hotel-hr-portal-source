@@ -7,6 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Shift } from '@/types';
 import WorkTimer from './WorkTimer';
 import LiveClock from './LiveClock';
+import { ensureGuatemalaDate } from '@/lib/dateUtils';
 
 export default function PresenceBar() {
     const { user } = useAuth();
@@ -27,38 +28,6 @@ export default function PresenceBar() {
         if (!navigator.geolocation) {
             setStatusMessage({ text: "Geolocation is not supported by your browser", type: 'error' });
             return;
-        }
-
-        // Window check for Clock In
-        if (type === 'CLOCK_IN' && upcomingShift && hotelConfig.clockInWindowMinutes) {
-            const shiftStart = new Date(upcomingShift.start_time).getTime();
-
-            // Get current time in Guatemala (GMT-6)
-            // Note: Date.now() is UTC. We need to compare it with the shiftStart which is also interpreted as UTC by new Date(iso)
-            // However, the shift data in DB might be stored as "2024-03-09T08:00:00" without Z.
-            // Let's ensure we compare consistently.
-            const now = new Date().getTime();
-            const windowMs = hotelConfig.clockInWindowMinutes * 60 * 1000;
-            const diff = Math.abs(now - shiftStart);
-
-            if (diff > windowMs) {
-                const minutesLeft = Math.ceil((diff - windowMs) / 60000);
-
-                // Helper to format the shift time in Guatemala timezone for the message
-                const shiftTimeStr = new Intl.DateTimeFormat(language === 'es' ? 'es-GT' : 'en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone: 'America/Guatemala',
-                    hour12: true
-                }).format(new Date(upcomingShift.start_time));
-
-                const message = language === 'es'
-                    ? `Solo puedes marcar entrada dentro de los ${hotelConfig.clockInWindowMinutes} minutos de tu horario (${shiftTimeStr}). Faltan aprox. ${minutesLeft} minutos.`
-                    : `You can only clock in within ${hotelConfig.clockInWindowMinutes} minutes of your shift (${shiftTimeStr}). Please wait about ${minutesLeft} minutes.`;
-
-                setStatusMessage({ text: message, type: 'error' });
-                return;
-            }
         }
 
         setLoading(true);
@@ -104,7 +73,7 @@ export default function PresenceBar() {
                                     minute: '2-digit',
                                     timeZone: 'America/Guatemala',
                                     hour12: true
-                                }).format(new Date(upcomingShift.start_time))}
+                                }).format(ensureGuatemalaDate(upcomingShift.start_time))}
                             </p>
                         )}
                     </div>
@@ -133,12 +102,12 @@ export default function PresenceBar() {
                         disabled={loading}
                         className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-full transition-all shadow-md disabled:opacity-50 flex items-center"
                     >
-                        {loading ? (
+                        {loading && (
                             <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                             </svg>
-                        ) : null}
+                        )}
                         CLOCK IN
                     </button>
                 ) : (
@@ -147,12 +116,12 @@ export default function PresenceBar() {
                         disabled={loading}
                         className="px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold rounded-full transition-all shadow-md disabled:opacity-50 flex items-center"
                     >
-                        {loading ? (
+                        {loading && (
                             <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                             </svg>
-                        ) : null}
+                        )}
                         CLOCK OUT
                     </button>
                 )}

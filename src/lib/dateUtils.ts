@@ -39,6 +39,31 @@ export function parseGuatemalaDateTimeLocal(dateTimeStr: string | null): string 
 }
 
 /**
+ * Ensures a date string or object is interpreted as America/Guatemala (GMT-6).
+ * If the input string lacks a timezone offset, it appends -06:00.
+ */
+export function ensureGuatemalaDate(date: Date | string | null): Date {
+    if (!date) return new Date();
+    if (date instanceof Date) return date;
+
+    // If it's a string and doesn't have a 'Z' or a '+' or '-' for offset
+    if (typeof date === 'string' && !date.includes('Z') && !/\d{2}:\d{2}[+-]\d{2}:\d{2}$/.test(date)) {
+        // Check if it has a T or space
+        const separator = date.includes('T') ? 'T' : ' ';
+        const parts = date.split(separator);
+        const datePart = parts[0];
+        let timePart = parts[1] || "00:00:00";
+
+        // Ensure timePart has seconds for compatibility
+        if (timePart.split(':').length === 2) timePart += ":00";
+
+        return new Date(`${datePart}T${timePart}.000-06:00`);
+    }
+
+    return new Date(date);
+}
+
+/**
  * Gets a Date object representing the start of a day (00:00:00) in Guatemala timezone
  * from a standard Date object.
  */

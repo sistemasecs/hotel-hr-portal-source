@@ -169,8 +169,11 @@ export interface Shift {
   start_time: string;
   end_time: string;
   actual_start_time?: string | null;
-  status: 'Scheduled' | 'Clocked-in' | 'Completed' | 'Absent';
+  actual_end_time?: string | null;
+  status: 'Scheduled' | 'Clocked-in' | 'Completed' | 'Absent' | 'Pending Approval';
   type: string;
+  user_name?: string;
+  department_name?: string;
 }
 
 export interface ShiftType {

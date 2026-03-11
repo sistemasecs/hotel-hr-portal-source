@@ -61,13 +61,36 @@ export async function POST(request: Request) {
 
         const newLog = result.rows[0];
 
-        // 4. Update Shift Status if shiftId provided
-        if (shiftId) {
-            const shiftStatus = type === 'CLOCK_IN' ? 'Clocked-in' : 'Completed';
-            await pool.query(
-                'UPDATE shifts SET status = $1 WHERE id = $2',
-                [shiftStatus, shiftId]
-            );
+        // 4. Update Shift Status or Create Floating Shift
+        if (type === 'CLOCK_IN') {
+            if (shiftId) {
+                await pool.query(
+                    'UPDATE shifts SET status = $1, actual_start_time = NOW() WHERE id = $2',
+                    ['Clocked-in', shiftId]
+                );
+            } else {
+                // Create a floating shift for unscheduled clock-ins
+                await pool.query(
+                    `INSERT INTO shifts (user_id, start_time, end_time, type, status, actual_start_time)
+                     VALUES ($1, NOW(), NOW() + interval '8 hours', $2, $3, NOW())`,
+                    [userId, 'Floating', 'Clocked-in']
+                );
+            }
+        } else if (type === 'CLOCK_OUT') {
+            if (shiftId) {
+                await pool.query(
+                    'UPDATE shifts SET status = $1, actual_end_time = NOW() WHERE id = $2',
+                    ['Pending Approval', shiftId]
+                );
+            } else {
+                // Try to find the most recent active shift if shiftId was missing
+                await pool.query(
+                    `UPDATE shifts SET status = $1, actual_end_time = NOW() 
+                     WHERE user_id = $2 AND status = 'Clocked-in' 
+                     AND actual_end_time IS NULL`,
+                    ['Pending Approval', userId]
+                );
+            }
         }
 
         await logActivity(userId, 'CREATE', 'ATTENDANCE_LOG', newLog.id, { type, isVerified });

@@ -13,24 +13,16 @@ export async function GET(request: Request) {
         }
 
         let query = `
-            WITH AttendancePairs AS (
-                SELECT 
-                    user_id,
-                    timestamp as clock_in,
-                    LEAD(timestamp) OVER (PARTITION BY user_id ORDER BY timestamp) as clock_out,
-                    type,
-                    LEAD(type) OVER (PARTITION BY user_id ORDER BY timestamp) as next_type
-                FROM attendance_logs
-                WHERE timestamp >= $1 AND timestamp <= $2
-            )
             SELECT 
                 u.id as user_id,
                 u.name as user_name,
                 u.department,
-                SUM(EXTRACT(EPOCH FROM (clock_out - clock_in)) / 3600) as total_hours
-            FROM AttendancePairs ap
-            JOIN users u ON ap.user_id = u.id
-            WHERE ap.type = 'CLOCK_IN' AND ap.next_type = 'CLOCK_OUT'
+                SUM(EXTRACT(EPOCH FROM (s.actual_end_time - s.actual_start_time)) / 3600) as total_hours
+            FROM shifts s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.status = 'Completed' 
+              AND s.actual_start_time >= $1 
+              AND s.actual_end_time <= $2
         `;
 
         let values: any[] = [startDate, endDate];
