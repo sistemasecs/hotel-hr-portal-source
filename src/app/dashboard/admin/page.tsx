@@ -1180,10 +1180,10 @@ function AdminDashboardContent() {
 
           <div className="overflow-auto pb-8 min-h-[400px] print:overflow-visible print:min-h-0 print:h-auto">
             <div 
-              className="transition-transform duration-200 ease-out origin-top flex justify-center print:transform-none print:origin-center"
+              className="transition-transform duration-200 ease-out origin-top flex justify-center"
               style={{ transform: `scale(${zoomLevel})` }}
             >
-              <div className="flex space-x-8 min-w-max">
+              <div className="flex space-x-8 min-w-max pb-32">
                 {selectedHierarchyDepts.length > 0
                   ? selectedHierarchyDepts.map(deptId => renderHierarchyNode(deptId))
                   : (
@@ -1219,35 +1219,57 @@ function AdminDashboardContent() {
 
           <style jsx global>{`
             @media print {
-              body * {
-                visibility: hidden;
-              }
-              .print\\:block, .print\\:block * {
-                visibility: visible;
-              }
-              .print\\:hidden {
+              /* Hide everything by default */
+              body > * {
                 display: none !important;
               }
-              /* Target only the hierarchy view */
-              main, .space-y-8, .bg-white.rounded-xl.shadow-sm.border.border-slate-100.p-6 {
+              
+              /* Show the main content area but remove its layout constraints */
+              body > #root, 
+              body > __next, 
+              body > div:first-child {
+                display: block !important;
+              }
+
+              /* Specific overrides to show only the hierarchy view */
+              .print-container, 
+              .print-container * {
                 visibility: visible !important;
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
+              }
+
+              /* Hide the sidebar, header, and other tabs */
+              aside, 
+              nav, 
+              header, 
+              .print\\:hidden,
+              button {
+                display: none !important;
+              }
+
+              /* Ensure the hierarchy view is visible and at the top */
+              main {
+                display: block !important;
                 margin: 0 !important;
                 padding: 0 !important;
+                width: 100% !important;
+              }
+
+              .bg-white.rounded-xl.shadow-sm.border {
                 border: none !important;
                 box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
               }
-              .bg-slate-900, header, nav, button {
-                 display: none !important;
-              }
+
               .overflow-auto {
                 overflow: visible !important;
               }
-              .min-h-\\[400px\\] {
-                min-height: 0 !important;
+
+              /* Force the specific hierarchy container to be visible */
+              div[style*="transform: scale"] {
+                display: flex !important;
+                justify-content: center !important;
+                transform-origin: top center !important;
               }
             }
           `}</style>
