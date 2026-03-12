@@ -59,7 +59,7 @@ export default function PresenceBar() {
     if (!user) return null;
 
     return (
-        <div className="bg-white border-b border-slate-200 px-4 py-3 md:px-6 md:py-4 shadow-sm sticky top-0 z-30 w-full transition-all">
+        <div className="bg-white border-b border-slate-200 px-4 py-3 md:px-6 md:py-4 shadow-sm sticky top-0 z-30 w-full transition-all no-print">
             <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6">
                 
                 {/* Mobile: Top Row for Status and Menu Space */}

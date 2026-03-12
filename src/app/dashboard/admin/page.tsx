@@ -1180,7 +1180,7 @@ function AdminDashboardContent() {
 
           <div className="overflow-auto pb-8 min-h-[400px] print:overflow-visible print:min-h-0 print:h-auto">
             <div 
-              className="transition-transform duration-200 ease-out origin-top flex justify-center"
+              className="transition-transform duration-200 ease-out origin-top flex justify-center print-content"
               style={{ transform: `scale(${zoomLevel})` }}
             >
               <div className="flex space-x-8 min-w-max pb-32">
@@ -1219,57 +1219,50 @@ function AdminDashboardContent() {
 
           <style jsx global>{`
             @media print {
-              /* Hide everything by default */
-              body > * {
-                display: none !important;
-              }
-              
-              /* Show the main content area but remove its layout constraints */
-              body > #root, 
-              body > __next, 
-              body > div:first-child {
-                display: block !important;
+              /* Remove all layout-breaking wrappers for print */
+              body, html {
+                height: auto !important;
+                overflow: visible !important;
+                background: white !important;
               }
 
-              /* Specific overrides to show only the hierarchy view */
-              .print-container, 
-              .print-container * {
-                visibility: visible !important;
-              }
-
-              /* Hide the sidebar, header, and other tabs */
-              aside, 
-              nav, 
-              header, 
-              .print\\:hidden,
-              button {
+              /* Hide everything by default using a more targeted approach */
+              aside, nav, header, footer,
+              .no-print, .print\\:hidden,
+              button, .border-b, .mb-6, h2 {
                 display: none !important;
               }
 
-              /* Ensure the hierarchy view is visible and at the top */
-              main {
+              /* Ensure the main container and its ancestors are visible but clean */
+              main, .flex-1, .flex-col, .space-y-8, .bg-white.rounded-xl.shadow-sm {
                 display: block !important;
+                position: static !important;
+                width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                width: 100% !important;
-              }
-
-              .bg-white.rounded-xl.shadow-sm.border {
                 border: none !important;
                 box-shadow: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
+                overflow: visible !important;
+                min-height: 0 !important;
               }
 
+              /* The specific scroll container must be visible */
               .overflow-auto {
                 overflow: visible !important;
+                display: block !important;
               }
 
-              /* Force the specific hierarchy container to be visible */
-              div[style*="transform: scale"] {
+              /* Target the zoomable container specifically */
+              .print-content {
                 display: flex !important;
                 justify-content: center !important;
                 transform-origin: top center !important;
+                /* Note: We DO NOT force transform: none here because we want to respect the user's zoomLevel from the style attribute */
+              }
+
+              /* Ensure tree nodes don't break across pages */
+              .flex-col.items-center {
+                page-break-inside: avoid !important;
               }
             }
           `}</style>
