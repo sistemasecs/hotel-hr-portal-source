@@ -22,6 +22,7 @@ export async function GET() {
       dislikes: row.dislikes || [],
       tShirtSize: row.t_shirt_size,
       allergies: row.allergies || [],
+      isActive: row.is_active,
     }));
     return NextResponse.json(users);
   } catch (error) {
@@ -33,7 +34,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, password, role, department, area, supervisorId, avatarUrl, birthday, hireDate, likes, dislikes, tShirtSize, allergies, currentUserId } = body;
+    const { name, email, password, role, department, area, supervisorId, avatarUrl, birthday, hireDate, likes, dislikes, tShirtSize, allergies, isActive, currentUserId } = body;
 
     // Hash the password before storing
     const salt = await bcrypt.genSalt(10);
@@ -45,10 +46,10 @@ export async function POST(request: Request) {
     const passwordHash = await bcrypt.hash(passwordToHash, salt);
 
     const result = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role, department, area, supervisor_id, avatar_url, birthday, hire_date, likes, dislikes, t_shirt_size, allergies)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      `INSERT INTO users (name, email, password_hash, role, department, area, supervisor_id, avatar_url, birthday, hire_date, likes, dislikes, t_shirt_size, allergies, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
-      [name, email, passwordHash, role, department, area || null, supervisorId || null, avatarUrl || null, birthday, hireDate, likes || [], dislikes || [], tShirtSize, allergies || []]
+      [name, email, passwordHash, role, department, area || null, supervisorId || null, avatarUrl || null, birthday, hireDate, likes || [], dislikes || [], tShirtSize, allergies || [], isActive !== undefined ? isActive : true]
     );
 
     const row = result.rows[0];
@@ -67,6 +68,7 @@ export async function POST(request: Request) {
       dislikes: row.dislikes || [],
       tShirtSize: row.t_shirt_size,
       allergies: row.allergies || [],
+      isActive: row.is_active,
     };
 
     // Log activity

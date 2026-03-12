@@ -30,6 +30,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
+    if (user.is_active === false) {
+      return NextResponse.json({ error: 'Account is inactive. Please contact HR.' }, { status: 403 });
+    }
+
     // Don't send the password hash back to the client
     const safeUser = {
       id: user.id,

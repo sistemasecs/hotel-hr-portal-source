@@ -24,6 +24,7 @@ export interface User {
   dislikes?: string[];
   tShirtSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
   allergies?: string[];
+  isActive?: boolean;
 }
 
 export interface Event {

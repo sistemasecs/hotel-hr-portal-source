@@ -641,9 +641,15 @@ function AdminDashboardContent() {
                     <td className="p-4 text-sm text-slate-600">{u.department}</td>
                     <td className="p-4 text-sm text-slate-600">{parseDate(u.hireDate).toLocaleDateString()}</td>
                     <td className="p-4">
-                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                        {t('active')}
-                      </span>
+                      {u.isActive !== false ? (
+                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                          {t('active')}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                          {t('inactive')}
+                        </span>
+                      )}
                     </td>
                     <td className="p-4 text-right">
                       <button
@@ -956,6 +962,18 @@ function AdminDashboardContent() {
                   placeholder="e.g., Peanuts, Penicillin"
                   className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
                 />
+              </div>
+              <div className="md:col-span-2 flex items-center space-x-2 py-2">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={editUserForm.isActive !== false}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, isActive: e.target.checked })}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-300 rounded"
+                />
+                <label htmlFor="isActive" className="text-sm font-medium text-slate-700">
+                  {t('accountActive')}
+                </label>
               </div>
             </div>
             <div className="mt-6 flex justify-end space-x-3 pt-4 border-t border-slate-200">
