@@ -736,15 +736,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const newLog = await response.json();
         setAttendanceLogs(prev => [newLog, ...prev]);
 
-        // Fetch the updated shift to get actual_start_time and set as active
-        if (shiftId) {
-          const shiftRes = await fetch(`/api/shifts/${shiftId}`);
-          if (shiftRes.ok) {
-            const updatedShift = await shiftRes.json();
-            setShifts(prev => prev.map(s => s.id === shiftId ? updatedShift : s));
-            setActiveShift(updatedShift);
-          }
-        }
+        // Refresh all shifts and the activeShift state immediately from the DB
+        await fetchUserShifts(userId);
       }
     } catch (error) {
       console.error('Error clocking in:', error);
@@ -761,12 +754,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.ok) {
         const newLog = await response.json();
         setAttendanceLogs(prev => [newLog, ...prev]);
-        if (shiftId) {
-          setShifts(prev => prev.map(s => s.id === shiftId ? { ...s, status: 'Completed' } : s));
-          if (activeShift?.id === shiftId) {
-            setActiveShift(null);
-          }
-        }
+        
+        // Refresh all shifts and clear activeShift state immediately from the DB
+        await fetchUserShifts(userId);
       }
     } catch (error) {
       console.error('Error clocking out:', error);
@@ -798,7 +788,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Identify active shift
         const active = data.find((s: Shift) => s.status === 'Clocked-in');
-        if (active) setActiveShift(active);
+        setActiveShift(active || null);
       }
     } catch (error) {
       console.error('Error fetching user shifts:', error);
