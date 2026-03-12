@@ -1224,6 +1224,7 @@ function AdminDashboardContent() {
                 height: auto !important;
                 overflow: visible !important;
                 background: white !important;
+                width: auto !important;
               }
 
               /* Hide everything by default using a more targeted approach */
@@ -1237,7 +1238,7 @@ function AdminDashboardContent() {
               main, .flex-1, .flex-col, .space-y-8, .bg-white.rounded-xl.shadow-sm {
                 display: block !important;
                 position: static !important;
-                width: 100% !important;
+                width: auto !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 border: none !important;
@@ -1250,6 +1251,7 @@ function AdminDashboardContent() {
               .overflow-auto {
                 overflow: visible !important;
                 display: block !important;
+                width: auto !important;
               }
 
               /* Target the zoomable container specifically */
@@ -1257,12 +1259,21 @@ function AdminDashboardContent() {
                 display: flex !important;
                 justify-content: center !important;
                 transform-origin: top center !important;
+                min-width: max-content !important;
+                width: auto !important;
                 /* Note: We DO NOT force transform: none here because we want to respect the user's zoomLevel from the style attribute */
               }
 
-              /* Ensure tree nodes don't break across pages */
+              /* Ensure tree nodes don't break across pages and don't squash */
               .flex-col.items-center {
                 page-break-inside: avoid !important;
+                flex-shrink: 0 !important;
+              }
+
+              /* Specific fix for the flex container wrapping the nodes */
+              .flex.space-x-8.min-w-max {
+                min-width: max-content !important;
+                flex-shrink: 0 !important;
               }
             }
           `}</style>
