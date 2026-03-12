@@ -14,11 +14,20 @@ export async function GET(request: Request) {
         // Automatically convert Google Drive view links to direct download links
         // Example: https://drive.google.com/file/d/1B-abcdEFG/view?usp=sharing
         const driveRegex = /drive\.google\.com\/file\/d\/([^/]+)\/view/;
-        const match = url.match(driveRegex);
+        const driveMatch = url.match(driveRegex);
 
-        if (match && match[1]) {
-            const fileId = match[1];
+        // Automatically convert Google Docs/Sheets/Slides view links to PDF export
+        // Example: https://docs.google.com/document/d/ID/edit?usp=sharing
+        const docsRegex = /docs\.google\.com\/(document|spreadsheets|presentation)\/d\/([^/]+)\//;
+        const docsMatch = url.match(docsRegex);
+
+        if (driveMatch && driveMatch[1]) {
+            const fileId = driveMatch[1];
             finalUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        } else if (docsMatch && docsMatch[2]) {
+            const docType = docsMatch[1]; // document, spreadsheets, presentation
+            const fileId = docsMatch[2];
+            finalUrl = `https://docs.google.com/${docType}/d/${fileId}/export?format=pdf`;
         }
 
         const response = await fetch(finalUrl, {
