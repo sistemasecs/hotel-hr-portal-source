@@ -279,57 +279,22 @@ export default function Sidebar() {
                 );
               })}
 
-              {/* HR Admin Dropdown - Only if not on Admin Page */}
+              {/* HR Admin Button - Direct Link */}
               {isAdmin && (
-                <div className="pt-2">
-                  <button
-                    onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-md text-sm font-medium transition-colors ${pathname.startsWith('/dashboard/admin') && !isAdminMenuOpen
-                      ? 'bg-primary-600 text-white'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                      }`}
-                  >
-                    <div className="flex items-center">
-                      <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span>{t('hrAdmin')}</span>
-                    </div>
-                    <svg
-                      className={`w-4 h-4 transition-transform duration-200 ${isAdminMenuOpen ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-
-                  {/* Dropdown Content */}
-                  {isAdminMenuOpen && (
-                    <div className="mt-1 pl-4 space-y-1 border-l-2 border-slate-800 ml-4">
-                      {adminSubLinks.map((link) => {
-                        const currentTab = searchParams.get('tab') || 'Directory';
-                        const isActive = pathname === '/dashboard/admin' && currentTab === link.tab;
-
-                        return (
-                          <Link
-                            key={link.tab}
-                            href={`/dashboard/admin?tab=${link.tab}`}
-                            onClick={handleLinkClick}
-                            className={`block px-4 py-2 rounded-md text-sm font-medium transition-colors ${isActive
-                              ? 'bg-primary-600/20 text-primary-400'
-                              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                              }`}
-                          >
-                            {link.name}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                <Link
+                  href="/dashboard/admin"
+                  onClick={handleLinkClick}
+                  className={`flex items-center px-4 py-3 rounded-md text-sm font-medium transition-colors ${pathname.startsWith('/dashboard/admin')
+                    ? 'bg-primary-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`}
+                >
+                  <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>{t('hrAdmin')}</span>
+                </Link>
               )}
             </>
           ) : (
