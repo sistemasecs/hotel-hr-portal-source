@@ -178,6 +178,7 @@ function AdminDashboardContent() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editUserForm, setEditUserForm] = useState<Partial<User> & { password?: string }>({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [showActiveOnly, setShowActiveOnly] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // CSV Upload State
@@ -542,12 +543,20 @@ function AdminDashboardContent() {
     document.body.removeChild(link);
   };
 
-  const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.role.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers = users
+    .filter(u => {
+      const matchesSearch = u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.role.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesStatus = showActiveOnly ? (u.isActive !== false) : true;
+      
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const sortedDepartments = [...departments].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="space-y-8">
@@ -599,6 +608,20 @@ function AdminDashboardContent() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
+              </div>
+              <div className="flex bg-slate-100 p-1 rounded-lg">
+                <button
+                  onClick={() => setShowActiveOnly(true)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${showActiveOnly ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  {t('active')}
+                </button>
+                <button
+                  onClick={() => setShowActiveOnly(false)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${!showActiveOnly ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  {t('all')}
+                </button>
               </div>
               <div className="flex space-x-2">
                 <button
@@ -899,7 +922,7 @@ function AdminDashboardContent() {
                   className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="" disabled>Select Department</option>
-                  {departments.map(dept => (
+                  {sortedDepartments.map(dept => (
                     <option key={dept.id} value={dept.name}>{dept.name}</option>
                   ))}
                 </select>
@@ -913,7 +936,7 @@ function AdminDashboardContent() {
                     className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
                   >
                     <option value="">Select Area (Optional)</option>
-                    {departments.find(d => d.name === editUserForm.department)?.areas?.map(area => (
+                    {[...(departments.find(d => d.name === editUserForm.department)?.areas || [])].sort((a, b) => a.localeCompare(b)).map(area => (
                       <option key={area} value={area}>{area}</option>
                     ))}
                   </select>
