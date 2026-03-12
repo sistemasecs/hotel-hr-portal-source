@@ -37,8 +37,14 @@ function AdminDashboardContent() {
 
     const manager = users.find(u => u.id === dept.managerId);
     const deptUsers = users.filter(u => u.department === dept.name && u.id !== dept.managerId);
-    const supervisors = deptUsers.filter(u => u.role === 'Supervisor');
-    const staffWithoutSupervisor = deptUsers.filter(u => u.role === 'Staff' && !u.supervisorId);
+    
+    // Anyone with a supervisor role OR anyone who HAS direct reports should be treated as a supervisor in the UI
+    const supervisorRoles = ['Supervisor', 'Manager', 'HR Admin'];
+    const supervisors = deptUsers.filter(u => supervisorRoles.includes(u.role) || users.some(other => other.supervisorId === u.id));
+    
+    // Staff who don't have a supervisor AND aren't supervisors themselves
+    const staffWithoutSupervisor = deptUsers.filter(u => !u.supervisorId && !supervisors.some(s => s.id === u.id));
+    
     const childDepartments = departments.filter(d => d.parentId === dept.id);
 
     return (
@@ -487,12 +493,21 @@ function AdminDashboardContent() {
   const handleConfirmCsvUpload = () => {
     let addedCount = 0;
     csvPreviewData.valid.forEach(userData => {
+      // Find supervisor by email if provided
+      let supervisorId = userData.supervisorId || null;
+      if (userData.supervisorEmail) {
+        const supervisor = users.find(u => u.email.toLowerCase() === userData.supervisorEmail.toLowerCase());
+        if (supervisor) supervisorId = supervisor.id;
+      }
+
       addUser({
         name: userData.name,
         email: userData.email,
         password: userData.password,
         role: userData.role as any,
         department: userData.department,
+        area: userData.area || '',
+        supervisorId: supervisorId,
         birthday: userData.birthday,
         hireDate: userData.hireDate,
         avatarUrl: userData.avatarUrl || '',
@@ -501,6 +516,7 @@ function AdminDashboardContent() {
         likes: userData.likes ? userData.likes.split(',').map((s: string) => s.trim()) : [],
         dislikes: userData.dislikes ? userData.dislikes.split(',').map((s: string) => s.trim()) : [],
         allergies: userData.allergies ? userData.allergies.split(',').map((s: string) => s.trim()) : [],
+        isActive: true,
       } as any);
       addedCount++;
     });
@@ -511,9 +527,9 @@ function AdminDashboardContent() {
   };
 
   const handleDownloadTemplate = () => {
-    const headers = ['name', 'email', 'password', 'role', 'department', 'birthday', 'hireDate', 'tShirtSize', 'likes', 'dislikes', 'allergies'];
+    const headers = ['name', 'email', 'password', 'role', 'department', 'area', 'supervisorEmail', 'birthday', 'hireDate', 'tShirtSize', 'likes', 'dislikes', 'allergies'];
     const csvContent = headers.join(',') + '\n' +
-      'John Doe,john@example.com,password123,Staff,Housekeeping,1990-01-01,2023-01-01,M,"Coffee, Dogs","Loud noises",Peanuts';
+      'John Doe,john@example.com,password123,Staff,Housekeeping,Cleaning,manager@example.com,1990-01-01,2023-01-01,M,"Coffee, Dogs","Loud noises",Peanuts';
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -610,6 +626,8 @@ function AdminDashboardContent() {
                   <th className="p-4 font-semibold">{t('name')}</th>
                   <th className="p-4 font-semibold">{t('role')}</th>
                   <th className="p-4 font-semibold">{t('department')}</th>
+                  <th className="p-4 font-semibold">{t('areas')}</th>
+                  <th className="p-4 font-semibold">{t('manager')}</th>
                   <th className="p-4 font-semibold">Hire Date</th>
                   <th className="p-4 font-semibold">{t('status')}</th>
                   <th className="p-4 font-semibold text-right">{t('actions')}</th>
@@ -639,6 +657,10 @@ function AdminDashboardContent() {
                     </td>
                     <td className="p-4 text-sm text-slate-600">{u.role}</td>
                     <td className="p-4 text-sm text-slate-600">{u.department}</td>
+                    <td className="p-4 text-sm text-slate-600">{u.area || '-'}</td>
+                    <td className="p-4 text-sm text-slate-600">
+                      {u.supervisorId ? users.find(sup => sup.id === u.supervisorId)?.name : '-'}
+                    </td>
                     <td className="p-4 text-sm text-slate-600">{parseDate(u.hireDate).toLocaleDateString()}</td>
                     <td className="p-4">
                       {u.isActive !== false ? (
@@ -918,6 +940,22 @@ function AdminDashboardContent() {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('manager')} (Supervisor)</label>
+                <select
+                  value={editUserForm.supervisorId || ''}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, supervisorId: e.target.value })}
+                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">{t('chooseEmployee')}</option>
+                  {users
+                    .filter(sup => sup.id !== editingUser?.id && (sup.role === 'Supervisor' || sup.role === 'Manager' || sup.role === 'HR Admin'))
+                    .map(sup => (
+                      <option key={sup.id} value={sup.id}>{sup.name} ({sup.role})</option>
+                    ))
+                  }
+                </select>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">{t('tShirtSize')}</label>
                 <select
                   value={editUserForm.tShirtSize || ''}
@@ -1020,7 +1058,32 @@ function AdminDashboardContent() {
             <div className="flex space-x-8 min-w-max justify-center">
               {selectedHierarchyDept
                 ? renderHierarchyNode(selectedHierarchyDept)
-                : departments.filter(d => !d.parentId).map(dept => renderHierarchyNode(dept.id))
+                : (
+                  <>
+                    {departments.filter(d => !d.parentId).map(dept => renderHierarchyNode(dept.id))}
+                    
+                    {/* Users without a department */}
+                    {users.filter(u => !u.department).length > 0 && (
+                      <div className="flex flex-col items-center relative">
+                        <div className="bg-slate-400 text-white px-6 py-2 rounded-t-lg font-semibold w-64 text-center shadow-md">
+                          {t('notSpecified')} / No Dept
+                        </div>
+                        <div className="bg-slate-50 border-2 border-slate-200 w-64 p-4 rounded-b-lg shadow-sm flex flex-col items-center">
+                          <div className="flex flex-col space-y-2 w-full">
+                            {users.filter(u => !u.department).map(u => (
+                              <div key={u.id} className="bg-white border border-slate-100 p-2 rounded shadow-sm flex items-center space-x-2">
+                                <div className="w-6 h-6 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center text-slate-500 text-xs overflow-hidden">
+                                  {u.avatarUrl ? <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" /> : u.name.charAt(0)}
+                                </div>
+                                <div className="text-xs font-medium text-slate-700 truncate">{u.name}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )
               }
             </div>
           </div>
