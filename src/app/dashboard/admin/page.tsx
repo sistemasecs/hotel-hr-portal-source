@@ -647,11 +647,8 @@ function AdminDashboardContent() {
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                   <th className="p-4 font-semibold">{t('name')}</th>
-                  <th className="p-4 font-semibold">{t('role')}</th>
-                  <th className="p-4 font-semibold">{t('department')}</th>
                   <th className="p-4 font-semibold">{t('areas')}</th>
-                  <th className="p-4 font-semibold">{t('manager')}</th>
-                  <th className="p-4 font-semibold">Hire Date</th>
+                  <th className="p-4 font-semibold">{t('hireDate')}</th>
                   <th className="p-4 font-semibold">{t('status')}</th>
                   <th className="p-4 font-semibold text-right">{t('actions')}</th>
                 </tr>
@@ -678,13 +675,8 @@ function AdminDashboardContent() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 text-sm text-slate-600">{u.role}</td>
-                    <td className="p-4 text-sm text-slate-600">{u.department}</td>
                     <td className="p-4 text-sm text-slate-600">{u.area || '-'}</td>
-                    <td className="p-4 text-sm text-slate-600">
-                      {u.supervisorId ? users.find(sup => sup.id === u.supervisorId)?.name : '-'}
-                    </td>
-                    <td className="p-4 text-sm text-slate-600">{parseDate(u.hireDate).toLocaleDateString()}</td>
+                    <td className="p-4 text-sm text-slate-600 font-medium">{parseDate(u.hireDate).toLocaleDateString()}</td>
                     <td className="p-4">
                       {u.isActive !== false ? (
                         <span className="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
@@ -1024,17 +1016,57 @@ function AdminDashboardContent() {
                   className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
-              <div className="md:col-span-2 flex items-center space-x-2 py-2">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={editUserForm.isActive !== false}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, isActive: e.target.checked })}
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-300 rounded"
-                />
-                <label htmlFor="isActive" className="text-sm font-medium text-slate-700">
-                  {t('accountActive')}
-                </label>
+              <div className="md:col-span-2 space-y-4">
+                <div className="flex items-center space-x-2 py-2">
+                  <input
+                    type="checkbox"
+                    id="isActive"
+                    checked={editUserForm.isActive !== false}
+                    onChange={(e) => {
+                      const active = e.target.checked;
+                      setEditUserForm({ 
+                        ...editUserForm, 
+                        isActive: active,
+                        inactiveDate: active ? null : new Date().toISOString().split('T')[0],
+                        inactiveReason: active ? null : editUserForm.inactiveReason || ''
+                      });
+                    }}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-300 rounded"
+                  />
+                  <label htmlFor="isActive" className="text-sm font-medium text-slate-700">
+                    {t('accountActive')}
+                  </label>
+                </div>
+
+                {editUserForm.isActive === false && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-red-50 rounded-lg border border-red-100">
+                    <div>
+                      <label className="block text-sm font-medium text-red-800 mb-1">{t('inactiveDate')} *</label>
+                      <input
+                        type="date"
+                        required
+                        value={editUserForm.inactiveDate || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, inactiveDate: e.target.value })}
+                        className="w-full border border-red-200 rounded-md shadow-sm p-2 text-sm focus:ring-red-500 focus:border-red-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-red-800 mb-1">{t('inactiveReason')} *</label>
+                      <select
+                        required
+                        value={editUserForm.inactiveReason || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, inactiveReason: e.target.value })}
+                        className="w-full border border-red-200 rounded-md shadow-sm p-2 text-sm focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="" disabled>Seleccionar Motivo</option>
+                        <option value="Fired">{t('reasonFired')}</option>
+                        <option value="Quit">{t('reasonQuit')}</option>
+                        <option value="Role change">{t('reasonRoleChange')}</option>
+                        <option value="Other">{t('reasonOther')}</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="mt-6 flex justify-end space-x-3 pt-4 border-t border-slate-200">

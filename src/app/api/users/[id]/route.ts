@@ -26,6 +26,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       tShirtSize: row.t_shirt_size,
       allergies: row.allergies || [],
       isActive: row.is_active,
+      inactiveDate: row.inactive_date ? row.inactive_date.toISOString().split('T')[0] : null,
+      inactiveReason: row.inactive_reason,
     };
 
     return NextResponse.json(user);
@@ -62,6 +64,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       tShirtSize: 't_shirt_size',
       allergies: 'allergies',
       isActive: 'is_active',
+      inactiveDate: 'inactive_date',
+      inactiveReason: 'inactive_reason',
     };
 
     for (const [key, value] of Object.entries(updateData)) {
@@ -105,6 +109,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       tShirtSize: row.t_shirt_size,
       allergies: row.allergies || [],
       isActive: row.is_active,
+      inactiveDate: row.inactive_date ? row.inactive_date.toISOString().split('T')[0] : null,
+      inactiveReason: row.inactive_reason,
     };
 
     await logActivity(currentUserId || null, 'UPDATE', 'USER', updatedUser.id, { updatedFields: Object.keys(updateData) });

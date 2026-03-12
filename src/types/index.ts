@@ -25,6 +25,8 @@ export interface User {
   tShirtSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
   allergies?: string[];
   isActive?: boolean;
+  inactiveDate?: string | null;
+  inactiveReason?: string | null;
 }
 
 export interface Event {
