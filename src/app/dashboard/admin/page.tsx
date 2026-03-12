@@ -29,7 +29,9 @@ function AdminDashboardContent() {
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
 
-  const [selectedHierarchyDept, setSelectedHierarchyDept] = useState<string | null>(null);
+  const [selectedHierarchyDepts, setSelectedHierarchyDepts] = useState<string[]>([]);
+  const [zoomLevel, setZoomLevel] = useState(1.0);
+  const [isDeptMultiSelectOpen, setIsDeptMultiSelectOpen] = useState(false);
 
   const renderHierarchyNode = (deptId: string) => {
     const dept = departments.find(d => d.id === deptId);
@@ -1067,56 +1069,188 @@ function AdminDashboardContent() {
       )}
 
       {activeTab === 'Hierarchy' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden p-6">
-          <div className="flex justify-between items-center mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 print:shadow-none print:border-none print:p-0">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0 print:hidden">
             <h2 className="text-xl font-semibold text-slate-800">{t('hierarchy')}</h2>
-            <div className="flex items-center space-x-2">
-              <label className="text-sm font-medium text-slate-700">{t('viewDepartment')}</label>
-              <select
-                value={selectedHierarchyDept || ''}
-                onChange={(e) => setSelectedHierarchyDept(e.target.value || null)}
-                className="border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+            
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Multi-Department Selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsDeptMultiSelectOpen(!isDeptMultiSelectOpen)}
+                  className="flex items-center justify-between px-4 py-2 border border-slate-300 rounded-md shadow-sm bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 min-w-[200px]"
+                >
+                  <span className="truncate">
+                    {selectedHierarchyDepts.length === 0 
+                      ? t('entireOrganization') 
+                      : `${selectedHierarchyDepts.length} ${t('departments')}`}
+                  </span>
+                  <svg className="ml-2 h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                
+                {isDeptMultiSelectOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setIsDeptMultiSelectOpen(false)}
+                    ></div>
+                    <div className="absolute left-0 mt-2 w-64 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20 max-h-60 overflow-y-auto">
+                      <div className="p-2 space-y-1">
+                        <label className="flex items-center px-3 py-2 hover:bg-slate-50 rounded cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedHierarchyDepts.length === 0}
+                            onChange={() => setSelectedHierarchyDepts([])}
+                            className="h-4 w-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                          />
+                          <span className="ml-3 text-sm text-slate-700">{t('entireOrganization')}</span>
+                        </label>
+                        <hr className="my-1 border-slate-100" />
+                        {departments.map((dept) => (
+                          <label key={dept.id} className="flex items-center px-3 py-2 hover:bg-slate-50 rounded cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={selectedHierarchyDepts.includes(dept.id)}
+                              onChange={() => {
+                                if (selectedHierarchyDepts.includes(dept.id)) {
+                                  setSelectedHierarchyDepts(selectedHierarchyDepts.filter(id => id !== dept.id));
+                                } else {
+                                  setSelectedHierarchyDepts([...selectedHierarchyDepts, dept.id]);
+                                }
+                              }}
+                              className="h-4 w-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                            />
+                            <span className="ml-3 text-sm text-slate-700">{dept.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Zoom Controls */}
+              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+                <button
+                  onClick={() => setZoomLevel(prev => Math.max(0.2, prev - 0.1))}
+                  className="p-1.5 text-slate-600 hover:text-primary-600 hover:bg-white rounded transition-all"
+                  title="Zoom Out"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                  </svg>
+                </button>
+                <div className="px-2 flex items-center justify-center min-w-[3.5rem] text-xs font-bold text-slate-600">
+                  {Math.round(zoomLevel * 100)}%
+                </div>
+                <button
+                  onClick={() => setZoomLevel(prev => Math.min(2, prev + 0.1))}
+                  className="p-1.5 text-slate-600 hover:text-primary-600 hover:bg-white rounded transition-all"
+                  title="Zoom In"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setZoomLevel(1.0)}
+                  className="ml-1 p-1.5 text-slate-600 hover:text-primary-600 hover:bg-white rounded transition-all border-l border-slate-200"
+                  title="Reset Zoom"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Print Button */}
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors flex items-center shadow-sm"
               >
-                <option value="">{t('entireOrganization')}</option>
-                {departments.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                {t('print')}
+              </button>
             </div>
           </div>
-          <div className="overflow-x-auto pb-8">
-            <div className="flex space-x-8 min-w-max justify-center">
-              {selectedHierarchyDept
-                ? renderHierarchyNode(selectedHierarchyDept)
-                : (
-                  <>
-                    {departments.filter(d => !d.parentId).map(dept => renderHierarchyNode(dept.id))}
-                    
-                    {/* Users without a department */}
-                    {users.filter(u => !u.department).length > 0 && (
-                      <div className="flex flex-col items-center relative">
-                        <div className="bg-slate-400 text-white px-6 py-2 rounded-t-lg font-semibold w-64 text-center shadow-md">
-                          {t('notSpecified')} / No Dept
-                        </div>
-                        <div className="bg-slate-50 border-2 border-slate-200 w-64 p-4 rounded-b-lg shadow-sm flex flex-col items-center">
-                          <div className="flex flex-col space-y-2 w-full">
-                            {users.filter(u => !u.department).map(u => (
-                              <div key={u.id} className="bg-white border border-slate-100 p-2 rounded shadow-sm flex items-center space-x-2">
-                                <div className="w-6 h-6 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center text-slate-500 text-xs overflow-hidden">
-                                  {u.avatarUrl ? <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" /> : u.name.charAt(0)}
+
+          <div className="overflow-auto pb-8 min-h-[400px] print:overflow-visible print:min-h-0 print:h-auto">
+            <div 
+              className="transition-transform duration-200 ease-out origin-top flex justify-center print:transform-none print:origin-center"
+              style={{ transform: `scale(${zoomLevel})` }}
+            >
+              <div className="flex space-x-8 min-w-max">
+                {selectedHierarchyDepts.length > 0
+                  ? selectedHierarchyDepts.map(deptId => renderHierarchyNode(deptId))
+                  : (
+                    <>
+                      {departments.filter(d => !d.parentId).map(dept => renderHierarchyNode(dept.id))}
+                      
+                      {/* Users without a department */}
+                      {users.filter(u => !u.department).length > 0 && (
+                        <div className="flex flex-col items-center relative">
+                          <div className="bg-slate-400 text-white px-6 py-2 rounded-t-lg font-semibold w-64 text-center shadow-md">
+                            {t('notSpecified')} / No Dept
+                          </div>
+                          <div className="bg-slate-50 border-2 border-slate-200 w-64 p-4 rounded-b-lg shadow-sm flex flex-col items-center">
+                            <div className="flex flex-col space-y-2 w-full">
+                              {users.filter(u => !u.department).map(u => (
+                                <div key={u.id} className="bg-white border border-slate-100 p-2 rounded shadow-sm flex items-center space-x-2">
+                                  <div className="w-6 h-6 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center text-slate-500 text-xs overflow-hidden">
+                                    {u.avatarUrl ? <img src={u.avatarUrl} alt={u.name} className="w-full h-full object-cover" /> : u.name.charAt(0)}
+                                  </div>
+                                  <div className="text-xs font-medium text-slate-700 truncate">{u.name}</div>
                                 </div>
-                                <div className="text-xs font-medium text-slate-700 truncate">{u.name}</div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </>
-                )
-              }
+                      )}
+                    </>
+                  )
+                }
+              </div>
             </div>
           </div>
+
+          <style jsx global>{`
+            @media print {
+              body * {
+                visibility: hidden;
+              }
+              .print\\:block, .print\\:block * {
+                visibility: visible;
+              }
+              .print\\:hidden {
+                display: none !important;
+              }
+              /* Target only the hierarchy view */
+              main, .space-y-8, .bg-white.rounded-xl.shadow-sm.border.border-slate-100.p-6 {
+                visibility: visible !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+              }
+              .bg-slate-900, header, nav, button {
+                 display: none !important;
+              }
+              .overflow-auto {
+                overflow: visible !important;
+              }
+              .min-h-\\[400px\\] {
+                min-height: 0 !important;
+              }
+            }
+          `}</style>
         </div>
       )}
 
