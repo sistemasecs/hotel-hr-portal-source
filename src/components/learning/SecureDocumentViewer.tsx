@@ -90,7 +90,7 @@ export default function SecureDocumentViewer({ fileUrl }: SecureDocumentViewerPr
 
             <div className="relative shadow-2xl border border-slate-300 overflow-hidden inline-[mx-auto]">
                 <Document 
-                    file={fileUrl} 
+                    file={`/api/proxy/pdf?url=${encodeURIComponent(fileUrl)}`}
                     onLoadSuccess={onDocumentLoadSuccess}
                     className="w-full"
                     loading={
