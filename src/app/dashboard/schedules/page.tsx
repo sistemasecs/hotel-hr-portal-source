@@ -43,7 +43,8 @@ export default function SchedulesPage() {
         userId: '',
         startTime: '',
         endTime: '',
-        type: ''
+        type: '',
+        repeatDays: [] as number[] // 0-6 where 0 is Mon (based on current week view)
     });
 
     // For manager: auto-set their department
@@ -56,11 +57,17 @@ export default function SchedulesPage() {
     // Effective department filter
     const effectiveDeptId = isAdmin ? selectedDept : managerDeptId;
 
-    // Calculate week range
+    // Calculate week range (Monday - Sunday)
     const weekRange = useMemo(() => {
         const start = new Date(currentDate);
-        start.setDate(currentDate.getDate() - currentDate.getDay());
+        const day = start.getDay();
+        // start.getDay() is 0 (Sun) to 6 (Sat)
+        // We want 1 (Mon) to be the start. 
+        // If it's Sun, go back 6. If Mon, stay. If Tue, go back 1.
+        const diff = day === 0 ? -6 : 1 - day;
+        start.setDate(start.getDate() + diff);
         start.setHours(0, 0, 0, 0);
+        
         const end = new Date(start);
         end.setDate(start.getDate() + 6);
         end.setHours(23, 59, 59, 999);
@@ -128,10 +135,10 @@ export default function SchedulesPage() {
         fetchShifts(filters);
     };
 
-    // Translate days
+    // Translate days (Monday - Sunday)
     const days = language === 'es'
-        ? ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
-        : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        ? ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+        : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     const weekDays = useMemo(() => {
         return Array.from({ length: 7 }, (_, i) => {
@@ -153,7 +160,8 @@ export default function SchedulesPage() {
             userId: userId || (canManage ? '' : user?.id || ''),
             startTime: formatToGuatemalaDateTimeLocal(start),
             endTime: formatToGuatemalaDateTimeLocal(end),
-            type: 'Morning'
+            type: 'Morning',
+            repeatDays: []
         });
         setEditingShift(null);
         setIsShiftModalOpen(true);
@@ -161,15 +169,49 @@ export default function SchedulesPage() {
 
     const handleSaveShift = async () => {
         if (!shiftForm.userId || !shiftForm.startTime || !shiftForm.endTime) return;
-        const payload = {
-            ...shiftForm,
-            startTime: parseGuatemalaDateTimeLocal(shiftForm.startTime),
-            endTime: parseGuatemalaDateTimeLocal(shiftForm.endTime)
-        };
+        
+        const baseStartTime = parseGuatemalaDateTimeLocal(shiftForm.startTime);
+        const baseEndTime = parseGuatemalaDateTimeLocal(shiftForm.endTime);
+        
+        // If editing, just update the single shift
         if (editingShift) {
-            await updateShift(editingShift.id, payload as any);
+            await updateShift(editingShift.id, {
+                userId: shiftForm.userId,
+                startTime: baseStartTime,
+                endTime: baseEndTime,
+                type: shiftForm.type
+            } as any);
         } else {
-            await addShift(payload as any);
+            // New shift creation
+            const selectedDays = shiftForm.repeatDays.length > 0 ? shiftForm.repeatDays : [new Date(baseStartTime).getDay()];
+            
+            // Loop through selected days and create a shift for each
+            // Monday-Sunday view handles days differently, but JS getDay() is 0 (Sun) to 6 (Sat)
+            // We need to match the day of the week from the startDate range
+            
+            for (const dayIndex of selectedDays) {
+                // Find the date in the current week that matches this dayIndex
+                const targetDate = weekDays.find(d => d.getDay() === dayIndex);
+                if (targetDate) {
+                    const start = new Date(targetDate);
+                    const originalStart = new Date(baseStartTime);
+                    start.setHours(originalStart.getHours(), originalStart.getMinutes(), 0, 0);
+                    
+                    const end = new Date(start);
+                    const originalEnd = new Date(baseEndTime);
+                    // Handle overnight shifts
+                    const durationMs = new Date(baseEndTime).getTime() - new Date(baseStartTime).getTime();
+                    end.setTime(start.getTime() + durationMs);
+
+                    await addShift({
+                        user_id: shiftForm.userId,
+                        start_time: start.toISOString(),
+                        end_time: end.toISOString(),
+                        type: shiftForm.type,
+                        status: 'Scheduled'
+                    } as any);
+                }
+            }
         }
         setIsShiftModalOpen(false);
     };
@@ -295,18 +337,45 @@ export default function SchedulesPage() {
 
             {/* View Tabs for managers/admins */}
             {canManage && (
-                <div className="flex bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm w-fit">
+                <div className="flex bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm w-fit p-1 gap-1">
                     {[
-                        { key: 'calendar', label: language === 'es' ? '📅 Horario' : '📅 Calendar' },
-                        { key: 'approvals', label: `✅ ${language === 'es' ? 'Aprobaciones' : 'Approvals'}${pendingShifts.length > 0 ? ` (${pendingShifts.length})` : ''}` },
-                        { key: 'summary', label: language === 'es' ? '📊 Resumen Semanal' : '📊 Weekly Summary' }
+                        { 
+                            key: 'calendar', 
+                            label: language === 'es' ? 'Horario' : 'Calendar',
+                            icon: <CalendarDays className="w-4 h-4" />
+                        },
+                        { 
+                            key: 'approvals', 
+                            label: language === 'es' ? 'Aprobaciones' : 'Approvals',
+                            badge: pendingShifts.length > 0 ? pendingShifts.length : null,
+                            icon: <CheckCircle className="w-4 h-4" />
+                        },
+                        { 
+                            key: 'summary', 
+                            label: language === 'es' ? 'Resumen' : 'Summary',
+                            icon: <Users className="w-4 h-4" />
+                        }
                     ].map(tab => (
                         <button
                             key={tab.key}
                             onClick={() => setActiveView(tab.key as any)}
-                            className={`px-5 py-3 text-sm font-semibold border-r border-slate-100 last:border-r-0 transition-colors ${activeView === tab.key ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+                            className={`flex items-center space-x-2 px-4 py-2.5 text-sm font-bold rounded-xl transition-all ${
+                                activeView === tab.key 
+                                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-200' 
+                                : 'text-slate-600 hover:bg-slate-50'
+                            }`}
                         >
-                            {tab.label}
+                            <span className={`${activeView === tab.key ? 'text-white' : 'text-emerald-600'}`}>
+                                {tab.icon}
+                            </span>
+                            <span>{tab.label}</span>
+                            {tab.badge && (
+                                <span className={`ml-1.5 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] rounded-full font-black ${
+                                    activeView === tab.key ? 'bg-white text-emerald-600' : 'bg-rose-500 text-white'
+                                }`}>
+                                    {tab.badge}
+                                </span>
+                            )}
                         </button>
                     ))}
                 </div>
@@ -354,7 +423,17 @@ export default function SchedulesPage() {
                                                                 <div className="flex justify-between items-start mb-1">
                                                                     <span className="font-bold text-slate-800">{shift.type}</span>
                                                                     <div className="hidden group-hover:flex space-x-1">
-                                                                        <button onClick={() => { setEditingShift(shift); setShiftForm({ userId: shift.user_id, startTime: formatToGuatemalaDateTimeLocal(shift.start_time), endTime: formatToGuatemalaDateTimeLocal(shift.end_time), type: shift.type as any }); setIsShiftModalOpen(true); }} className="text-slate-400 hover:text-primary-600"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                                                                        <button onClick={() => { 
+                                                                            setEditingShift(shift); 
+                                                                            setShiftForm({ 
+                                                                                userId: shift.user_id, 
+                                                                                startTime: formatToGuatemalaDateTimeLocal(shift.start_time), 
+                                                                                endTime: formatToGuatemalaDateTimeLocal(shift.end_time), 
+                                                                                type: shift.type as any,
+                                                                                repeatDays: []
+                                                                            }); 
+                                                                            setIsShiftModalOpen(true); 
+                                                                        }} className="text-slate-400 hover:text-primary-600"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
                                                                         <button onClick={() => handleDeleteShift(shift.id)} className="text-slate-400 hover:text-rose-600"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
                                                                     </div>
                                                                 </div>
@@ -652,6 +731,44 @@ export default function SchedulesPage() {
                                     <option value="custom">{language === 'es' ? 'Personalizado' : 'Custom'}</option>
                                 </select>
                             </div>
+
+                            {!editingShift && (
+                                <div className="pt-2">
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                                        {language === 'es' ? 'Repetir en días' : 'Repeat on days'}
+                                    </label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[1, 2, 3, 4, 5, 6, 0].map((dayIdx) => {
+                                            const dayNames = language === 'es' 
+                                                ? ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'] 
+                                                : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+                                            const isSelected = shiftForm.repeatDays.includes(dayIdx);
+                                            return (
+                                                <button
+                                                    key={dayIdx}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newDays = isSelected
+                                                            ? shiftForm.repeatDays.filter(d => d !== dayIdx)
+                                                            : [...shiftForm.repeatDays, dayIdx];
+                                                        setShiftForm({ ...shiftForm, repeatDays: newDays });
+                                                    }}
+                                                    className={`w-9 h-9 rounded-lg text-xs font-bold transition-all border ${
+                                                        isSelected 
+                                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' 
+                                                        : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-200 hover:text-emerald-600'
+                                                    }`}
+                                                >
+                                                    {dayNames[dayIdx]}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-2 italic">
+                                        {language === 'es' ? '* Se creará un turno para cada día seleccionado.' : '* A shift will be created for each selected day.'}
+                                    </p>
+                                </div>
+                            )}
                         </div>
                         <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
                             {editingShift && (
