@@ -472,9 +472,9 @@ function AdminDashboardContent() {
 
           newUsers.forEach(userData => {
             if (userData.name && userData.email && userData.role && userData.department && userData.birthday && userData.hireDate) {
-              valid.push(userData);
+              valid.push({ ...userData, id: Math.random().toString(36).substr(2, 9) });
             } else {
-              invalid.push(userData);
+              invalid.push({ ...userData, id: Math.random().toString(36).substr(2, 9) });
             }
           });
 
@@ -493,6 +493,39 @@ function AdminDashboardContent() {
     }
   };
 
+  const handleEditCsvRow = (id: string, field: string, value: string, type: 'valid' | 'invalid') => {
+    const list = [...csvPreviewData[type]];
+    const rowIndex = list.findIndex(r => r.id === id);
+    if (rowIndex === -1) return;
+
+    list[rowIndex] = { ...list[rowIndex], [field]: value };
+    
+    // Re-validate all data to move between valid/invalid if needed
+    const allData = [...csvPreviewData.valid, ...csvPreviewData.invalid];
+    const itemToUpdate = allData.find(d => d.id === id);
+    if (itemToUpdate) {
+      Object.assign(itemToUpdate, { [field]: value });
+    }
+
+    const newValid: any[] = [];
+    const newInvalid: any[] = [];
+
+    allData.forEach(userData => {
+      if (userData.name && userData.email && userData.role && userData.department && userData.birthday && userData.hireDate) {
+        newValid.push(userData);
+      } else {
+        newInvalid.push(userData);
+      }
+    });
+
+    setCsvPreviewData({ valid: newValid, invalid: newInvalid });
+  };
+
+  const handleDeleteCsvRow = (id: string, type: 'valid' | 'invalid') => {
+    const newList = csvPreviewData[type].filter(r => r.id !== id);
+    setCsvPreviewData({ ...csvPreviewData, [type]: newList });
+  };
+
   const handleConfirmCsvUpload = () => {
     let addedCount = 0;
     csvPreviewData.valid.forEach(userData => {
@@ -506,7 +539,7 @@ function AdminDashboardContent() {
       addUser({
         name: userData.name,
         email: userData.email,
-        password: userData.password,
+        password: userData.password || 'Welcome123',
         role: userData.role as any,
         department: userData.department,
         area: userData.area || '',
@@ -516,9 +549,9 @@ function AdminDashboardContent() {
         avatarUrl: userData.avatarUrl || '',
         avatarFit: 'cover',
         tShirtSize: userData.tShirtSize as any || '',
-        likes: userData.likes ? userData.likes.split(',').map((s: string) => s.trim()) : [],
-        dislikes: userData.dislikes ? userData.dislikes.split(',').map((s: string) => s.trim()) : [],
-        allergies: userData.allergies ? userData.allergies.split(',').map((s: string) => s.trim()) : [],
+        likes: userData.likes ? (typeof userData.likes === 'string' ? userData.likes.split(',').map((s: string) => s.trim()) : userData.likes) : [],
+        dislikes: userData.dislikes ? (typeof userData.dislikes === 'string' ? userData.dislikes.split(',').map((s: string) => s.trim()) : userData.dislikes) : [],
+        allergies: userData.allergies ? (typeof userData.allergies === 'string' ? userData.allergies.split(',').map((s: string) => s.trim()) : userData.allergies) : [],
         isActive: true,
       } as any);
       addedCount++;
@@ -741,28 +774,66 @@ function AdminDashboardContent() {
 
                   {csvPreviewData.valid.length > 0 && (
                     <div className="bg-emerald-50 border border-emerald-200 rounded-lg overflow-hidden">
-                      <div className="p-3 bg-emerald-100 border-b border-emerald-200">
+                      <div className="p-3 bg-emerald-100 border-b border-emerald-200 flex justify-between items-center">
                         <h4 className="text-sm font-semibold text-emerald-800">
                           {t('csvUploadValidRows')} ({csvPreviewData.valid.length})
                         </h4>
+                        <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider bg-emerald-200/50 px-2 py-0.5 rounded">Listo para subir</span>
                       </div>
-                      <div className="overflow-x-auto max-h-60">
+                      <div className="overflow-x-auto max-h-80">
                         <table className="w-full text-left text-sm">
-                          <thead className="bg-emerald-50 sticky top-0">
+                          <thead className="bg-emerald-50 sticky top-0 z-10 border-b border-emerald-100">
                             <tr>
-                              <th className="p-2 font-medium text-emerald-800">Name</th>
-                              <th className="p-2 font-medium text-emerald-800">Email</th>
-                              <th className="p-2 font-medium text-emerald-800">Role</th>
-                              <th className="p-2 font-medium text-emerald-800">Department</th>
+                              <th className="p-3 font-bold text-emerald-800 uppercase text-[10px]">Name</th>
+                              <th className="p-3 font-bold text-emerald-800 uppercase text-[10px]">Email</th>
+                              <th className="p-3 font-bold text-emerald-800 uppercase text-[10px]">Role</th>
+                              <th className="p-3 font-bold text-emerald-800 uppercase text-[10px]">Department</th>
+                              <th className="p-3 font-bold text-emerald-800 uppercase text-[10px] text-right">Delete</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-emerald-100">
-                            {csvPreviewData.valid.map((row, i) => (
-                              <tr key={i}>
-                                <td className="p-2 text-emerald-900">{row.name}</td>
-                                <td className="p-2 text-emerald-900">{row.email}</td>
-                                <td className="p-2 text-emerald-900">{row.role}</td>
-                                <td className="p-2 text-emerald-900">{row.department}</td>
+                            {csvPreviewData.valid.map((row) => (
+                              <tr key={row.id} className="hover:bg-white/50 transition-colors">
+                                <td className="p-2">
+                                  <input 
+                                    className="w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded px-1 transition-all" 
+                                    value={row.name} 
+                                    onChange={(e) => handleEditCsvRow(row.id, 'name', e.target.value, 'valid')}
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input 
+                                    className="w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded px-1" 
+                                    value={row.email} 
+                                    onChange={(e) => handleEditCsvRow(row.id, 'email', e.target.value, 'valid')}
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <select 
+                                    className="w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded px-1 text-sm appearance-none" 
+                                    value={row.role} 
+                                    onChange={(e) => handleEditCsvRow(row.id, 'role', e.target.value, 'valid')}
+                                  >
+                                    <option value="Staff">Staff</option>
+                                    <option value="Supervisor">Supervisor</option>
+                                    <option value="Manager">Manager</option>
+                                    <option value="HR Admin">HR Admin</option>
+                                  </select>
+                                </td>
+                                <td className="p-2">
+                                  <select 
+                                    className="w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded px-1 text-sm appearance-none" 
+                                    value={row.department} 
+                                    onChange={(e) => handleEditCsvRow(row.id, 'department', e.target.value, 'valid')}
+                                  >
+                                    {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                                  </select>
+                                </td>
+                                <td className="p-2 text-right">
+                                  <button onClick={() => handleDeleteCsvRow(row.id, 'valid')} className="p-1.5 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  </button>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -772,33 +843,78 @@ function AdminDashboardContent() {
                   )}
 
                   {csvPreviewData.invalid.length > 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg overflow-hidden">
-                      <div className="p-3 bg-red-100 border-b border-red-200">
-                        <h4 className="text-sm font-semibold text-red-800">
-                          {t('csvUploadInvalidRows')} ({csvPreviewData.invalid.length}) - {t('csvUploadMissingFields')}
+                    <div className="bg-rose-50 border border-rose-200 rounded-lg overflow-hidden">
+                      <div className="p-3 bg-rose-100 border-b border-rose-200 flex justify-between items-center">
+                        <h4 className="text-sm font-semibold text-rose-800">
+                          {t('csvUploadInvalidRows')} ({csvPreviewData.invalid.length})
                         </h4>
+                        <span className="text-[10px] text-rose-600 font-bold uppercase tracking-wider bg-rose-200/50 px-2 py-0.5 rounded">Faltan datos obligatorios</span>
                       </div>
-                      <div className="overflow-x-auto max-h-60">
+                      <div className="overflow-x-auto max-h-80">
                         <table className="w-full text-left text-sm">
-                          <thead className="bg-red-50 sticky top-0">
+                          <thead className="bg-rose-50 sticky top-0 z-10 border-b border-rose-100">
                             <tr>
-                              <th className="p-2 font-medium text-red-800">Name</th>
-                              <th className="p-2 font-medium text-red-800">Email</th>
-                              <th className="p-2 font-medium text-red-800">Role</th>
-                              <th className="p-2 font-medium text-red-800">Department</th>
+                              <th className="p-3 font-bold text-rose-800 uppercase text-[10px]">Name</th>
+                              <th className="p-3 font-bold text-rose-800 uppercase text-[10px]">Email</th>
+                              <th className="p-3 font-bold text-rose-800 uppercase text-[10px]">Role</th>
+                              <th className="p-3 font-bold text-rose-800 uppercase text-[10px]">Department</th>
+                              <th className="p-3 font-bold text-rose-800 uppercase text-[10px] text-right">Delete</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-red-100">
-                            {csvPreviewData.invalid.map((row, i) => (
-                              <tr key={i}>
-                                <td className="p-2 text-red-900">{row.name || '-'}</td>
-                                <td className="p-2 text-red-900">{row.email || '-'}</td>
-                                <td className="p-2 text-red-900">{row.role || '-'}</td>
-                                <td className="p-2 text-red-900">{row.department || '-'}</td>
+                          <tbody className="divide-y divide-rose-100">
+                            {csvPreviewData.invalid.map((row) => (
+                              <tr key={row.id} className="hover:bg-white/50 transition-colors">
+                                <td className="p-2">
+                                  <input 
+                                    placeholder="Missing Name"
+                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-rose-500 rounded px-1 transition-all ${!row.name ? 'placeholder-rose-300' : ''}`} 
+                                    value={row.name || ''} 
+                                    onChange={(e) => handleEditCsvRow(row.id, 'name', e.target.value, 'invalid')}
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <input 
+                                    placeholder="Missing Email"
+                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-rose-500 rounded px-1 ${!row.email ? 'placeholder-rose-300' : ''}`} 
+                                    value={row.email || ''} 
+                                    onChange={(e) => handleEditCsvRow(row.id, 'email', e.target.value, 'invalid')}
+                                  />
+                                </td>
+                                <td className="p-2">
+                                  <select 
+                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-rose-500 rounded px-1 text-sm appearance-none ${!row.role ? 'text-rose-300' : ''}`} 
+                                    value={row.role || ''} 
+                                    onChange={(e) => handleEditCsvRow(row.id, 'role', e.target.value, 'invalid')}
+                                  >
+                                    <option value="">Select Role</option>
+                                    <option value="Staff">Staff</option>
+                                    <option value="Supervisor">Supervisor</option>
+                                    <option value="Manager">Manager</option>
+                                    <option value="HR Admin">HR Admin</option>
+                                  </select>
+                                </td>
+                                <td className="p-2">
+                                  <select 
+                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-rose-500 rounded px-1 text-sm appearance-none ${!row.department ? 'text-rose-300' : ''}`} 
+                                    value={row.department || ''} 
+                                    onChange={(e) => handleEditCsvRow(row.id, 'department', e.target.value, 'invalid')}
+                                  >
+                                    <option value="">Select Dept</option>
+                                    {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                                  </select>
+                                </td>
+                                <td className="p-2 text-right">
+                                  <button onClick={() => handleDeleteCsvRow(row.id, 'invalid')} className="p-1.5 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  </button>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
+                      </div>
+                      <div className="p-2 bg-rose-200/30 text-[10px] text-rose-700 italic px-4">
+                        * Completa todos los campos obligatorios para activar la fila.
                       </div>
                     </div>
                   )}
