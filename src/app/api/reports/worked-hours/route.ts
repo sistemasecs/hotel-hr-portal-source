@@ -17,22 +17,29 @@ export async function GET(request: Request) {
                 u.id as user_id,
                 u.name as user_name,
                 u.department,
-                SUM(EXTRACT(EPOCH FROM (s.actual_end_time - s.actual_start_time)) / 3600) as total_hours
-            FROM shifts s
-            JOIN users u ON s.user_id = u.id
-            WHERE s.status = 'Completed' 
-              AND s.actual_start_time >= $1 
-              AND s.actual_end_time <= $2
+                COALESCE(SUM(EXTRACT(EPOCH FROM (s.end_time - s.start_time)) / 3600), 0) as scheduled_hours,
+                COALESCE(SUM(CASE WHEN s.actual_start_time IS NOT NULL AND s.actual_end_time IS NOT NULL 
+                    THEN EXTRACT(EPOCH FROM (s.actual_end_time - s.actual_start_time)) / 3600 
+                    ELSE 0 END), 0) as actual_hours,
+                COUNT(s.id) as total_shifts,
+                COUNT(CASE WHEN s.approval_status = 'approved' THEN 1 END) as approved_shifts,
+                COUNT(CASE WHEN s.status = 'Pending Approval' OR (s.actual_end_time IS NOT NULL AND COALESCE(s.approval_status, 'pending') = 'pending') THEN 1 END) as pending_shifts
+            FROM users u
+            LEFT JOIN shifts s ON s.user_id = u.id
+                AND s.start_time >= $1 
+                AND s.start_time <= $2
         `;
 
         let values: any[] = [startDate, endDate];
 
         if (departmentId) {
-            query += ` AND u.department = (SELECT name FROM departments WHERE id = $3)`;
+            query += ` WHERE u.department = (SELECT name FROM departments WHERE id = $3)`;
             values.push(departmentId);
+        } else {
+            query += ` WHERE 1=1`;
         }
 
-        query += ` GROUP BY u.id, u.name, u.department ORDER BY total_hours DESC`;
+        query += ` GROUP BY u.id, u.name, u.department ORDER BY u.name ASC`;
 
         const result = await pool.query(query, values);
         return NextResponse.json(result.rows);

@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { userId, type, latitude, longitude, shiftId } = await request.json();
+        const { userId, type, latitude, longitude, shiftId, clockInReason } = await request.json();
 
         if (!userId || !type || latitude === undefined || longitude === undefined) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -54,9 +54,9 @@ export async function POST(request: Request) {
 
         // 3. Log Attendance
         const result = await pool.query(
-            `INSERT INTO attendance_logs (user_id, shift_id, type, latitude, longitude, is_verified)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [userId, shiftId || null, type, latitude, longitude, isVerified]
+            `INSERT INTO attendance_logs (user_id, shift_id, type, latitude, longitude, is_verified, clock_in_reason)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [userId, shiftId || null, type, latitude, longitude, isVerified, clockInReason || null]
         );
 
         const newLog = result.rows[0];
@@ -69,11 +69,11 @@ export async function POST(request: Request) {
                     ['Clocked-in', shiftId]
                 );
             } else {
-                // Create a floating shift for unscheduled clock-ins
+                // Create a floating shift for unscheduled clock-ins, store the reason
                 await pool.query(
-                    `INSERT INTO shifts (user_id, start_time, end_time, type, status, actual_start_time)
-                     VALUES ($1, NOW(), NOW() + interval '8 hours', $2, $3, NOW())`,
-                    [userId, 'Floating', 'Clocked-in']
+                    `INSERT INTO shifts (user_id, start_time, end_time, type, status, actual_start_time, clock_in_reason)
+                     VALUES ($1, NOW(), NOW() + interval '8 hours', $2, $3, NOW(), $4)`,
+                    [userId, 'Floating', 'Clocked-in', clockInReason || null]
                 );
             }
         } else if (type === 'CLOCK_OUT') {

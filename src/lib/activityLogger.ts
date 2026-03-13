@@ -1,7 +1,7 @@
 import pool from './db';
 
 export type ActivityAction = 'CREATE' | 'UPDATE' | 'DELETE';
-export type EntityType = 'USER' | 'DEPARTMENT' | 'EVENT' | 'EVENT_TYPE' | 'TRAINING_MODULE' | 'REQUEST' | 'CELEBRATION_PHOTO' | 'GAMIFICATION' | 'CONFIG' | 'SHIFT' | 'ATTENDANCE_LOG' | 'SHIFT_TYPE';
+export type EntityType = 'USER' | 'DEPARTMENT' | 'EVENT' | 'EVENT_TYPE' | 'TRAINING_MODULE' | 'REQUEST' | 'CELEBRATION_PHOTO' | 'GAMIFICATION' | 'CONFIG' | 'SHIFT' | 'SHIFT_APPROVAL' | 'ATTENDANCE_LOG' | 'SHIFT_TYPE';
 
 export async function logActivity(
     userId: string | null,

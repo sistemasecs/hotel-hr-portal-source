@@ -16,6 +16,8 @@ export default function PresenceBar() {
     const { t, language } = useLanguage();
     const [loading, setLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null);
+    const [showReasonModal, setShowReasonModal] = useState(false);
+    const [clockInReason, setClockInReason] = useState('');
 
     useEffect(() => {
         if (user?.id) {
@@ -31,6 +33,21 @@ export default function PresenceBar() {
             return;
         }
 
+        // If clocking in without a scheduled shift, ask for a reason first
+        if (type === 'CLOCK_IN' && !upcomingShift) {
+            setShowReasonModal(true);
+            return;
+        }
+
+        executeClockAction(type);
+    };
+
+    const executeClockAction = (type: 'CLOCK_IN' | 'CLOCK_OUT', reason?: string) => {
+        if (!navigator.geolocation) {
+            setStatusMessage({ text: "Geolocation is not supported by your browser", type: 'error' });
+            return;
+        }
+
         setLoading(true);
         setStatusMessage(null);
 
@@ -39,7 +56,7 @@ export default function PresenceBar() {
                 const { latitude, longitude } = position.coords;
                 try {
                     if (type === 'CLOCK_IN') {
-                        await clockIn(user!.id, latitude, longitude, upcomingShift?.id);
+                        await clockIn(user!.id, latitude, longitude, upcomingShift?.id, reason);
                     } else {
                         await clockOut(user!.id, latitude, longitude, activeShift?.id);
                     }
@@ -56,9 +73,15 @@ export default function PresenceBar() {
         );
     };
 
+    const handleReasonSubmit = () => {
+        setShowReasonModal(false);
+        executeClockAction('CLOCK_IN', clockInReason);
+        setClockInReason('');
+    };
+
     if (!user) return null;
 
-    return (
+    return (<>
         <div className="bg-white border-b border-slate-200 px-4 py-3 md:px-6 md:py-4 shadow-sm sticky top-0 z-30 w-full transition-all no-print">
             <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6">
                 
@@ -146,5 +169,44 @@ export default function PresenceBar() {
                 </div>
             </div>
         </div>
-    );
+
+        {/* Floating Shift Reason Modal */}
+        {showReasonModal && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-900">
+                            {language === 'es' ? '⚠️ Sin turno programado' : '⚠️ No Scheduled Shift'}
+                        </h3>
+                        <p className="text-sm text-slate-500 mt-1">
+                            {language === 'es' ? 'Por favor indica el motivo por el que estás registrando tu entrada.' : 'Please provide the reason you are clocking in without a scheduled shift.'}
+                        </p>
+                    </div>
+                    <textarea
+                        className="w-full border border-slate-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        rows={3}
+                        placeholder={language === 'es' ? 'Ej: Cubriendo a un compañero, evento especial...' : 'e.g. Covering for a colleague, special event...'}
+                        value={clockInReason}
+                        onChange={e => setClockInReason(e.target.value)}
+                        autoFocus
+                    />
+                    <div className="flex space-x-3">
+                        <button
+                            onClick={() => { setShowReasonModal(false); setClockInReason(''); }}
+                            className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                        >
+                            {language === 'es' ? 'Cancelar' : 'Cancel'}
+                        </button>
+                        <button
+                            onClick={handleReasonSubmit}
+                            className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700 transition-colors"
+                        >
+                            {language === 'es' ? 'Confirmar entrada' : 'Confirm Clock In'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+    </>);
 }
+

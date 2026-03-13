@@ -54,7 +54,7 @@ interface DataContextType {
   updateHotelConfig: (config: Partial<DataContextType['hotelConfig']>) => Promise<void>;
   activityLogs: ActivityLog[];
   fetchActivityLogs: () => Promise<void>;
-  clockIn: (userId: string, latitude: number, longitude: number, shiftId?: string) => Promise<void>;
+  clockIn: (userId: string, latitude: number, longitude: number, shiftId?: string, clockInReason?: string) => Promise<void>;
   clockOut: (userId: string, latitude: number, longitude: number, shiftId?: string) => Promise<void>;
   addShift: (shift: Omit<Shift, 'id'>) => Promise<void>;
   fetchUserShifts: (userId: string) => Promise<void>;
@@ -725,12 +725,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const clockIn = async (userId: string, latitude: number, longitude: number, shiftId?: string) => {
+  const clockIn = async (userId: string, latitude: number, longitude: number, shiftId?: string, clockInReason?: string) => {
     try {
       const response = await fetch('/api/attendance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, type: 'CLOCK_IN', latitude, longitude, shiftId }),
+        body: JSON.stringify({ userId, type: 'CLOCK_IN', latitude, longitude, shiftId, clockInReason }),
       });
       if (response.ok) {
         const newLog = await response.json();

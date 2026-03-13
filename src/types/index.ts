@@ -178,6 +178,10 @@ export interface Shift {
   type: string;
   user_name?: string;
   department_name?: string;
+  approval_status?: 'pending' | 'approved' | 'rejected' | null;
+  approved_by?: string | null;
+  approval_notes?: string | null;
+  clock_in_reason?: string | null;
 }
 
 export interface ShiftType {
@@ -198,4 +202,5 @@ export interface AttendanceLog {
   latitude: number;
   longitude: number;
   is_verified: boolean;
+  clock_in_reason?: string | null;
 }
