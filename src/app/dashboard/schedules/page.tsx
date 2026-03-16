@@ -258,10 +258,35 @@ export default function SchedulesPage() {
     // Dept employees (for manager view)
     const deptEmployees = useMemo(() => {
         if (!canManage) return [];
-        return users.filter(u => {
-            if (isAdmin && !effectiveDeptId) return true;
-            return departments.find(d => d.id === effectiveDeptId)?.name === u.department;
-        });
+        
+        const roleOrder: Record<string, number> = {
+            'HR Admin': 0,
+            'Manager': 1,
+            'Supervisor': 2,
+            'Staff': 3
+        };
+
+        return users
+            .filter(u => {
+                if (isAdmin && !effectiveDeptId) return true;
+                return departments.find(d => d.id === effectiveDeptId)?.name === u.department;
+            })
+            .sort((a, b) => {
+                // First by department color/name if multiple
+                if (a.department !== b.department) {
+                    return a.department.localeCompare(b.department);
+                }
+                
+                // Then by role hierarchy
+                const aRank = roleOrder[a.role] ?? 99;
+                const bRank = roleOrder[b.role] ?? 99;
+                if (aRank !== bRank) {
+                    return aRank - bRank;
+                }
+                
+                // Finally by name
+                return a.name.localeCompare(b.name);
+            });
     }, [users, effectiveDeptId, isAdmin, canManage, departments]);
 
     const formatTime = (isoStr: string) =>
