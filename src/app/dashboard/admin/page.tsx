@@ -612,7 +612,7 @@ function AdminDashboardContent() {
           if (supervisor) supervisorId = supervisor.id;
         }
 
-        await addUser({
+        const success = await addUser({
           name: userData.name,
           email: userData.email,
           password: userData.password || 'Welcome123',
@@ -631,7 +631,11 @@ function AdminDashboardContent() {
           isActive: true,
         } as any);
         
-        addedCount++;
+        if (success) {
+          addedCount++;
+        } else {
+          failedCount++;
+        }
       } catch (err) {
         console.error('Failed to add user during batch upload:', err);
         failedCount++;

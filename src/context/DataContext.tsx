@@ -30,7 +30,7 @@ interface DataContextType {
   addTrainingModule: (module: Omit<TrainingModule, 'id'>) => void;
   updateTrainingModule: (id: string, module: Partial<TrainingModule>) => void;
   deleteTrainingModule: (id: string) => void;
-  addUser: (user: Omit<User, 'id'>) => Promise<void>;
+  addUser: (user: Omit<User, 'id'>) => Promise<boolean>;
   updateUser: (id: string, user: Partial<User>) => Promise<void>;
   addDepartment: (department: Omit<Department, 'id'>) => void;
   updateDepartment: (id: string, department: Partial<Department>) => void;
@@ -263,7 +263,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchUsers();
   }, []);
 
-  const addUser = async (user: Omit<User, 'id'>) => {
+  const addUser = async (user: Omit<User, 'id'>): Promise<boolean> => {
     try {
       const currentUser = JSON.parse(localStorage.getItem('hotel_hr_user') || '{}');
       const response = await fetch('/api/users', {
@@ -277,11 +277,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (response.ok) {
         const newUser = await response.json();
         setUsers(prev => [...prev, newUser]);
+        return true;
       } else {
-        console.error('Failed to add user');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to add user:', errorData);
+        return false;
       }
     } catch (error) {
       console.error('Error adding user:', error);
+      return false;
     }
   };
 
