@@ -186,6 +186,8 @@ function AdminDashboardContent() {
   // CSV Upload State
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [csvPreviewData, setCsvPreviewData] = useState<{ valid: any[], invalid: any[] }>({ valid: [], invalid: [] });
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
 
   // Department State
   const [newDeptName, setNewDeptName] = useState('');
@@ -526,40 +528,61 @@ function AdminDashboardContent() {
     setCsvPreviewData({ ...csvPreviewData, [type]: newList });
   };
 
-  const handleConfirmCsvUpload = () => {
+  const handleConfirmCsvUpload = async () => {
+    if (csvPreviewData.valid.length === 0 || isUploading) return;
+
+    setIsUploading(true);
+    setUploadProgress({ current: 0, total: csvPreviewData.valid.length });
+
     let addedCount = 0;
-    csvPreviewData.valid.forEach(userData => {
-      // Find supervisor by email if provided
-      let supervisorId = userData.supervisorId || null;
-      if (userData.supervisorEmail) {
-        const supervisor = users.find(u => u.email.toLowerCase() === userData.supervisorEmail.toLowerCase());
-        if (supervisor) supervisorId = supervisor.id;
+    let failedCount = 0;
+    
+    for (const userData of csvPreviewData.valid) {
+      try {
+        // Find supervisor by email if provided
+        let supervisorId = userData.supervisorId || null;
+        if (userData.supervisorEmail) {
+          const supervisor = users.find(u => u.email.toLowerCase() === userData.supervisorEmail.toLowerCase());
+          if (supervisor) supervisorId = supervisor.id;
+        }
+
+        await addUser({
+          name: userData.name,
+          email: userData.email,
+          password: userData.password || 'Welcome123',
+          role: userData.role as any,
+          department: userData.department,
+          area: userData.area || '',
+          supervisorId: supervisorId,
+          birthday: userData.birthday,
+          hireDate: userData.hireDate,
+          avatarUrl: userData.avatarUrl || '',
+          avatarFit: 'cover',
+          tShirtSize: userData.tShirtSize as any || '',
+          likes: userData.likes ? (typeof userData.likes === 'string' ? userData.likes.split(',').map((s: string) => s.trim()) : userData.likes) : [],
+          dislikes: userData.dislikes ? (typeof userData.dislikes === 'string' ? userData.dislikes.split(',').map((s: string) => s.trim()) : userData.dislikes) : [],
+          allergies: userData.allergies ? (typeof userData.allergies === 'string' ? userData.allergies.split(',').map((s: string) => s.trim()) : userData.allergies) : [],
+          isActive: true,
+        } as any);
+        
+        addedCount++;
+      } catch (err) {
+        console.error('Failed to add user during batch upload:', err);
+        failedCount++;
       }
+      
+      setUploadProgress(prev => ({ ...prev, current: addedCount + failedCount }));
+    }
 
-      addUser({
-        name: userData.name,
-        email: userData.email,
-        password: userData.password || 'Welcome123',
-        role: userData.role as any,
-        department: userData.department,
-        area: userData.area || '',
-        supervisorId: supervisorId,
-        birthday: userData.birthday,
-        hireDate: userData.hireDate,
-        avatarUrl: userData.avatarUrl || '',
-        avatarFit: 'cover',
-        tShirtSize: userData.tShirtSize as any || '',
-        likes: userData.likes ? (typeof userData.likes === 'string' ? userData.likes.split(',').map((s: string) => s.trim()) : userData.likes) : [],
-        dislikes: userData.dislikes ? (typeof userData.dislikes === 'string' ? userData.dislikes.split(',').map((s: string) => s.trim()) : userData.dislikes) : [],
-        allergies: userData.allergies ? (typeof userData.allergies === 'string' ? userData.allergies.split(',').map((s: string) => s.trim()) : userData.allergies) : [],
-        isActive: true,
-      } as any);
-      addedCount++;
-    });
-
-    alert(t('csvUploadSuccess').replace('{count}', addedCount.toString()));
+    setIsUploading(false);
+    if (failedCount > 0) {
+      alert(`${addedCount} users added successfully. ${failedCount} failed. Please check the logs.`);
+    } else {
+      alert(t('csvUploadSuccess').replace('{count}', addedCount.toString()));
+    }
     setIsCsvModalOpen(false);
     setCsvPreviewData({ valid: [], invalid: [] });
+    setUploadProgress({ current: 0, total: 0 });
   };
 
   const handleDownloadTemplate = () => {
@@ -796,21 +819,24 @@ function AdminDashboardContent() {
                               <tr key={row.id} className="hover:bg-white/50 transition-colors">
                                 <td className="p-2">
                                   <input 
-                                    className="w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded px-1 transition-all" 
+                                    disabled={isUploading}
+                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded px-1 transition-all ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`} 
                                     value={row.name} 
                                     onChange={(e) => handleEditCsvRow(row.id, 'name', e.target.value, 'valid')}
                                   />
                                 </td>
                                 <td className="p-2">
                                   <input 
-                                    className="w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded px-1" 
+                                    disabled={isUploading}
+                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded px-1 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`} 
                                     value={row.email} 
                                     onChange={(e) => handleEditCsvRow(row.id, 'email', e.target.value, 'valid')}
                                   />
                                 </td>
                                 <td className="p-2">
                                   <select 
-                                    className="w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded px-1 text-sm appearance-none" 
+                                    disabled={isUploading}
+                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded px-1 text-sm appearance-none ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`} 
                                     value={row.role} 
                                     onChange={(e) => handleEditCsvRow(row.id, 'role', e.target.value, 'valid')}
                                   >
@@ -822,7 +848,8 @@ function AdminDashboardContent() {
                                 </td>
                                 <td className="p-2">
                                   <select 
-                                    className="w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded px-1 text-sm appearance-none" 
+                                    disabled={isUploading}
+                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-emerald-500 rounded px-1 text-sm appearance-none ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`} 
                                     value={row.department} 
                                     onChange={(e) => handleEditCsvRow(row.id, 'department', e.target.value, 'valid')}
                                   >
@@ -830,7 +857,11 @@ function AdminDashboardContent() {
                                   </select>
                                 </td>
                                 <td className="p-2 text-right">
-                                  <button onClick={() => handleDeleteCsvRow(row.id, 'valid')} className="p-1.5 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors">
+                                  <button 
+                                    disabled={isUploading}
+                                    onClick={() => handleDeleteCsvRow(row.id, 'valid')} 
+                                    className={`p-1.5 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                   </button>
                                 </td>
@@ -866,23 +897,26 @@ function AdminDashboardContent() {
                               <tr key={row.id} className="hover:bg-white/50 transition-colors">
                                 <td className="p-2">
                                   <input 
+                                    disabled={isUploading}
                                     placeholder="Missing Name"
-                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-rose-500 rounded px-1 transition-all ${!row.name ? 'placeholder-rose-300' : ''}`} 
+                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-rose-500 rounded px-1 transition-all ${!row.name ? 'placeholder-rose-300' : ''} ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`} 
                                     value={row.name || ''} 
                                     onChange={(e) => handleEditCsvRow(row.id, 'name', e.target.value, 'invalid')}
                                   />
                                 </td>
                                 <td className="p-2">
                                   <input 
+                                    disabled={isUploading}
                                     placeholder="Missing Email"
-                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-rose-500 rounded px-1 ${!row.email ? 'placeholder-rose-300' : ''}`} 
+                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-rose-500 rounded px-1 ${!row.email ? 'placeholder-rose-300' : ''} ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`} 
                                     value={row.email || ''} 
                                     onChange={(e) => handleEditCsvRow(row.id, 'email', e.target.value, 'invalid')}
                                   />
                                 </td>
                                 <td className="p-2">
                                   <select 
-                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-rose-500 rounded px-1 text-sm appearance-none ${!row.role ? 'text-rose-300' : ''}`} 
+                                    disabled={isUploading}
+                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-rose-500 rounded px-1 text-sm appearance-none ${!row.role ? 'text-rose-300' : ''} ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`} 
                                     value={row.role || ''} 
                                     onChange={(e) => handleEditCsvRow(row.id, 'role', e.target.value, 'invalid')}
                                   >
@@ -895,7 +929,8 @@ function AdminDashboardContent() {
                                 </td>
                                 <td className="p-2">
                                   <select 
-                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-rose-500 rounded px-1 text-sm appearance-none ${!row.department ? 'text-rose-300' : ''}`} 
+                                    disabled={isUploading}
+                                    className={`w-full bg-transparent border-none focus:ring-1 focus:ring-rose-500 rounded px-1 text-sm appearance-none ${!row.department ? 'text-rose-300' : ''} ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`} 
                                     value={row.department || ''} 
                                     onChange={(e) => handleEditCsvRow(row.id, 'department', e.target.value, 'invalid')}
                                   >
@@ -904,7 +939,11 @@ function AdminDashboardContent() {
                                   </select>
                                 </td>
                                 <td className="p-2 text-right">
-                                  <button onClick={() => handleDeleteCsvRow(row.id, 'invalid')} className="p-1.5 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors">
+                                  <button 
+                                    disabled={isUploading}
+                                    onClick={() => handleDeleteCsvRow(row.id, 'invalid')} 
+                                    className={`p-1.5 text-rose-500 hover:bg-rose-100 rounded-lg transition-colors ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                   </button>
                                 </td>
@@ -919,22 +958,50 @@ function AdminDashboardContent() {
                     </div>
                   )}
 
+                  {isUploading && (
+                    <div className="pt-4 space-y-2">
+                      <div className="flex justify-between items-center text-xs font-medium text-slate-600">
+                        <span>{t('csvUploadingProgress')}...</span>
+                        <span>{uploadProgress.current} / {uploadProgress.total}</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
+                        <div 
+                          className="bg-emerald-500 h-full transition-all duration-300 ease-out"
+                          style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
                     <button
+                      disabled={isUploading}
                       onClick={() => {
                         setIsCsvModalOpen(false);
                         setCsvPreviewData({ valid: [], invalid: [] });
                       }}
-                      className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+                      className={`px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors font-medium ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      {t('csvUploadCancel')}
+                      {t('cancel')}
                     </button>
                     <button
+                      disabled={csvPreviewData.valid.length === 0 || isUploading}
                       onClick={handleConfirmCsvUpload}
-                      disabled={csvPreviewData.valid.length === 0}
-                      className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all font-bold shadow-sm flex items-center space-x-2 ${
+                        (csvPreviewData.valid.length === 0 || isUploading) ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:scale-105 active:scale-95'
+                      }`}
                     >
-                      {t('csvUploadConfirm')} ({csvPreviewData.valid.length})
+                      {isUploading ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          <span>{t('uploading')}...</span>
+                        </>
+                      ) : (
+                        <span>{t('acceptUpload')}</span>
+                      )}
                     </button>
                   </div>
                 </div>
