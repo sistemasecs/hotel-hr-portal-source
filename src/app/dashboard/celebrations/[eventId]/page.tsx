@@ -43,6 +43,44 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
   const [commentImageFile, setCommentImageFile] = useState<File | null>(null);
   const [commentImagePreview, setCommentImagePreview] = useState<string | null>(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  // Tagging State
+  const { users: allUsers } = useData();
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const [filteredTagUsers, setFilteredTagUsers] = useState<typeof allUsers>([]);
+  const [tagSearch, setTagSearch] = useState('');
+  const [cursorPosition, setCursorPosition] = useState(0);
+
+  useEffect(() => {
+    const handleTagSearch = () => {
+      const lastAtIndex = newComment.lastIndexOf('@', cursorPosition - 1);
+      if (lastAtIndex !== -1) {
+        const textAfterAt = newComment.substring(lastAtIndex + 1, cursorPosition);
+        if (!textAfterAt.includes(' ')) {
+          const search = textAfterAt.toLowerCase();
+          setTagSearch(search);
+          setFilteredTagUsers(allUsers.filter(u => 
+            u.name.toLowerCase().includes(search) && u.id !== user?.id
+          ).slice(0, 5));
+          setShowTagSuggestions(true);
+          return;
+        }
+      }
+      setShowTagSuggestions(false);
+    };
+
+    handleTagSearch();
+  }, [newComment, cursorPosition, allUsers, user?.id]);
+
+  const handleSelectTag = (userName: string) => {
+    const lastAtIndex = newComment.lastIndexOf('@', cursorPosition - 1);
+    const beforeAt = newComment.substring(0, lastAtIndex);
+    const afterTag = newComment.substring(cursorPosition);
+    const updatedComment = `${beforeAt}@${userName} ${afterTag}`;
+    setNewComment(updatedComment);
+    setShowTagSuggestions(false);
+  };
+
   const commentFileInputRef = useRef<HTMLInputElement>(null);
 
   const EMOJIS = ['👍', '❤️', '😂', '🎉', '👏'];
@@ -172,6 +210,17 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
       console.error('Error toggling reaction:', error);
       // Ideally, revert optimistic update here on failure
     }
+  };
+
+  const renderCommentContent = (content: string) => {
+    // Split by mention pattern while keeping the pattern in the result
+    const parts = content.split(/(@[A-Za-z\s]+)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('@')) {
+        return <span key={i} className="font-bold text-primary-600 bg-primary-50 px-1 rounded">{part}</span>;
+      }
+      return part;
+    });
   };
 
   if (!eventId) {
@@ -451,14 +500,48 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
                 </div>
               )}
             </div>
-            <div className="flex-grow">
+            <div className="flex-grow relative">
               <textarea
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
+                onChange={(e) => {
+                  setNewComment(e.target.value);
+                  setCursorPosition(e.target.selectionStart);
+                }}
+                onKeyUp={(e) => setCursorPosition((e.target as HTMLTextAreaElement).selectionStart)}
+                onClick={(e) => setCursorPosition((e.target as HTMLTextAreaElement).selectionStart)}
                 placeholder="Write a comment..."
                 className="w-full border border-slate-300 rounded-lg shadow-sm p-3 text-sm focus:ring-primary-500 focus:border-primary-500 min-h-[80px]"
                 required
               />
+
+              {/* Tag Suggestions */}
+              {showTagSuggestions && filteredTagUsers.length > 0 && (
+                <div className="absolute z-50 left-0 bottom-full mb-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2">
+                  <div className="p-2 border-b border-slate-50 bg-slate-50/50">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2">Tag a colleague</p>
+                  </div>
+                  {filteredTagUsers.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => handleSelectTag(u.name)}
+                      className="w-full flex items-center p-2 hover:bg-primary-50 transition-colors group"
+                    >
+                      {u.avatarUrl ? (
+                        <img src={u.avatarUrl} alt={u.name} className="w-8 h-8 rounded-full object-cover mr-3" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs mr-3">
+                          {u.name.charAt(0)}
+                        </div>
+                      )}
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-slate-900 group-hover:text-primary-700">{u.name}</p>
+                        <p className="text-[10px] text-slate-500">{u.department}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
               
               {/* Image Preview */}
               {commentImagePreview && (
@@ -531,7 +614,7 @@ export default function AlbumDetailsPage({ params }: { params: Promise<{ eventId
                         {new Date(comment.createdAt).toLocaleString()}
                       </span>
                     </div>
-                    <p className="text-slate-700 text-sm whitespace-pre-wrap">{comment.content}</p>
+                    <p className="text-slate-700 text-sm whitespace-pre-wrap">{renderCommentContent(comment.content)}</p>
                     
                     {comment.imageUrl && (
                       <div className="mt-3">

@@ -204,3 +204,14 @@ export interface AttendanceLog {
   is_verified: boolean;
   clock_in_reason?: string | null;
 }
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: 'REQUEST_APPROVED' | 'EVENT_TAG' | 'BIRTHDAY_COMMENT' | 'MENTION';
+  title: string;
+  message: string;
+  link?: string;
+  is_read: boolean;
+  created_at: string;
+}

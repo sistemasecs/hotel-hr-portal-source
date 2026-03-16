@@ -1,0 +1,71 @@
+import { NextResponse } from 'next/server';
+import pool from '@/lib/db';
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return NextResponse.json({ error: 'UserId is required' }, { status: 400 });
+    }
+
+    const query = `
+      SELECT * FROM notifications 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC 
+      LIMIT 50
+    `;
+    const { rows } = await pool.query(query, [userId]);
+
+    return NextResponse.json(rows);
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { notificationId, userId, markAllAsRead } = body;
+
+    if (markAllAsRead && userId) {
+      await pool.query('UPDATE notifications SET is_read = TRUE WHERE user_id = $1', [userId]);
+      return NextResponse.json({ success: true });
+    }
+
+    if (!notificationId) {
+      return NextResponse.json({ error: 'NotificationId is required' }, { status: 400 });
+    }
+
+    await pool.query('UPDATE notifications SET is_read = TRUE WHERE id = $1', [notificationId]);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error updating notification:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { userId, type, title, message, link } = body;
+
+    if (!userId || !type || !title || !message) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const query = `
+      INSERT INTO notifications (user_id, type, title, message, link)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `;
+    const { rows } = await pool.query(query, [userId, type, title, message, link || null]);
+
+    return NextResponse.json(rows[0], { status: 201 });
+  } catch (error) {
+    console.error('Error creating notification:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}

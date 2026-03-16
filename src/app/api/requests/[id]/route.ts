@@ -68,6 +68,20 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         const updatedRequest = result.rows[0];
         await logActivity(userId || null, 'UPDATE', 'REQUEST', updatedRequest.id, { status: updatedRequest.status });
 
+        // Add Notification on Approval
+        if (status === 'Approved') {
+            await pool.query(`
+                INSERT INTO notifications (user_id, type, title, message, link)
+                VALUES ($1, $2, $3, $4, $5)
+            `, [
+                updatedRequest.userId, 
+                'REQUEST_APPROVED', 
+                'Request Approved', 
+                `Your ${updatedRequest.type} request has been approved.`,
+                '/dashboard/requests'
+            ]);
+        }
+
         return NextResponse.json(updatedRequest);
     } catch (error) {
         console.error('Error updating request:', error);

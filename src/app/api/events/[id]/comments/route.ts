@@ -76,6 +76,56 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         
         newComment.reactions = [];
 
+        // --- Notification Logic ---
+        const allUsersResult = await pool.query('SELECT id, name FROM users WHERE id != $1', [userId]);
+        const allUsers = allUsersResult.rows;
+
+        // 1. Detect Mentions (@Name)
+        const mentions = content.match(/@([A-Za-z\s]+)/g);
+        if (mentions) {
+            for (const mention of mentions) {
+                const nameToMatch = mention.substring(1).trim().toLowerCase();
+                const matchedUser = allUsers.find(u => u.name.toLowerCase().includes(nameToMatch));
+                
+                if (matchedUser) {
+                    await pool.query(`
+                        INSERT INTO notifications (user_id, type, title, message, link)
+                        VALUES ($1, $2, $3, $4, $5)
+                    `, [
+                        matchedUser.id,
+                        'EVENT_TAG',
+                        'You were tagged',
+                        `${newComment.userName} tagged you in a comment.`,
+                        `/dashboard/celebrations/${encodeURIComponent(id)}`
+                    ]);
+                }
+            }
+        }
+
+        // 2. Birthday Notification
+        // Check if event ID is synthetic birthday (doesn't contain hyphen and ends with a year)
+        const isBirthday = !id.includes('-') && /\d{4}$/.test(id);
+        if (isBirthday) {
+            // Find the user whose birthday it is. The ID pattern is formattedName+Year
+            const birthdayUser = allUsers.find(u => {
+                const formatted = u.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+                return id.startsWith(formatted);
+            });
+
+            if (birthdayUser && birthdayUser.id !== userId) {
+                await pool.query(`
+                    INSERT INTO notifications (user_id, type, title, message, link)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [
+                    birthdayUser.id,
+                    'BIRTHDAY_COMMENT',
+                    'Happy Birthday Comment!',
+                    `${newComment.userName} commented on your birthday photo album.`,
+                    `/dashboard/celebrations/${encodeURIComponent(id)}`
+                ]);
+            }
+        }
+
         return NextResponse.json(newComment, { status: 201 });
     } catch (error) {
         console.error('Error posting comment:', error);

@@ -8,22 +8,34 @@ import { Shift } from '@/types';
 import WorkTimer from './WorkTimer';
 import LiveClock from './LiveClock';
 import { ensureGuatemalaDate } from '@/lib/dateUtils';
-import { LogIn, LogOut, Info } from 'lucide-react';
+import { LogIn, LogOut, Info, Bell, Check, ExternalLink } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function PresenceBar() {
     const { user } = useAuth();
-    const { clockIn, clockOut, shifts, fetchUserShifts, activeShift } = useData();
+    const { clockIn, clockOut, shifts, fetchUserShifts, activeShift, notifications, fetchNotifications, markNotificationAsRead } = useData();
     const { t, language } = useLanguage();
     const [loading, setLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState<{ text: string, type: 'error' | 'success' | 'info' } | null>(null);
     const [showReasonModal, setShowReasonModal] = useState(false);
     const [clockInReason, setClockInReason] = useState('');
+    const [showNotifications, setShowNotifications] = useState(false);
 
     useEffect(() => {
         if (user?.id) {
             fetchUserShifts(user.id);
+            fetchNotifications(user.id);
         }
     }, [user?.id]);
+
+    // Unread count
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+
+    const handleMarkAllRead = () => {
+        if (user?.id) {
+            markNotificationAsRead('', user.id, true);
+        }
+    };
 
     const upcomingShift = shifts.find((s: Shift) => s.status === 'Scheduled');
 
@@ -122,8 +134,82 @@ export default function PresenceBar() {
                     {activeShift && <WorkTimer startTime={activeShift.actual_start_time || activeShift.start_time} />}
                 </div>
 
-                {/* Action Buttons & Status Message */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 lg:gap-4 w-full lg:w-auto">
+                {/* Notifications & Action Buttons */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 lg:gap-4 w-full lg:w-auto relative">
+                    
+                    {/* Notification Bell */}
+                    <div className="relative">
+                        <button 
+                            onClick={() => setShowNotifications(!showNotifications)}
+                            className={`p-2 rounded-xl transition-all relative group ${showNotifications ? 'bg-primary-50 text-primary-600' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+                        >
+                            <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'animate-swing' : ''}`} />
+                            {unreadCount > 0 && (
+                                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
+                                    {unreadCount}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Notifications Dropdown (Glassmorphism) */}
+                        {showNotifications && (
+                            <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl z-50 overflow-hidden ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-white/50">
+                                    <h3 className="font-bold text-slate-900">Notifications</h3>
+                                    {unreadCount > 0 && (
+                                        <button 
+                                            onClick={handleMarkAllRead}
+                                            className="text-xs font-semibold text-primary-600 hover:text-primary-700 flex items-center"
+                                        >
+                                            <Check className="w-3 h-3 mr-1" />
+                                            Mark all read
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="max-h-[70vh] overflow-y-auto">
+                                    {notifications.length > 0 ? (
+                                        <div className="divide-y divide-slate-50">
+                                            {notifications.map((notification) => (
+                                                <div 
+                                                    key={notification.id} 
+                                                    className={`p-4 transition-colors hover:bg-white/50 group cursor-pointer ${!notification.is_read ? 'bg-primary-50/30' : ''}`}
+                                                    onClick={() => {
+                                                        markNotificationAsRead(notification.id);
+                                                        if (notification.link) window.location.href = notification.link;
+                                                    }}
+                                                >
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <h4 className={`text-sm font-bold ${notification.is_read ? 'text-slate-700' : 'text-slate-900 text-primary-700'}`}>
+                                                            {notification.title}
+                                                        </h4>
+                                                        <span className="text-[10px] font-medium text-slate-400">
+                                                            {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">
+                                                        {notification.message}
+                                                    </p>
+                                                    {notification.link && (
+                                                        <div className="mt-2 flex items-center text-xs font-bold text-primary-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            View details <ExternalLink className="w-3 h-3 ml-1" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="py-12 px-6 text-center">
+                                            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <Bell className="w-6 h-6 text-slate-300" />
+                                            </div>
+                                            <p className="text-sm font-medium text-slate-400">No notifications yet</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     {statusMessage && (
                         <span className={`text-xs font-medium px-3 py-2 rounded-lg text-center shadow-sm w-full sm:w-auto ${statusMessage.type === 'error' ? 'text-red-700 bg-red-50 border border-red-100' :
                             statusMessage.type === 'success' ? 'text-emerald-700 bg-emerald-50 border border-emerald-100' :

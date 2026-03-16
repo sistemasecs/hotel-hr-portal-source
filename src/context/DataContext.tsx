@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { User, Event, EventType, TrainingModule, UserTraining, CelebrationPhoto, PeerVote, SupervisorScore, EmployeeOfTheMonth, Department, ActivityLog, Shift, AttendanceLog, ShiftType } from '../types';
+import { User, Event, EventType, TrainingModule, UserTraining, CelebrationPhoto, PeerVote, SupervisorScore, EmployeeOfTheMonth, Department, ActivityLog, Shift, AttendanceLog, ShiftType, Notification } from '../types';
 import { mockEvents, mockTrainingModules, mockUserTrainings, mockCelebrationPhotos } from '../data/mockData';
 
 interface DataContextType {
@@ -15,6 +15,9 @@ interface DataContextType {
   attendanceLogs: AttendanceLog[];
   shiftTypes: ShiftType[];
   activeShift: Shift | null;
+  notifications: Notification[];
+  fetchNotifications: (userId: string) => Promise<void>;
+  markNotificationAsRead: (notificationId: string, userId?: string, markAllAsRead?: boolean) => Promise<void>;
   hotelConfig: {
     hotelLatitude: number | null;
     hotelLongitude: number | null;
@@ -89,6 +92,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceLog[]>([]);
   const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([]);
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [hotelConfig, setHotelConfig] = useState<{
     hotelLatitude: number | null;
     hotelLongitude: number | null;
@@ -139,6 +143,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           setHotelConfig(newConfig);
         }
+
+        // Fetch User Notifications if user is logged in (simplified, normally triggered by auth)
+        // Note: The bell component will call fetchNotifications explicitly.
 
         // Fetch Event Types
         const eventTypesRes = await fetch('/api/event-types');
@@ -926,6 +933,37 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const fetchNotifications = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/notifications?userId=${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId: string, userId?: string, markAllAsRead?: boolean) => {
+    try {
+      const res = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId, userId, markAllAsRead })
+      });
+      if (res.ok) {
+        if (markAllAsRead && userId) {
+          setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+        } else {
+          setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n));
+        }
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
   const approveShift = async (id: string) => {
     try {
       const response = await fetch(`/api/shifts/${id}`, {
@@ -980,29 +1018,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         employeesOfTheMonth,
         setEmployeeOfTheMonth,
         hotelLogo,
-        setHotelLogo: handleSetHotelLogo,
+        setHotelLogo: setHotelLogo,
         updateHotelConfig,
         activityLogs,
         fetchActivityLogs,
-        shifts,
-        attendanceLogs,
-        hotelConfig,
         clockIn,
         clockOut,
         addShift,
         fetchUserShifts,
+        shifts,
+        attendanceLogs,
         fetchAttendanceLogs,
         updateShift,
         deleteShift,
         fetchShifts,
-        shiftTypes,
-        activeShift,
+        approveShift,
+        fetchWorkedHoursReport,
         addShiftType,
         updateShiftType,
         deleteShiftType,
         fetchShiftTypes,
-        fetchWorkedHoursReport,
-        approveShift,
+        shiftTypes,
+        activeShift,
+        hotelConfig,
+        notifications,
+        fetchNotifications,
+        markNotificationAsRead,
       }}
     >
       {children}
