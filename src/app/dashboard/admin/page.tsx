@@ -9,7 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { User, Event, TrainingModule, EmployeeRequest } from '@/types';
 import ModuleForm from '@/components/admin/ModuleForm';
 import AttendanceReports from '@/components/admin/AttendanceReports';
-import { calculateVacationBalance, getVacationHistory, getDurationInDays } from '@/lib/vacationUtils';
+import { calculateVacationBalance, getVacationHistory, getDurationInDays, getDaysSinceLastVacation, VacationYearBreakdown } from '@/lib/vacationUtils';
 import Papa from 'papaparse';
 import dynamic from 'next/dynamic';
 
@@ -25,7 +25,7 @@ function AdminDashboardContent() {
   const { primaryColor, setPrimaryColor } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'Directory' | 'Hierarchy' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Attendance' | 'Activity' | 'Settings'>('Directory');
+  const [activeTab, setActiveTab] = useState<'Directory' | 'Hierarchy' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Attendance' | 'Vacations' | 'Activity' | 'Settings'>('Directory');
   const [attendanceSubTab, setAttendanceSubTab] = useState<'Logs' | 'Reports'>('Logs');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
@@ -161,7 +161,7 @@ function AdminDashboardContent() {
   // Read tab from URL on mount and when searchParams change
   useEffect(() => {
     const tab = searchParams.get('tab');
-    const validTabs = ['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Attendance', 'Activity', 'Settings'];
+    const validTabs = ['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Attendance', 'Vacations', 'Activity', 'Settings'];
     if (tab && validTabs.includes(tab)) {
       setActiveTab(tab as any);
     }
@@ -201,6 +201,25 @@ function AdminDashboardContent() {
 
   // Vacation State
   const [allVacationRequests, setAllVacationRequests] = useState<EmployeeRequest[]>([]);
+  const [vacationConsents, setVacationConsents] = useState<any[]>([]);
+
+  const fetchVacationConsents = async () => {
+    try {
+      const res = await fetch('/api/vacations/consent');
+      if (res.ok) {
+        const data = await res.json();
+        setVacationConsents(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch vacation consents:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'Vacations') {
+      fetchVacationConsents();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (user && isAdmin) {
@@ -275,6 +294,10 @@ function AdminDashboardContent() {
   const handleSaveUser = () => {
     if (editingUser) {
       updateUser(editingUser.id, editUserForm);
+      setIsUserModalOpen(false);
+      setEditingUser(null);
+      setEditUserForm({});
+      alert(t('employeeUpdated'));
     } else {
       if (editUserForm.name && editUserForm.email && editUserForm.role && editUserForm.department && editUserForm.birthday && editUserForm.hireDate) {
         addUser(editUserForm as Omit<User, 'id'>);
@@ -286,6 +309,28 @@ function AdminDashboardContent() {
     setIsUserModalOpen(false);
     setEditingUser(null);
     setEditUserForm({});
+  };
+
+  const handleSignConsent = async (targetUserId: string, yearNumber: number) => {
+    try {
+      const res = await fetch('/api/vacations/consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: targetUserId,
+          yearNumber,
+          signedById: user?.id,
+          notes: `Signed via Admin Dashboard - ${new Date().toLocaleDateString()}`
+        })
+      });
+
+      if (res.ok) {
+        fetchVacationConsents();
+        alert(t('consentSigned'));
+      }
+    } catch (error) {
+      console.error('Failed to sign vacation consent:', error);
+    }
   };
 
   const handleArrayInput = (field: keyof User, value: string) => {
@@ -647,7 +692,12 @@ function AdminDashboardContent() {
       {activeTab === 'Directory' && (
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-            <h2 className="text-xl font-semibold text-slate-800">{t('staffDirectory')}</h2>
+            <div className="flex items-baseline space-x-3">
+              <h2 className="text-xl font-semibold text-slate-800">{t('staffDirectory')}</h2>
+              <span className="text-sm font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                {filteredUsers.length} {t('totalStaff')}
+              </span>
+            </div>
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
               <div className="relative">
                 <input
@@ -2489,6 +2539,129 @@ function AdminDashboardContent() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Vacation Management Tab */}
+      {activeTab === 'Vacations' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <h2 className="text-xl font-bold text-slate-900 mb-4">{t('vacationManagement')}</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Staff Overview */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">{t('staffOverview')}</h3>
+                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                  {filteredUsers.map(u => {
+                    const userRequests = allVacationRequests.filter(r => r.userId === u.id);
+                    const { balance } = calculateVacationBalance(u.hireDate, userRequests);
+                    const daysSince = getDaysSinceLastVacation(userRequests);
+                    const history = getVacationHistory(u.hireDate, userRequests);
+
+                    return (
+                      <div key={u.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center space-x-3">
+                            {u.avatarUrl ? (
+                              <img src={u.avatarUrl} alt={u.name} className="w-10 h-10 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-sm font-bold">
+                                {u.name.charAt(0)}
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-bold text-slate-900">{u.name}</p>
+                              <p className="text-xs text-slate-500">{u.department}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-black text-primary-600">{balance} {t('days')}</p>
+                            <p className="text-[10px] text-slate-400 uppercase tracking-tighter">
+                              {t('lastVacationEnded')}: {daysSince !== null ? `${daysSince} ${t('daysAgo')}` : t('never')}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Consent Forms for this user */}
+                        <div className="mt-4 border-t border-slate-200 pt-3">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">{t('consentForms')}</p>
+                          <div className="space-y-2">
+                            {history.map(year => {
+                              const isSigned = vacationConsents.some(c => c.user_id === u.id && c.year_number === year.yearNumber);
+                              return (
+                                <div key={year.yearNumber} className="flex items-center justify-between bg-white p-2 rounded border border-slate-100">
+                                  <div className="text-xs">
+                                    <span className="font-medium text-slate-700">{t('employmentYear')} {year.yearNumber}</span>
+                                    <span className="text-slate-400 ml-2">({year.periodStart} - {year.periodEnd})</span>
+                                  </div>
+                                  {isSigned ? (
+                                    <span className="flex items-center text-[10px] font-bold text-emerald-600">
+                                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                      {t('consentSigned').toUpperCase()}
+                                    </span>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleSignConsent(u.id, year.yearNumber)}
+                                      className="text-[10px] font-bold text-primary-600 hover:text-primary-800 transition-colors underline uppercase"
+                                    >
+                                      {t('signConsent')}
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Vacation Calendar */}
+              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 h-fit">
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4 flex items-center">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {t('vacations')} Calendar
+                </h3>
+                <div className="space-y-4">
+                  {/* Reuse the calendar logic from Culture Hub or similar if needed, 
+                      for now showing a list of upcoming approved vacations as a simple placeholder calendar view */}
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
+                    {allVacationRequests
+                      .filter(r => r.status === 'Approved')
+                      .sort((a, b) => new Date(a.data.startDate).getTime() - new Date(b.data.startDate).getTime())
+                      .slice(0, 10)
+                      .map(r => (
+                        <div key={r.id} className="p-3 flex items-center space-x-3">
+                          <div className="flex-shrink-0 w-10 h-10 bg-primary-50 rounded-lg flex flex-col items-center justify-center border border-primary-100">
+                            <span className="text-[10px] font-bold text-primary-600 uppercase">
+                              {new Date(r.data.startDate).toLocaleString('default', { month: 'short' })}
+                            </span>
+                            <span className="text-lg font-black text-primary-700 leading-none">
+                              {new Date(r.data.startDate).getDate()}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900">{r.userName || 'Employee'}</p>
+                            <p className="text-[10px] text-slate-500">
+                              {r.data.startDate} → {r.data.endDate}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    {allVacationRequests.filter(r => r.status === 'Approved').length === 0 && (
+                      <div className="p-8 text-center text-slate-500 text-sm">No vacations scheduled</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

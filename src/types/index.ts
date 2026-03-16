@@ -161,7 +161,7 @@ export interface ActivityLog {
   id: string;
   userId: string | null;
   userName: string | null;
-  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'SIGN';
   entityType: string;
   entityId: string | null;
   details: any;

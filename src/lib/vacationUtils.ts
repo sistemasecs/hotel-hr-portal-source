@@ -108,3 +108,23 @@ export const calculateVacationBalance = (hireDate: string, requests: EmployeeReq
     balance: accrued - taken
   };
 };
+
+/**
+ * Calculates days since the end of the most recent approved vacation.
+ * Returns null if no vacations have been taken.
+ */
+export const getDaysSinceLastVacation = (requests: EmployeeRequest[]): number | null => {
+  const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved');
+  if (approvedVacations.length === 0) return null;
+
+  const dates = approvedVacations.map(r => new Date(r.data.endDate).getTime());
+  const lastEndDate = new Date(Math.max(...dates));
+  const now = new Date();
+  
+  // Set to midnight to avoid precision issues
+  lastEndDate.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+
+  const diffTime = now.getTime() - lastEndDate.getTime();
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+};
