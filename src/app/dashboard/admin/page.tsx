@@ -1629,86 +1629,198 @@ function AdminDashboardContent() {
       )}
 
       {activeTab === 'Training' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-6 border-b border-slate-100">
-              <h2 className="text-xl font-semibold text-slate-800">{t('complianceOverview')}</h2>
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+              <div className="p-6 border-b border-slate-100">
+                <h2 className="text-xl font-semibold text-slate-800">{t('complianceOverview')}</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                      <th className="p-4 font-semibold">{t('employees')}</th>
+                      <th className="p-4 font-semibold">{t('module')}</th>
+                      <th className="p-4 font-semibold">{t('status')}</th>
+                      <th className="p-4 font-semibold">{t('completionDate')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {userTrainings.map((ut, idx) => {
+                      const u = users.find(user => user.id === ut.userId);
+                      const m = trainingModules.find(mod => mod.id === ut.moduleId);
+                      if (!u || !m) return null;
+                      return (
+                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-4 text-sm font-medium text-slate-900">{u.name}</td>
+                          <td className="p-4 text-sm text-slate-600">{m.title}</td>
+                          <td className="p-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ut.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
+                              ut.status === 'In Progress' ? 'bg-amber-100 text-amber-800' :
+                                'bg-slate-100 text-slate-800'
+                              }`}>
+                              {ut.status}
+                            </span>
+                          </td>
+                          <td className="p-4 text-sm text-slate-600">
+                            {ut.completionDate ? new Date(ut.completionDate).toLocaleDateString() : '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                    <th className="p-4 font-semibold">{t('employees')}</th>
-                    <th className="p-4 font-semibold">{t('module')}</th>
-                    <th className="p-4 font-semibold">{t('status')}</th>
-                    <th className="p-4 font-semibold">{t('completionDate')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {userTrainings.map((ut, idx) => {
-                    const u = users.find(user => user.id === ut.userId);
-                    const m = trainingModules.find(mod => mod.id === ut.moduleId);
-                    if (!u || !m) return null;
-                    return (
-                      <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-4 text-sm font-medium text-slate-900">{u.name}</td>
-                        <td className="p-4 text-sm text-slate-600">{m.title}</td>
-                        <td className="p-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ut.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
-                            ut.status === 'In Progress' ? 'bg-amber-100 text-amber-800' :
-                              'bg-slate-100 text-slate-800'
-                            }`}>
-                            {ut.status}
-                          </span>
-                        </td>
-                        <td className="p-4 text-sm text-slate-600">
-                          {ut.completionDate ? new Date(ut.completionDate).toLocaleDateString() : '-'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 h-fit">
+              <h2 className="text-xl font-semibold text-slate-800 mb-6">{t('assignTraining')}</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('selectEmployee')}</label>
+                  <select
+                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    value={selectedUser || ''}
+                    onChange={(e) => setSelectedUser(e.target.value)}
+                  >
+                    <option value="" disabled>{t('chooseEmployee')}</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.department})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('selectModule')}</label>
+                  <select
+                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    value={selectedModule || ''}
+                    onChange={(e) => setSelectedModule(e.target.value)}
+                  >
+                    <option value="" disabled>{t('chooseModule')}</option>
+                    {trainingModules.map(m => (
+                      <option key={m.id} value={m.id}>{m.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={handleAssign}
+                  disabled={!selectedUser || !selectedModule}
+                  className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Assign Module
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 h-fit">
-            <h2 className="text-xl font-semibold text-slate-800 mb-6">{t('assignTraining')}</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t('selectEmployee')}</label>
-                <select
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                  value={selectedUser || ''}
-                  onChange={(e) => setSelectedUser(e.target.value)}
-                >
-                  <option value="" disabled>{t('chooseEmployee')}</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name} ({u.department})</option>
-                  ))}
-                </select>
+          <div className="border-t border-slate-100 pt-8">
+            {isModuleFormOpen ? (
+              <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                <h2 className="text-xl font-bold text-slate-900 mb-6">
+                  {editingModule ? t('editModule') : t('createNewModule')}
+                </h2>
+                <ModuleForm
+                  initialData={editingModule}
+                  onSubmit={handleSubmitModule}
+                  onCancel={() => setIsModuleFormOpen(false)}
+                />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t('selectModule')}</label>
-                <select
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                  value={selectedModule || ''}
-                  onChange={(e) => setSelectedModule(e.target.value)}
-                >
-                  <option value="" disabled>{t('chooseModule')}</option>
-                  {trainingModules.map(m => (
-                    <option key={m.id} value={m.id}>{m.title}</option>
-                  ))}
-                </select>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-slate-800">{t('manageLearningModules')}</h2>
+                  <button
+                    onClick={handleAddModuleClick}
+                    className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors"
+                  >
+                    + {t('createNewModule')}
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          {t('module')}
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          {t('type')}
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          {t('targetDepts')}
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          {t('status')}
+                        </th>
+                        <th scope="col" className="relative px-6 py-3">
+                          <span className="sr-only">{t('actions')}</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-200">
+                      {trainingModules.map((module) => (
+                        <tr key={module.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-slate-900">{module.title}</span>
+                              <span className="text-sm text-slate-500">{module.duration}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${module.type === 'Video' ? 'bg-blue-100 text-blue-800' :
+                              module.type === 'Document' ? 'bg-green-100 text-green-800' :
+                                'bg-purple-100 text-purple-800'
+                              }`}>
+                              {module.type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                              {module.targetDepartments?.length > 0 ? (
+                                module.targetDepartments.map(deptName => (
+                                  <span key={deptName} className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px]">
+                                    {deptName}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-slate-400 text-[10px] italic">{t('all')}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${module.required ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
+                              {module.required ? t('requiredTraining') : t('optional')}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end space-x-2">
+                              <button
+                                onClick={() => handleEditModuleClick(module)}
+                                className="text-primary-600 hover:text-primary-900 p-1"
+                                title={t('edit')}
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteModule(module.id)}
+                                className="text-red-600 hover:text-red-900 p-1"
+                                title={t('delete')}
+                              >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m4-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <button
-                onClick={handleAssign}
-                disabled={!selectedUser || !selectedModule}
-                className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Assign Module
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -2139,118 +2251,6 @@ function AdminDashboardContent() {
       )}
 
       {/* Learning Modules Tab */}
-      {activeTab === 'Modules' && (
-        <div className="space-y-8">
-          {isModuleFormOpen ? (
-            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-              <h2 className="text-xl font-bold text-slate-900 mb-6">
-                {editingModule ? t('editModule') : t('createNewModule')}
-              </h2>
-              <ModuleForm
-                initialData={editingModule}
-                onSubmit={handleSubmitModule}
-                onCancel={() => setIsModuleFormOpen(false)}
-              />
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-slate-800">{t('manageLearningModules')}</h2>
-                <button
-                  onClick={handleAddModuleClick}
-                  className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors"
-                >
-                  + {t('createNewModule')}
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        {t('module')}
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        {t('type')}
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        {t('targetDepts')}
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        {t('status')}
-                      </th>
-                      <th scope="col" className="relative px-6 py-3">
-                        <span className="sr-only">{t('actions')}</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-slate-200">
-                    {trainingModules.map((module) => (
-                      <tr key={module.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium text-slate-900">{module.title}</span>
-                            <span className="text-sm text-slate-500">{module.duration}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${module.type === 'Video' ? 'bg-blue-100 text-blue-800' :
-                            module.type === 'Document' ? 'bg-green-100 text-green-800' :
-                              'bg-purple-100 text-purple-800'
-                            }`}>
-                            {module.type}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {module.targetDepartments.map(dept => (
-                              <span key={dept} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded border border-slate-200">
-                                {dept}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {module.required ? (
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                              {t('required')}
-                            </span>
-                          ) : (
-                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800">
-                              {t('optional')}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => handleEditModuleClick(module)}
-                            className="text-primary-600 hover:text-primary-900 mr-4"
-                          >
-                            {t('edit')}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteModule(module.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            {t('delete')}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {trainingModules.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                          {t('noModulesFound')}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Recognition Tab */}
       {activeTab === 'Recognition' && (
