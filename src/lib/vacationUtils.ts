@@ -1,0 +1,110 @@
+import { EmployeeRequest } from '@/types';
+
+/**
+ * Calculates the number of days between two dates inclusive.
+ * Assumes dates are in YYYY-MM-DD format.
+ */
+export const getDurationInDays = (startDate: string, endDate: string): number => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  // Set to midnight to avoid DST issues
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+};
+
+/**
+ * Calculates total accrued vacation days since hire date (15 days per completed year).
+ */
+export const getAccruedDays = (hireDate: string, currentDate: string = new Date().toISOString().split('T')[0]): number => {
+  const hire = new Date(hireDate);
+  const current = new Date(currentDate);
+  
+  let years = current.getFullYear() - hire.getFullYear();
+  
+  // Adjust if anniversary hasn't happened yet this year
+  const anniversaryThisYear = new Date(current.getFullYear(), hire.getMonth(), hire.getDate());
+  if (current < anniversaryThisYear) {
+    years--;
+  }
+  
+  return Math.max(0, years * 15);
+};
+
+export interface VacationYearBreakdown {
+  yearNumber: number;
+  periodStart: string;
+  periodEnd: string;
+  accrued: number;
+  taken: number;
+  remaining: number;
+  requests: EmployeeRequest[];
+}
+
+/**
+ * Groups approved vacation requests by employment year.
+ */
+export const getVacationHistory = (hireDate: string, requests: EmployeeRequest[]): VacationYearBreakdown[] => {
+  const hire = new Date(hireDate);
+  const now = new Date();
+  const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved');
+  
+  const history: VacationYearBreakdown[] = [];
+  let currentStart = new Date(hire);
+  let yearNum = 1;
+  
+  while (currentStart < now) {
+    const periodStart = new Date(currentStart);
+    const periodEnd = new Date(currentStart);
+    periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+    periodEnd.setDate(periodEnd.getDate() - 1);
+    
+    // Period string formats
+    const startStr = periodStart.toISOString().split('T')[0];
+    const endStr = periodEnd.toISOString().split('T')[0];
+    
+    // Find requests that fall within this year
+    // Note: If a request spans across two employment years, we attribute it to the year it starts in for simplicity,
+    // or we could split it. Usually, it's attributed to the year it's deducted from.
+    const yearRequests = approvedVacations.filter(r => {
+      const reqStart = new Date(r.data.startDate);
+      return reqStart >= periodStart && reqStart <= periodEnd;
+    });
+    
+    const taken = yearRequests.reduce((sum, r) => sum + getDurationInDays(r.data.startDate, r.data.endDate), 0);
+    const accrued = 15;
+    
+    history.push({
+      yearNumber: yearNum,
+      periodStart: startStr,
+      periodEnd: endStr,
+      accrued,
+      taken,
+      remaining: accrued - taken,
+      requests: yearRequests
+    });
+    
+    currentStart.setFullYear(currentStart.getFullYear() + 1);
+    yearNum++;
+  }
+  
+  return history.reverse(); // Newest years first
+};
+
+/**
+ * Calculates total balance.
+ */
+export const calculateVacationBalance = (hireDate: string, requests: EmployeeRequest[]) => {
+  const accrued = getAccruedDays(hireDate);
+  const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved');
+  const taken = approvedVacations.reduce((sum, r) => sum + getDurationInDays(r.data.startDate, r.data.endDate), 0);
+  
+  return {
+    accrued,
+    taken,
+    balance: accrued - taken
+  };
+};

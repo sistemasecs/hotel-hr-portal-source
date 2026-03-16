@@ -6,9 +6,10 @@ import { useData } from '@/context/DataContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User, Event, TrainingModule } from '@/types';
+import { User, Event, TrainingModule, EmployeeRequest } from '@/types';
 import ModuleForm from '@/components/admin/ModuleForm';
 import AttendanceReports from '@/components/admin/AttendanceReports';
+import { calculateVacationBalance, getVacationHistory, getDurationInDays } from '@/lib/vacationUtils';
 import Papa from 'papaparse';
 import dynamic from 'next/dynamic';
 
@@ -197,6 +198,26 @@ function AdminDashboardContent() {
   // Event Types State
   const [newEventTypeName, setNewEventTypeName] = useState('');
   const [editingEventType, setEditingEventType] = useState<{ id: string, newName: string } | null>(null);
+
+  // Vacation State
+  const [allVacationRequests, setAllVacationRequests] = useState<EmployeeRequest[]>([]);
+
+  useEffect(() => {
+    if (user && isAdmin) {
+      const fetchAllVacations = async () => {
+        try {
+          const res = await fetch(`/api/requests/vacations?userId=${user.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            setAllVacationRequests(data);
+          }
+        } catch (error) {
+          console.error('Failed to fetch vacation requests:', error);
+        }
+      };
+      fetchAllVacations();
+    }
+  }, [user, isAdmin]);
 
   // Event State
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -682,6 +703,7 @@ function AdminDashboardContent() {
                   <th className="p-4 font-semibold">{t('name')}</th>
                   <th className="p-4 font-semibold">{t('areas')}</th>
                   <th className="p-4 font-semibold">{t('hireDate')}</th>
+                  <th className="p-4 font-semibold">{t('vacations')}</th>
                   <th className="p-4 font-semibold">{t('status')}</th>
                   <th className="p-4 font-semibold text-right">{t('actions')}</th>
                 </tr>
@@ -710,6 +732,18 @@ function AdminDashboardContent() {
                     </td>
                     <td className="p-4 text-sm text-slate-600">{u.area || '-'}</td>
                     <td className="p-4 text-sm text-slate-600 font-medium">{parseDate(u.hireDate).toLocaleDateString()}</td>
+                    <td className="p-4">
+                      {(() => {
+                        const userRequests = allVacationRequests.filter(r => r.userId === u.id);
+                        const { accrued, balance } = calculateVacationBalance(u.hireDate, userRequests);
+                        return (
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-slate-900">{balance} {t('days')}</span>
+                            <span className="text-[10px] text-slate-500 uppercase tracking-wider">{t('accrued')}: {accrued}</span>
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="p-4">
                       {u.isActive !== false ? (
                         <span className="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
@@ -1176,6 +1210,87 @@ function AdminDashboardContent() {
                   className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
+
+              {editingUser && (
+                <div className="md:col-span-2 mt-6 border-t border-slate-200 pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-slate-800 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {t('vacationTracking')}
+                    </h3>
+                    {(() => {
+                      const userRequests = allVacationRequests.filter(r => r.userId === editingUser.id);
+                      const { balance } = calculateVacationBalance(editingUser.hireDate, userRequests);
+                      return (
+                        <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold">
+                          {balance} {t('days')} {t('remaining')}
+                        </span>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden mb-6">
+                    <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      {t('yearlyBreakdown')}
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-white border-b border-slate-200">
+                          <tr className="text-slate-500 text-[10px] uppercase">
+                            <th className="px-4 py-2">{t('year')}</th>
+                            <th className="px-4 py-2">{t('period')}</th>
+                            <th className="px-4 py-2 text-center">{t('accrued')}</th>
+                            <th className="px-4 py-2 text-center">{t('taken')}</th>
+                            <th className="px-4 py-2 text-center font-bold">{t('balance')}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200 bg-white">
+                          {getVacationHistory(editingUser.hireDate, allVacationRequests.filter(r => r.userId === editingUser.id)).map((year) => (
+                            <tr key={year.yearNumber} className="hover:bg-slate-50">
+                              <td className="px-4 py-2 font-medium">#{year.yearNumber}</td>
+                              <td className="px-4 py-2 text-slate-500 text-xs">
+                                {new Date(year.periodStart).toLocaleDateString()} - {new Date(year.periodEnd).toLocaleDateString()}
+                              </td>
+                              <td className="px-4 py-2 text-center">{year.accrued}</td>
+                              <td className="px-4 py-2 text-center">{year.taken}</td>
+                              <td className="px-4 py-2 text-center font-bold text-primary-600">{year.remaining}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{t('vacations')}</div>
+                    {allVacationRequests.filter(r => r.userId === editingUser.id && r.status === 'Approved').length === 0 ? (
+                      <div className="text-sm text-slate-400 italic py-2">{t('noVacationsTaken')}</div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {allVacationRequests
+                          .filter(r => r.userId === editingUser.id && r.status === 'Approved')
+                          .sort((a, b) => new Date(b.data.startDate).getTime() - new Date(a.data.startDate).getTime())
+                          .map(r => (
+                            <div key={r.id} className="bg-white border border-slate-200 p-3 rounded-lg shadow-sm">
+                              <div className="flex justify-between items-start mb-1">
+                                <span className="text-xs font-bold text-slate-900">
+                                  {new Date(r.data.startDate).toLocaleDateString()} - {new Date(r.data.endDate).toLocaleDateString()}
+                                </span>
+                                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
+                                  {getDurationInDays(r.data.startDate, r.data.endDate)} {t('days')}
+                                </span>
+                              </div>
+                              {r.data.reason && <p className="text-[11px] text-slate-500 italic truncate italic">"{r.data.reason}"</p>}
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="md:col-span-2 space-y-4">
                 <div className="flex items-center space-x-2 py-2">
                   <input
