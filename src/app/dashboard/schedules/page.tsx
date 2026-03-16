@@ -204,9 +204,9 @@ export default function SchedulesPage() {
                     end.setTime(start.getTime() + durationMs);
 
                     await addShift({
-                        user_id: shiftForm.userId,
-                        start_time: start.toISOString(),
-                        end_time: end.toISOString(),
+                        userId: shiftForm.userId,
+                        startTime: start.toISOString(),
+                        endTime: end.toISOString(),
                         type: shiftForm.type,
                         status: 'Scheduled'
                     } as any);

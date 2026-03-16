@@ -62,7 +62,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const { userId, startTime, endTime, type, status } = await request.json();
+        const body = await request.json();
+        const userId = body.userId || body.user_id;
+        const startTime = body.startTime || body.start_time;
+        const endTime = body.endTime || body.end_time;
+        const type = body.type;
+        const status = body.status;
 
         if (!userId || !startTime || !endTime) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
