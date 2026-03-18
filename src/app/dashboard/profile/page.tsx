@@ -14,6 +14,7 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState<Partial<User>>({});
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
 
   const currentUser = users.find(u => u.id === authUser?.id);
 
@@ -26,6 +27,39 @@ export default function ProfilePage() {
   if (!currentUser) {
     return <div className="p-8 text-center text-slate-500">{t('loading')}</div>;
   }
+
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: keyof User) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      alert(t('invalidFileType') || 'Please upload an image or PDF.');
+      return;
+    }
+
+    setUploadingDoc(field as string);
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('file', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formDataToSend,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      setFormData({ ...formData, [field]: data.url });
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      alert('Failed to upload document. Please try again.');
+    } finally {
+      setUploadingDoc(null);
+    }
+  };
 
   const handleArrayInput = (field: keyof User, value: string) => {
     const arrayValue = value.split(',').map(item => item.trim()).filter(item => item !== '');
@@ -367,6 +401,158 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Emergency Contact & Legal Info */}
+          <div className="mt-8 pt-8 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-100 pb-2">{language === 'es' ? 'Contacto de Emergencia' : 'Emergency Contact'}</h3>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Nombre de Contacto' : 'Contact Name'}</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.emergencyContactName || ''}
+                    onChange={(e) => setFormData({ ...formData, emergencyContactName: e.target.value })}
+                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                  />
+                ) : (
+                  <p className="text-slate-900">{currentUser.emergencyContactName || '-'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Teléfono de Emergencia' : 'Emergency Phone'}</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.emergencyContactPhone || ''}
+                    onChange={(e) => setFormData({ ...formData, emergencyContactPhone: e.target.value })}
+                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                  />
+                ) : (
+                  <p className="text-slate-900">{currentUser.emergencyContactPhone || '-'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'NIT / Tax ID' : 'Tax ID (NIT)'}</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.taxId || ''}
+                    onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
+                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                  />
+                ) : (
+                  <p className="text-slate-900">{currentUser.taxId || '-'}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-100 pb-2">{language === 'es' ? 'Estado Civil y Dependientes' : 'Marital Status & Dependents'}</h3>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Estado Civil' : 'Marital Status'}</label>
+                {isEditing ? (
+                  <select
+                    value={formData.maritalStatus || 'Single'}
+                    onChange={(e) => setFormData({ ...formData, maritalStatus: e.target.value })}
+                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="Single">{language === 'es' ? 'Soltero/a' : 'Single'}</option>
+                    <option value="Married">{language === 'es' ? 'Casado/a' : 'Married'}</option>
+                    <option value="Divorced">{language === 'es' ? 'Divorciado/a' : 'Divorced'}</option>
+                    <option value="Widowed">{language === 'es' ? 'Viudo/a' : 'Widowed'}</option>
+                  </select>
+                ) : (
+                  <p className="text-slate-900">
+                    {language === 'es' ? 
+                      (currentUser.maritalStatus === 'Married' ? 'Casado/a' : 
+                       currentUser.maritalStatus === 'Divorced' ? 'Divorciado/a' : 
+                       currentUser.maritalStatus === 'Widowed' ? 'Viudo/a' : 'Soltero/a') 
+                      : (currentUser.maritalStatus || 'Single')}
+                  </p>
+                )}
+              </div>
+
+              {(formData.maritalStatus === 'Married' || (!isEditing && currentUser.maritalStatus === 'Married')) && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Nombre del Cónyuge' : 'Spouse Name'}</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={formData.spouseName || ''}
+                      onChange={(e) => setFormData({ ...formData, spouseName: e.target.value })}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  ) : (
+                    <p className="text-slate-900">{currentUser.spouseName || '-'}</p>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Número de Hijos' : 'Number of Children'}</label>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.childrenCount ?? ''}
+                    onChange={(e) => setFormData({ ...formData, childrenCount: parseInt(e.target.value) || 0 })}
+                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                  />
+                ) : (
+                  <p className="text-slate-900">{currentUser.childrenCount || '0'}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Document Uploads */}
+          <div className="mt-8 pt-8 border-t border-slate-100">
+            <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-100 pb-2 mb-6">{language === 'es' ? 'Documentos Mandatorios' : 'Mandatory Documents'}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                { key: 'healthCardUrl', label: language === 'es' ? 'Tarjeta de Salud' : 'Health Card' },
+                { key: 'criminalRecordUrl', label: language === 'es' ? 'Antecedentes Penales' : 'Criminal Records' },
+                { key: 'policeRecordUrl', label: language === 'es' ? 'Antecedentes Policiacos' : 'Police Records' },
+                ...(currentUser.department.toLowerCase().includes('alimentos') || currentUser.department.toLowerCase().includes('bebidas') || currentUser.department.toLowerCase().includes('food') 
+                    ? [{ key: 'foodHandlingCardUrl', label: language === 'es' ? 'Manipulación de Alimentos' : 'Food Handling Card' }] : [])
+              ].map((doc) => (
+                <div key={doc.key} className="p-4 border border-slate-200 rounded-lg bg-slate-50">
+                  <p className="text-sm font-medium text-slate-800 mb-3">{doc.label}</p>
+                  {isEditing ? (
+                    <div className="flex flex-col space-y-2">
+                       {formData[doc.key as keyof User] && (
+                        <a href={formData[doc.key as keyof User] as string} target="_blank" rel="noreferrer" className="text-xs text-primary-600 hover:underline flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                          View Current File
+                        </a>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={(e) => handleDocumentUpload(e, doc.key as keyof User)}
+                        className="text-xs"
+                      />
+                      {uploadingDoc === doc.key && <span className="text-xs text-amber-500">Uploading...</span>}
+                    </div>
+                  ) : (
+                    currentUser[doc.key as keyof User] ? (
+                      <a href={currentUser[doc.key as keyof User] as string} target="_blank" rel="noreferrer" className="text-sm text-primary-600 hover:underline flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        View File
+                      </a>
+                    ) : (
+                      <span className="text-sm text-slate-400 italic">Not uploaded</span>
+                    )
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>
