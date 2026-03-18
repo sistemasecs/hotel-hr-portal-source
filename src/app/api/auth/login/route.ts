@@ -48,6 +48,16 @@ export async function POST(request: Request) {
       dislikes: user.dislikes || [],
       tShirtSize: user.t_shirt_size,
       allergies: user.allergies || [],
+      emergencyContactName: user.emergency_contact_name,
+      emergencyContactPhone: user.emergency_contact_phone,
+      maritalStatus: user.marital_status,
+      spouseName: user.spouse_name,
+      childrenCount: user.children_count,
+      taxId: user.tax_id,
+      healthCardUrl: user.health_card_url,
+      foodHandlingCardUrl: user.food_handling_card_url,
+      criminalRecordUrl: user.criminal_record_url,
+      policeRecordUrl: user.police_record_url,
     };
 
     return NextResponse.json(safeUser);

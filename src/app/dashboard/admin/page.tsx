@@ -11,6 +11,8 @@ import ModuleForm from '@/components/admin/ModuleForm';
 import AttendanceReports from '@/components/admin/AttendanceReports';
 import { calculateVacationBalance, getVacationHistory, getDurationInDays, getDaysSinceLastVacation, VacationYearBreakdown } from '@/lib/vacationUtils';
 import Papa from 'papaparse';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import dynamic from 'next/dynamic';
 
 const MapPicker = dynamic(() => import('@/components/admin/MapPicker'), {
@@ -527,37 +529,68 @@ function AdminDashboardContent() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          const newUsers = results.data as any[];
-          const valid: any[] = [];
-          const invalid: any[] = [];
+    if (!file) return;
 
-          newUsers.forEach(userData => {
-            if (userData.name && userData.email && userData.role && userData.department && userData.birthday && userData.hireDate) {
-              valid.push({ ...userData, id: Math.random().toString(36).substr(2, 9) });
-            } else {
-              invalid.push({ ...userData, id: Math.random().toString(36).substr(2, 9) });
-            }
-          });
+    try {
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(await file.arrayBuffer());
+      const sheet = workbook.getWorksheet(1);
+      
+      if (!sheet) {
+        throw new Error("No worksheet found");
+      }
 
-          setCsvPreviewData({ valid, invalid });
-          setIsCsvModalOpen(true);
+      const valid: any[] = [];
+      const invalid: any[] = [];
 
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-        },
-        error: (error) => {
-          console.error('Error parsing CSV:', error);
-          alert(t('csvUploadFormatError'));
+      sheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return; // Skip header
+
+        const name = row.getCell(1).text;
+        const email = row.getCell(2).text;
+        const role = row.getCell(3).text;
+        const department = row.getCell(4).text;
+        const area = row.getCell(5).text;
+        
+        let birthday = '';
+        const bdayCell = row.getCell(6);
+        if (bdayCell.type === ExcelJS.ValueType.Date && bdayCell.value instanceof Date) {
+          birthday = bdayCell.value.toISOString().split('T')[0];
+        } else {
+          birthday = bdayCell.text;
+        }
+
+        let hireDate = '';
+        const hireCell = row.getCell(7);
+        if (hireCell.type === ExcelJS.ValueType.Date && hireCell.value instanceof Date) {
+          hireDate = hireCell.value.toISOString().split('T')[0];
+        } else {
+          hireDate = hireCell.text;
+        }
+
+        const userData = {
+          name, email, role, department, area, birthday, hireDate,
+          id: Math.random().toString(36).substr(2, 9)
+        };
+
+        if (name && email && role && department && birthday && hireDate) {
+          valid.push(userData);
+        } else {
+          invalid.push(userData);
         }
       });
+
+      setCsvPreviewData({ valid, invalid });
+      setIsCsvModalOpen(true);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Error parsing Excel file:', error);
+      alert(t('csvUploadFormatError') || 'Error parsing the Excel file. Please ensure it is a valid .xlsx file.');
     }
   };
 
@@ -655,20 +688,77 @@ function AdminDashboardContent() {
     setUploadProgress({ current: 0, total: 0 });
   };
 
-  const handleDownloadTemplate = () => {
-    const headers = ['name', 'email', 'password', 'role', 'department', 'area', 'supervisorEmail', 'birthday', 'hireDate', 'tShirtSize', 'likes', 'dislikes', 'allergies'];
-    const csvContent = headers.join(',') + '\n' +
-      'John Doe,john@example.com,password123,Staff,Housekeeping,Cleaning,manager@example.com,1990-01-01,2023-01-01,M,"Coffee, Dogs","Loud noises",Peanuts';
+  const handleDownloadTemplate = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Employee Import');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'employee_import_template.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const headers = ['Name', 'Email', 'Role', 'Department', 'Area', 'Birthday (YYYY-MM-DD)', 'HireDate (YYYY-MM-DD)'];
+    sheet.addRow(headers);
+
+    // Style the header
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+
+    // Set column widths
+    sheet.columns = [
+      { key: 'name', width: 25 },
+      { key: 'email', width: 30 },
+      { key: 'role', width: 20 },
+      { key: 'department', width: 25 },
+      { key: 'area', width: 20 },
+      { key: 'birthday', width: 25 },
+      { key: 'hireDate', width: 25 },
+    ];
+
+    const listsSheet = workbook.addWorksheet('Lists');
+    listsSheet.state = 'hidden';
+
+    const roles = ['Staff', 'Supervisor', 'Manager', 'HR Admin'];
+    roles.forEach((r, i) => listsSheet.getCell(`A${i + 1}`).value = r);
+
+    const deptNames = departments.map(d => d.name).filter(Boolean);
+    deptNames.forEach((d, i) => listsSheet.getCell(`B${i + 1}`).value = d);
+
+    const allAreas = Array.from(new Set(departments.flatMap(d => d.areas || []))).filter(Boolean);
+    allAreas.forEach((a, i) => listsSheet.getCell(`C${i + 1}`).value = a);
+
+    for (let i = 2; i <= 100; i++) {
+      sheet.getCell(`C${i}`).dataValidation = {
+        type: 'list',
+        allowBlank: true,
+        formulae: [`Lists!$A$1:$A$${roles.length}`],
+        showErrorMessage: true,
+        errorTitle: 'Invalid Role',
+        error: 'Please select from the dropdown.'
+      };
+
+      if (deptNames.length > 0) {
+        sheet.getCell(`D${i}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`Lists!$B$1:$B$${deptNames.length}`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Department',
+          error: 'Please select from the dropdown.'
+        };
+      }
+
+      if (allAreas.length > 0) {
+        sheet.getCell(`E${i}`).dataValidation = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`Lists!$C$1:$C$${allAreas.length}`],
+          showErrorMessage: true,
+          errorTitle: 'Invalid Area',
+          error: 'Please select from the dropdown.'
+        };
+      }
+    }
+
+    sheet.addRow(['Juan Perez', 'juan@example.com', roles[0], deptNames[0] || '', allAreas[0] || '', '1990-01-01', '2023-01-01']);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), 'employee_import_template.xlsx');
   };
 
   const filteredUsers = users
@@ -871,7 +961,7 @@ function AdminDashboardContent() {
                   <div className="relative">
                     <input
                       type="file"
-                      accept=".csv"
+                      accept=".xlsx"
                       ref={fileInputRef}
                       onChange={handleFileUpload}
                       className="hidden"
