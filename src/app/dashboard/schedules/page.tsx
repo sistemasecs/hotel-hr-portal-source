@@ -23,7 +23,7 @@ interface WeeklySummaryRow {
 
 export default function SchedulesPage() {
     const { user, isAdmin } = useAuth();
-    const { shifts, users, fetchShifts, addShift, updateShift, deleteShift, departments, shiftTypes, fetchShiftTypes } = useData();
+    const { shifts, users, fetchShifts, addShift, updateShift, deleteShift, departments, updateDepartment, shiftTypes, fetchShiftTypes } = useData();
     const { t, language } = useLanguage();
 
     const isManager = user?.role === 'Manager' || user?.role === 'Supervisor';
@@ -34,6 +34,8 @@ export default function SchedulesPage() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDept, setSelectedDept] = useState<string>('');
     const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
+    const [collapsedAreas, setCollapsedAreas] = useState<Set<string>>(new Set());
+    const [draggedAreaInfo, setDraggedAreaInfo] = useState<{ deptName: string, areaName: string } | null>(null);
     const [editingShift, setEditingShift] = useState<Shift | null>(null);
     const [approvingShift, setApprovingShift] = useState<Shift | null>(null);
     const [approvalNotes, setApprovalNotes] = useState('');
@@ -222,6 +224,66 @@ export default function SchedulesPage() {
         }
     };
 
+    const toggleAreaCollapse = (deptName: string, areaName: string) => {
+        const key = `${deptName}-${areaName}`;
+        setCollapsedAreas(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(key)) newSet.delete(key);
+            else newSet.add(key);
+            return newSet;
+        });
+    };
+
+    const handleDragStart = (e: React.DragEvent, deptName: string, areaName: string) => {
+        setDraggedAreaInfo({ deptName, areaName });
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e: React.DragEvent, deptName: string) => {
+        if (draggedAreaInfo && draggedAreaInfo.deptName === deptName) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+    };
+
+    const handleDrop = async (e: React.DragEvent, targetDeptName: string, targetAreaName: string) => {
+        e.preventDefault();
+        if (!draggedAreaInfo || draggedAreaInfo.deptName !== targetDeptName || draggedAreaInfo.areaName === targetAreaName) {
+            setDraggedAreaInfo(null);
+            return;
+        }
+
+        const dept = departments.find(d => d.name === targetDeptName);
+        if (!dept) {
+            setDraggedAreaInfo(null);
+            return;
+        }
+
+        const allAreasInDeptSet = new Set<string>();
+        users.forEach(u => {
+            if (u.department === targetDeptName && u.area) {
+                allAreasInDeptSet.add(u.area);
+            }
+        });
+        
+        // If the department doesn't have an explicit area sort order yet, use the current alphabetical sorting as a baseline
+        let currentAreas = dept.areas && dept.areas.length > 0 ? [...dept.areas] : Array.from(allAreasInDeptSet).sort((a, b) => a.localeCompare(b));
+        
+        if (!currentAreas.includes(draggedAreaInfo.areaName)) currentAreas.push(draggedAreaInfo.areaName);
+        if (!currentAreas.includes(targetAreaName)) currentAreas.push(targetAreaName);
+
+        const oldIndex = currentAreas.indexOf(draggedAreaInfo.areaName);
+        const newIndex = currentAreas.indexOf(targetAreaName);
+
+        if (oldIndex !== -1 && newIndex !== -1) {
+            currentAreas.splice(oldIndex, 1);
+            currentAreas.splice(newIndex, 0, draggedAreaInfo.areaName);
+            updateDepartment(dept.id, { areas: currentAreas });
+        }
+
+        setDraggedAreaInfo(null);
+    };
+
     const handleShiftTypeChange = (typeId: string) => {
         const type = shiftTypes.find(t => t.id === typeId);
         if (type) {
@@ -272,19 +334,26 @@ export default function SchedulesPage() {
                 return departments.find(d => d.id === effectiveDeptId)?.name === u.department;
             })
             .sort((a, b) => {
-                // First by department color/name if multiple
+                // 1. Department
                 if (a.department !== b.department) {
                     return a.department.localeCompare(b.department);
                 }
                 
-                // Then by role hierarchy
+                // 2. Area (Puesto)
+                const areaA = a.area || '';
+                const areaB = b.area || '';
+                if (areaA !== areaB) {
+                    return areaA.localeCompare(areaB);
+                }
+
+                // 3. Role hierarchy
                 const aRank = roleOrder[a.role] ?? 99;
                 const bRank = roleOrder[b.role] ?? 99;
                 if (aRank !== bRank) {
                     return aRank - bRank;
                 }
                 
-                // Finally by name
+                // 4. Name
                 return a.name.localeCompare(b.name);
             });
     }, [users, effectiveDeptId, isAdmin, canManage, departments]);
@@ -426,62 +495,104 @@ export default function SchedulesPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {canManage && deptEmployees.length > 0 ? (
-                                    deptEmployees.map(employee => (
-                                        <tr key={employee.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="p-4 sticky left-0 bg-white z-10 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                                                <div className="flex items-center min-w-[180px]">
-                                                    <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden mr-3">
-                                                        {employee.avatarUrl ? <img src={employee.avatarUrl} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center h-full text-xs text-slate-400">?</span>}
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-bold text-slate-900">{employee.name}</p>
-                                                        <p className="text-[10px] text-slate-500 uppercase">{employee.role}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            {weekDays.map((date, i) => {
-                                                const dayShifts = shifts.filter(s => s.user_id === employee.id && new Date(s.start_time).toDateString() === date.toDateString());
-                                                return (
-                                                    <td key={i} className="p-2 border-l border-slate-100 min-h-[80px] group relative">
-                                                        {dayShifts.map(shift => (
-                                                            <div key={shift.id} className="border border-slate-200 rounded-lg p-2 mb-1 text-xs shadow-sm bg-white" style={{ borderLeft: `4px solid ${shiftTypes.find(t => t.name === shift.type)?.color || '#3b82f6'}` }}>
-                                                                <div className="flex justify-between items-start mb-1">
-                                                                    <span className="font-bold text-slate-800">{shift.type}</span>
-                                                                    <div className="hidden group-hover:flex space-x-1">
-                                                                        <button onClick={() => { 
-                                                                            setEditingShift(shift); 
-                                                                            setShiftForm({ 
-                                                                                userId: shift.user_id, 
-                                                                                startTime: formatToGuatemalaDateTimeLocal(shift.start_time), 
-                                                                                endTime: formatToGuatemalaDateTimeLocal(shift.end_time), 
-                                                                                type: shift.type as any,
-                                                                                repeatDays: []
-                                                                            }); 
-                                                                            setIsShiftModalOpen(true); 
-                                                                        }} className="text-slate-400 hover:text-primary-600"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                                                                        <button onClick={() => handleDeleteShift(shift.id)} className="text-slate-400 hover:text-rose-600"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
-                                                                    </div>
-                                                                </div>
-                                                                <p className="text-primary-700">{formatTime(shift.start_time)} - {formatTime(shift.end_time)}</p>
-                                                                {shift.status === 'Pending Approval' && (
-                                                                    <span className="mt-1 inline-block text-[9px] bg-amber-100 text-amber-700 font-bold uppercase px-1.5 py-0.5 rounded">⏳ Pending</span>
-                                                                )}
-                                                                {shift.approval_status === 'approved' && (
-                                                                    <span className="mt-1 inline-block text-[9px] bg-emerald-100 text-emerald-700 font-bold uppercase px-1.5 py-0.5 rounded">✓ Approved</span>
-                                                                )}
+                                    deptEmployees.map((employee, index) => {
+                                        const prevEmployee = index > 0 ? deptEmployees[index-1] : null;
+                                        const showDeptHeader = !prevEmployee || prevEmployee.department !== employee.department;
+                                        const showAreaHeader = !prevEmployee || prevEmployee.area !== employee.area || showDeptHeader;
+                                        
+                                        return (
+                                            <React.Fragment key={employee.id}>
+                                                {showDeptHeader && (
+                                                    <tr className="bg-slate-100/80">
+                                                        <td colSpan={8} className="p-3 pl-4 text-xs font-black text-slate-600 uppercase tracking-widest border-y border-slate-200">
+                                                            <div className="flex items-center">
+                                                                <div className="w-1.5 h-4 bg-primary-600 rounded-full mr-3" />
+                                                                {employee.department}
                                                             </div>
-                                                        ))}
-                                                        <button
-                                                            onClick={() => handleOpenAddModal(date, employee.id)}
-                                                            className="w-full py-2 border-2 border-dashed border-slate-100 rounded-lg text-slate-300 hover:border-primary-200 hover:text-primary-400 hover:bg-primary-50 transition-all opacity-0 group-hover:opacity-100"
-                                                        >
-                                                            +
-                                                        </button>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                {showAreaHeader && employee.area && (
+                                                    <tr 
+                                                        className={`bg-slate-50/50 cursor-pointer transition-colors hover:bg-slate-100 ${draggedAreaInfo?.areaName === employee.area ? 'opacity-50' : ''}`}
+                                                        draggable={true}
+                                                        onDragStart={(e) => handleDragStart(e, employee.department, employee.area!)}
+                                                        onDragOver={(e) => handleDragOver(e, employee.department)}
+                                                        onDrop={(e) => handleDrop(e, employee.department, employee.area!)}
+                                                        onClick={() => toggleAreaCollapse(employee.department, employee.area!)}
+                                                    >
+                                                        <td colSpan={8} className="p-2 pl-8 text-[11px] font-bold text-primary-700 uppercase tracking-wider border-b border-slate-100">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center space-x-2">
+                                                                    <svg className={`w-3 h-3 text-primary-400 transition-transform ${collapsedAreas.has(`${employee.department}-${employee.area}`) ? '-rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                                                    <span className="w-1 h-1 bg-primary-400 rounded-full" />
+                                                                    <span>{employee.area}</span>
+                                                                </div>
+                                                                <svg className="w-4 h-4 text-slate-300 mr-2 cursor-move" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" /></svg>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                {!collapsedAreas.has(`${employee.department}-${employee.area}`) && (
+                                                    <tr className="hover:bg-slate-50 transition-colors">
+                                                    <td className="p-4 sticky left-0 bg-white z-10 border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                                                        <div className="flex items-center min-w-[180px]">
+                                                            <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden mr-3">
+                                                                {employee.avatarUrl ? <img src={employee.avatarUrl} className="w-full h-full object-cover" /> : <span className="flex items-center justify-center h-full text-xs text-slate-400">?</span>}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-bold text-slate-900">{employee.name}</p>
+                                                                <p className="text-[10px] text-slate-500 uppercase">{employee.role}</p>
+                                                            </div>
+                                                        </div>
                                                     </td>
-                                                );
-                                            })}
-                                        </tr>
-                                    ))
+                                                    {weekDays.map((date, i) => {
+                                                        const dayShifts = shifts.filter(s => s.user_id === employee.id && new Date(s.start_time).toDateString() === date.toDateString());
+                                                        return (
+                                                            <td key={i} className="p-2 border-l border-slate-100 min-h-[80px] group relative">
+                                                                {dayShifts.map(shift => (
+                                                                    <div key={shift.id} className="border border-slate-200 rounded-lg p-2 mb-1 text-xs shadow-sm bg-white" style={{ borderLeft: `4px solid ${shiftTypes.find(t => t.name === shift.type)?.color || '#3b82f6'}` }}>
+                                                                        <div className="flex justify-between items-start mb-1">
+                                                                            <span className="font-bold text-slate-800">{shift.type}</span>
+                                                                            <div className="hidden group-hover:flex space-x-1">
+                                                                                <button onClick={() => { 
+                                                                                    setEditingShift(shift); 
+                                                                                    setShiftForm({ 
+                                                                                        userId: shift.user_id, 
+                                                                                        startTime: formatToGuatemalaDateTimeLocal(shift.start_time), 
+                                                                                        endTime: formatToGuatemalaDateTimeLocal(shift.end_time), 
+                                                                                        type: shift.type as any,
+                                                                                        repeatDays: []
+                                                                                    }); 
+                                                                                    setIsShiftModalOpen(true); 
+                                                                                }} className="text-slate-400 hover:text-primary-600"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                                                                                <button onClick={() => handleDeleteShift(shift.id)} className="text-slate-400 hover:text-rose-600"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                                                                            </div>
+                                                                        </div>
+                                                                        <p className="text-primary-700">{formatTime(shift.start_time)} - {formatTime(shift.end_time)}</p>
+                                                                        {shift.status === 'Pending Approval' && (
+                                                                            <span className="mt-1 inline-block text-[9px] bg-amber-100 text-amber-700 font-bold uppercase px-1.5 py-0.5 rounded">⏳ Pending</span>
+                                                                        )}
+                                                                        {shift.approval_status === 'approved' && (
+                                                                            <span className="mt-1 inline-block text-[9px] bg-emerald-100 text-emerald-700 font-bold uppercase px-1.5 py-0.5 rounded">✓ Approved</span>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                                <button
+                                                                    onClick={() => handleOpenAddModal(date, employee.id)}
+                                                                    className="w-full py-2 border-2 border-dashed border-slate-100 rounded-lg text-slate-300 hover:border-primary-200 hover:text-primary-400 hover:bg-primary-50 transition-all opacity-0 group-hover:opacity-100"
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    })
                                 ) : canManage ? (
                                     <tr>
                                         <td colSpan={8} className="p-12 text-center text-slate-500">
