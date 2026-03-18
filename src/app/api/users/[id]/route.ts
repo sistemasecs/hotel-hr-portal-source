@@ -28,6 +28,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       isActive: row.is_active,
       inactiveDate: row.inactive_date ? row.inactive_date.toISOString().split('T')[0] : null,
       inactiveReason: row.inactive_reason,
+      emergencyContactName: row.emergency_contact_name,
+      emergencyContactPhone: row.emergency_contact_phone,
+      maritalStatus: row.marital_status,
+      spouseName: row.spouse_name,
+      childrenCount: row.children_count,
+      taxId: row.tax_id,
+      healthCardUrl: row.health_card_url,
+      foodHandlingCardUrl: row.food_handling_card_url,
+      criminalRecordUrl: row.criminal_record_url,
+      policeRecordUrl: row.police_record_url,
     };
 
     return NextResponse.json(user);
@@ -66,6 +76,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       isActive: 'is_active',
       inactiveDate: 'inactive_date',
       inactiveReason: 'inactive_reason',
+      emergencyContactName: 'emergency_contact_name',
+      emergencyContactPhone: 'emergency_contact_phone',
+      maritalStatus: 'marital_status',
+      spouseName: 'spouse_name',
+      childrenCount: 'children_count',
+      taxId: 'tax_id',
+      healthCardUrl: 'health_card_url',
+      foodHandlingCardUrl: 'food_handling_card_url',
+      criminalRecordUrl: 'criminal_record_url',
+      policeRecordUrl: 'police_record_url',
     };
 
     for (const [key, value] of Object.entries(updateData)) {
@@ -111,6 +131,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       isActive: row.is_active,
       inactiveDate: row.inactive_date ? row.inactive_date.toISOString().split('T')[0] : null,
       inactiveReason: row.inactive_reason,
+      emergencyContactName: row.emergency_contact_name,
+      emergencyContactPhone: row.emergency_contact_phone,
+      maritalStatus: row.marital_status,
+      spouseName: row.spouse_name,
+      childrenCount: row.children_count,
+      taxId: row.tax_id,
+      healthCardUrl: row.health_card_url,
+      foodHandlingCardUrl: row.food_handling_card_url,
+      criminalRecordUrl: row.criminal_record_url,
+      policeRecordUrl: row.police_record_url,
     };
 
     await logActivity(currentUserId || null, 'UPDATE', 'USER', updatedUser.id, { updatedFields: Object.keys(updateData) });

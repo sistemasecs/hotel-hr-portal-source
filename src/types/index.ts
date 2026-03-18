@@ -27,6 +27,17 @@ export interface User {
   isActive?: boolean;
   inactiveDate?: string | null;
   inactiveReason?: string | null;
+  // New profile fields
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  maritalStatus?: string | null;
+  spouseName?: string | null;
+  childrenCount?: number;
+  taxId?: string | null;
+  healthCardUrl?: string | null;
+  foodHandlingCardUrl?: string | null;
+  criminalRecordUrl?: string | null;
+  policeRecordUrl?: string | null;
 }
 
 export interface Event {

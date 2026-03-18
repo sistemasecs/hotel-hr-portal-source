@@ -21,7 +21,7 @@ const MapPicker = dynamic(() => import('@/components/admin/MapPicker'), {
 function AdminDashboardContent() {
   const { user, isAdmin } = useAuth();
   const { users, trainingModules, userTrainings, assignTraining, departments, addDepartment, updateDepartment, deleteDepartment, eventTypes, addEventType, updateEventType, deleteEventType, updateUser, addUser, events, addEvent, updateEvent, deleteEvent, deleteTrainingModule, updateTrainingModule, addTrainingModule, peerVotes, supervisorScores, setSupervisorScore, employeesOfTheMonth, setEmployeeOfTheMonth, hotelLogo, setHotelLogo, updateHotelConfig, activityLogs, fetchActivityLogs, shifts, attendanceLogs, hotelConfig, fetchAttendanceLogs, addShift } = useData();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { primaryColor, setPrimaryColor } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -757,6 +757,7 @@ function AdminDashboardContent() {
                   <th className="p-4 font-semibold">{t('name')}</th>
                   <th className="p-4 font-semibold">{t('areas')}</th>
                   <th className="p-4 font-semibold">{t('hireDate')}</th>
+                  <th className="p-4 font-semibold">{language === 'es' ? 'Emergencia' : 'Emergency'}</th>
                   <th className="p-4 font-semibold">{t('vacations')}</th>
                   <th className="p-4 font-semibold">{t('status')}</th>
                   <th className="p-4 font-semibold text-right">{t('actions')}</th>
@@ -786,6 +787,16 @@ function AdminDashboardContent() {
                     </td>
                     <td className="p-4 text-sm text-slate-600">{u.area || '-'}</td>
                     <td className="p-4 text-sm text-slate-600 font-medium">{parseDate(u.hireDate).toLocaleDateString()}</td>
+                    <td className="p-4">
+                      {u.emergencyContactName ? (
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-slate-900">{u.emergencyContactName}</span>
+                          <span className="text-xs text-slate-500">{u.emergencyContactPhone}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">-</span>
+                      )}
+                    </td>
                     <td className="p-4">
                       {(() => {
                         const userRequests = allVacationRequests.filter(r => r.userId === u.id);
@@ -1219,6 +1230,68 @@ function AdminDashboardContent() {
                 </select>
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Contacto de Emergencia' : 'Emergency Contact Name'}</label>
+                <input
+                  type="text"
+                  value={editUserForm.emergencyContactName || ''}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, emergencyContactName: e.target.value })}
+                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Tel. Emergencia' : 'Emergency Phone'}</label>
+                <input
+                  type="text"
+                  value={editUserForm.emergencyContactPhone || ''}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, emergencyContactPhone: e.target.value })}
+                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'NIT' : 'Tax ID'}</label>
+                <input
+                  type="text"
+                  value={editUserForm.taxId || ''}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, taxId: e.target.value })}
+                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Estado Civil' : 'Marital Status'}</label>
+                <select
+                  value={editUserForm.maritalStatus || ''}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, maritalStatus: e.target.value })}
+                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">N/A</option>
+                  <option value="Single">{language === 'es' ? 'Soltero/a' : 'Single'}</option>
+                  <option value="Married">{language === 'es' ? 'Casado/a' : 'Married'}</option>
+                  <option value="Divorced">{language === 'es' ? 'Divorciado/a' : 'Divorced'}</option>
+                  <option value="Widowed">{language === 'es' ? 'Viudo/a' : 'Widowed'}</option>
+                </select>
+              </div>
+              {editUserForm.maritalStatus === 'Married' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Nombre Cónyuge' : 'Spouse Name'}</label>
+                  <input
+                    type="text"
+                    value={editUserForm.spouseName || ''}
+                    onChange={(e) => setEditUserForm({ ...editUserForm, spouseName: e.target.value })}
+                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Hijos' : 'Children Count'}</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editUserForm.childrenCount ?? 0}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, childrenCount: parseInt(e.target.value) || 0 })}
+                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">{t('tShirtSize')}</label>
                 <select
                   value={editUserForm.tShirtSize || ''}
@@ -1264,6 +1337,20 @@ function AdminDashboardContent() {
                   className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
+
+              {editingUser && (
+                <div className="md:col-span-2 pt-4 border-t border-slate-200">
+                  <h3 className="text-sm font-bold text-slate-800 mb-2">{language === 'es' ? 'Documentos' : 'Documents'}</h3>
+                  <div className="flex flex-wrap gap-4">
+                    {editingUser.healthCardUrl ? <a href={editingUser.healthCardUrl} target="_blank" rel="noreferrer" className="text-primary-600 font-medium text-xs hover:underline flex items-center bg-primary-50 px-2 py-1 rounded-md"><svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> Tarjeta Salud</a> : <span className="text-slate-400 text-xs border border-dashed border-slate-300 px-2 py-1 rounded bg-slate-50">No Tarjeta Salud</span>}
+                    {(editingUser.department === 'Alimentos y Bebidas' || editingUser.department === 'Food & Beverage') && (
+                      editingUser.foodHandlingCardUrl ? <a href={editingUser.foodHandlingCardUrl} target="_blank" rel="noreferrer" className="text-primary-600 font-medium text-xs hover:underline flex items-center bg-primary-50 px-2 py-1 rounded-md"><svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> Tarjeta Manipulación</a> : <span className="text-slate-400 text-xs border border-dashed border-slate-300 px-2 py-1 rounded bg-slate-50">No Tarj. Manipulación</span>
+                    )}
+                    {editingUser.criminalRecordUrl ? <a href={editingUser.criminalRecordUrl} target="_blank" rel="noreferrer" className="text-primary-600 font-medium text-xs hover:underline flex items-center bg-primary-50 px-2 py-1 rounded-md"><svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> Ant. Penales</a> : <span className="text-slate-400 text-xs border border-dashed border-slate-300 px-2 py-1 rounded bg-slate-50">No Ant. Penales</span>}
+                    {editingUser.policeRecordUrl ? <a href={editingUser.policeRecordUrl} target="_blank" rel="noreferrer" className="text-primary-600 font-medium text-xs hover:underline flex items-center bg-primary-50 px-2 py-1 rounded-md"><svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> Ant. Policiacos</a> : <span className="text-slate-400 text-xs border border-dashed border-slate-300 px-2 py-1 rounded bg-slate-50">No Ant. Policiacos</span>}
+                  </div>
+                </div>
+              )}
 
               {editingUser && (
                 <div className="md:col-span-2 mt-6 border-t border-slate-200 pt-6">

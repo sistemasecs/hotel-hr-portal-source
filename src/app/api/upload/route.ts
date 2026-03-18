@@ -10,8 +10,8 @@ export async function POST(request: Request): Promise<NextResponse> {
             return NextResponse.json({ error: 'No file provided' }, { status: 400 });
         }
 
-        if (!file.type.startsWith('image/')) {
-            return NextResponse.json({ error: 'Only image files are allowed' }, { status: 400 });
+        if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+            return NextResponse.json({ error: 'Only image and PDF files are allowed' }, { status: 400 });
         }
 
         if (file.size > 10 * 1024 * 1024) {
