@@ -3177,8 +3177,7 @@ function AdminDashboardContent() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }
