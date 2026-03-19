@@ -2953,6 +2953,7 @@ function AdminDashboardContent() {
                 </div>
               </div>
             </div>
+          </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
