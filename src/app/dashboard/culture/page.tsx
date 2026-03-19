@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useData } from '@/context/DataContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
+import CommentsSection from '@/components/CommentsSection';
 
 export default function CultureHubPage() {
   const { allEvents, users, addPeerVote, peerVotes, employeesOfTheMonth } = useData();
@@ -18,7 +19,19 @@ export default function CultureHubPage() {
   const [selectedNominee, setSelectedNominee] = useState<string>('');
   const [voteReason, setVoteReason] = useState<string>('');
 
-  const filteredEvents = filter === 'All' ? allEvents : allEvents.filter(e => e.type === filter);
+  const todayStr = new Date().toISOString().split('T')[0];
+  
+  const filteredEvents = (filter === 'All' ? allEvents : allEvents.filter(e => e.type === filter))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Find the first index of an event that is today or in the future
+  const firstFutureIndex = filteredEvents.findIndex(e => e.date >= todayStr);
+  
+  // Reorder so future events come first, then past events (or just slice)
+  // The user said "start with current date", so we'll show future events first.
+  const displayEvents = firstFutureIndex === -1 
+    ? filteredEvents // All are in the past
+    : filteredEvents.slice(firstFutureIndex); // Start from today onwards
 
   // Calendar Helpers
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
@@ -120,7 +133,7 @@ export default function CultureHubPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
           {viewType === 'List' ? (
-            filteredEvents.map(event => (
+            displayEvents.map(event => (
               <div key={event.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-start space-x-6">
                 <div className="flex-shrink-0 w-16 h-16 bg-primary-50 text-primary-600 rounded-xl flex flex-col items-center justify-center border border-primary-100">
                   <span className="text-sm font-bold uppercase tracking-wider">{parseDate(event.date).toLocaleString('default', { month: 'short' })}</span>
@@ -217,7 +230,7 @@ export default function CultureHubPage() {
             </div>
           )}
           
-          {filteredEvents.length === 0 && viewType === 'List' && (
+          {displayEvents.length === 0 && viewType === 'List' && (
             <div className="text-center py-12 bg-white rounded-xl border border-slate-100">
               <p className="text-slate-500">{t('noEventsFilter')}</p>
             </div>
@@ -248,6 +261,13 @@ export default function CultureHubPage() {
               <p className="mt-4 text-sm text-slate-300 leading-relaxed">
                 {t('eotmDesc')}
               </p>
+              
+              <div className="mt-6 pt-6 border-t border-slate-800">
+                <CommentsSection 
+                  referenceId={`EDM-${currentMonthStr}`} 
+                  title="¡Felicita al Empleado del Mes!"
+                />
+              </div>
             </div>
           ) : (
             <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg">

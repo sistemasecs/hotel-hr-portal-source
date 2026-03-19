@@ -98,16 +98,6 @@ export default function NewRequestPage() {
       description: t('reqWithoutUniformDesc') 
     },
     { 
-      type: 'Data Update', 
-      label: t('reqDataUpdate'), 
-      icon: (
-        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      ), 
-      description: t('reqDataUpdateDesc') 
-    },
-    { 
       type: 'Document', 
       label: t('reqDocument'), 
       icon: (
@@ -346,44 +336,6 @@ export default function NewRequestPage() {
             <div className="mt-4">
               <label className="block text-sm font-medium text-slate-700 mb-1">Comments</label>
               <textarea name="comments" rows={2} onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" placeholder="Additional details..."></textarea>
-            </div>
-          </>
-        );
-      case 'Data Update':
-        return (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">New Phone Number</label>
-                <input type="tel" name="phone" onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Marital Status</label>
-                <select name="maritalStatus" onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2">
-                  <option value="">Select...</option>
-                  <option value="Single">Single</option>
-                  <option value="Married">Married</option>
-                  <option value="Divorced">Divorced</option>
-                  <option value="Widowed">Widowed</option>
-                </select>
-              </div>
-            </div>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-slate-700 mb-1">New Address</label>
-              <textarea name="address" rows={2} onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2"></textarea>
-            </div>
-            <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-              <h4 className="font-medium text-slate-900 mb-3">Emergency Contact</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Name</label>
-                  <input type="text" name="emergencyName" onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2 text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Phone</label>
-                  <input type="tel" name="emergencyPhone" onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2 text-sm" />
-                </div>
-              </div>
             </div>
           </>
         );

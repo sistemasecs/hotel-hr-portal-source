@@ -50,7 +50,24 @@ export async function PATCH(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, type, title, message, link } = body;
+    const { userId, type, title, message, link, broadcast } = body;
+
+    if (broadcast) {
+      if (!type || !title || !message) {
+        return NextResponse.json({ error: 'Missing required fields for broadcast' }, { status: 400 });
+      }
+
+      // Insert for all active users
+      const query = `
+        INSERT INTO notifications (user_id, type, title, message, link)
+        SELECT id, $1, $2, $3, $4
+        FROM users
+        WHERE status = 'Active' OR status IS NULL
+        RETURNING *
+      `;
+      const { rows } = await pool.query(query, [type, title, message, link || null]);
+      return NextResponse.json({ count: rows.length }, { status: 201 });
+    }
 
     if (!userId || !type || !title || !message) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

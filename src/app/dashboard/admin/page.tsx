@@ -36,6 +36,51 @@ function AdminDashboardContent() {
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [isDeptMultiSelectOpen, setIsDeptMultiSelectOpen] = useState(false);
 
+  // Broadcast Notification State
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+  const handleSendBroadcast = async () => {
+    if (!broadcastTitle || !broadcastMessage) {
+      alert('Please fill out both title and message.');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to send this notification to ALL active employees?')) {
+      return;
+    }
+
+    setIsBroadcasting(true);
+    try {
+      const res = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          broadcast: true,
+          type: 'BROADCAST',
+          title: broadcastTitle,
+          message: broadcastMessage,
+          link: '/dashboard'
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        alert(`Successfully sent broadcast to ${data.count} employees.`);
+        setBroadcastTitle('');
+        setBroadcastMessage('');
+      } else {
+        alert('Failed to send broadcast.');
+      }
+    } catch (error) {
+      console.error('Error sending broadcast:', error);
+      alert('An error occurred while sending the broadcast.');
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
   const renderHierarchyNode = (deptId: string) => {
     const dept = departments.find(d => d.id === deptId);
     if (!dept) return null;
@@ -2848,7 +2893,68 @@ function AdminDashboardContent() {
 
       {/* Activity Log Tab */}
       {activeTab === 'Activity' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="space-y-6">
+          {/* Broadcast Announcement Card */}
+          <div className="bg-slate-900 text-white rounded-xl shadow-lg overflow-hidden border border-slate-800">
+            <div className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-primary-500/20 rounded-lg">
+                  <svg className="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Broadcast Announcement</h2>
+                  <p className="text-slate-400 text-sm">Send a mass notification to all active employees immediately.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Title / Subject</label>
+                  <input 
+                    type="text" 
+                    value={broadcastTitle}
+                    onChange={(e) => setBroadcastTitle(e.target.value)}
+                    placeholder="e.g. Important HR Update"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Message Content</label>
+                  <textarea 
+                    rows={3}
+                    value={broadcastMessage}
+                    onChange={(e) => setBroadcastMessage(e.target.value)}
+                    placeholder="Type the announcement here..."
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none"
+                  />
+                </div>
+                <div className="flex justify-end pt-2">
+                  <button 
+                    onClick={handleSendBroadcast}
+                    disabled={isBroadcasting || !broadcastTitle || !broadcastMessage}
+                    className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition-all shadow-lg flex items-center space-x-2"
+                  >
+                    {isBroadcasting ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        <span>Send Announcement</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
             <div>
               <h2 className="text-xl font-semibold text-slate-800">{t('activityLog')}</h2>
@@ -2910,6 +3016,7 @@ function AdminDashboardContent() {
             </table>
           </div>
         </div>
+      </div>
       )}
 
       {/* Settings Tab */}
@@ -2990,7 +3097,9 @@ function AdminDashboardContent() {
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
               <div className="p-6 border-b border-slate-100">
                 <h2 className="text-xl font-semibold text-slate-800">Geofencing & Attendance</h2>
                 <p className="text-sm text-slate-500 mt-1">Configure hotel location for distance-based check-in verification.</p>
