@@ -21,8 +21,11 @@ export default function MyRequestsPage() {
     if (user) {
       fetchRequests();
       fetchRequestsToCover();
+      fetchYearlyDocuments();
     }
   }, [user]);
+
+  const [yearlyDocs, setYearlyDocs] = useState<any[]>([]);
 
   const fetchRequests = async () => {
     try {
@@ -57,6 +60,17 @@ export default function MyRequestsPage() {
     }
   };
 
+  const fetchYearlyDocuments = async () => {
+    try {
+      const res = await fetch(`/api/requests/documents?type=YEARLY&userId=${user?.id}`);
+      if (res.ok) {
+        setYearlyDocs(await res.json());
+      }
+    } catch (error) {
+      console.error('Failed to fetch yearly documents:', error);
+    }
+  };
+
   const handleSignDocument = async () => {
     if (!activeDoc) return;
     setIsSigning(true);
@@ -70,6 +84,7 @@ export default function MyRequestsPage() {
       if (res.ok) {
         setIsSignModalOpen(false);
         fetchRequests(); // Refresh to update document state
+        fetchYearlyDocuments(); // Also refresh yearly docs
       } else {
         alert('Failed to sign document');
       }
@@ -368,6 +383,57 @@ export default function MyRequestsPage() {
                   </div>
                 </div>
               )}
+
+            {/* Yearly Vacation Summaries Section */}
+            {yearlyDocs.length > 0 && (
+              <div className="mt-12 mb-12">
+                <h2 className="text-2xl font-bold text-slate-900 mb-6">{t('vacation') || 'Vacations'} - {t('employmentYear') || 'Employment Year'}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {yearlyDocs.map((doc) => (
+                    <div key={doc.id} className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="p-2 bg-primary-50 rounded-lg">
+                              <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-slate-900">{t('employmentYear')} {doc.request_id.split(':').pop()}</h3>
+                              <p className="text-xs text-slate-500">{new Date(doc.created_at).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          {doc.is_signed ? (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-[10px] font-bold rounded-full uppercase tracking-wider">{t('signed')}</span>
+                          ) : (
+                            <span className="px-2 py-1 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full uppercase tracking-wider">{t('needsSigning')}</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="mt-6 flex space-x-3">
+                        {!doc.is_signed ? (
+                          <button
+                            onClick={() => { setActiveDoc(doc); setIsSignModalOpen(true); }}
+                            className="flex-1 px-4 py-2 bg-primary-600 text-white text-sm font-bold rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
+                          >
+                            {t('signDocument')}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => { setActiveDoc(doc); setIsSignModalOpen(true); }}
+                            className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 text-sm font-bold rounded-lg hover:bg-slate-200 transition-colors"
+                          >
+                            {t('viewSignedDocument')}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             </div>
 
             <div className="flex justify-end space-x-4">

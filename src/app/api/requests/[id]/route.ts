@@ -72,7 +72,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         // Add Notification and Generate Document on Approval
         if (status === 'Approved') {
             // Fetch user info for the notification and document
-            const userRes = await pool.query('SELECT name, department FROM users WHERE id = $1', [updatedRequest.userId]);
+            const userRes = await pool.query('SELECT name, department, hire_date as "hireDate" FROM users WHERE id = $1', [updatedRequest.userId]);
             const userData = userRes.rows[0];
 
             await pool.query(`
@@ -93,8 +93,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
                     updatedRequest.type, 
                     updatedRequest.data, 
                     {
+                        id: updatedRequest.userId,
                         name: userData?.name,
-                        department: userData?.department
+                        department: userData?.department,
+                        hireDate: userData?.hireDate
                     }
                 );
             } catch (err) {

@@ -247,6 +247,7 @@ function AdminDashboardContent() {
   const [editingEventType, setEditingEventType] = useState<{ id: string, newName: string } | null>(null);
 
   const [allVacationRequests, setAllVacationRequests] = useState<EmployeeRequest[]>([]);
+  const [yearlyDocuments, setYearlyDocuments] = useState<Record<string, any>>({});
 
   // Document Templates State
   const [documentTemplates, setDocumentTemplates] = useState<any[]>([]);
@@ -277,40 +278,51 @@ function AdminDashboardContent() {
   }, [activeTab]);
   const [vacationConsents, setVacationConsents] = useState<any[]>([]);
 
+  const fetchVacationRequests = async () => {
+    try {
+      const res = await fetch('/api/requests/vacations');
+      if (res.ok) {
+        setAllVacationRequests(await res.json());
+      }
+    } catch (error) {
+      console.error('Error fetching vacation requests:', error);
+    }
+  };
+
   const fetchVacationConsents = async () => {
     try {
       const res = await fetch('/api/vacations/consent');
       if (res.ok) {
-        const data = await res.json();
-        setVacationConsents(data);
+        setVacationConsents(await res.json());
       }
     } catch (error) {
-      console.error('Failed to fetch vacation consents:', error);
+      console.error('Error fetching vacation consents:', error);
+    }
+  };
+
+  const fetchYearlyDocuments = async () => {
+    try {
+      const res = await fetch('/api/requests/documents?type=YEARLY');
+      if (res.ok) {
+        const docs = await res.json();
+        const mapping = docs.reduce((acc: any, doc: any) => {
+          acc[doc.request_id] = doc;
+          return acc;
+        }, {});
+        setYearlyDocuments(mapping);
+      }
+    } catch (error) {
+      console.error('Error fetching yearly documents:', error);
     }
   };
 
   useEffect(() => {
     if (activeTab === 'Vacations') {
+      fetchVacationRequests();
       fetchVacationConsents();
+      fetchYearlyDocuments();
     }
   }, [activeTab]);
-
-  useEffect(() => {
-    if (user && isAdmin) {
-      const fetchAllVacations = async () => {
-        try {
-          const res = await fetch(`/api/requests/vacations?userId=${user.id}`);
-          if (res.ok) {
-            const data = await res.json();
-            setAllVacationRequests(data);
-          }
-        } catch (error) {
-          console.error('Failed to fetch vacation requests:', error);
-        }
-      };
-      fetchAllVacations();
-    }
-  }, [user, isAdmin]);
 
   // Event State
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -400,10 +412,24 @@ function AdminDashboardContent() {
 
       if (res.ok) {
         fetchVacationConsents();
+        // Also refresh yearly documents as signing might have triggered something or we want to update UI
+        fetchYearlyDocuments();
         alert(t('consentSigned'));
       }
     } catch (error) {
       console.error('Failed to sign vacation consent:', error);
+    }
+  };
+
+  const [viewingYearlyDoc, setViewingYearlyDoc] = useState<any | null>(null);
+
+  const handleViewYearlyDocument = (userId: string, yearNumber: number) => {
+    const docId = `YEARLY:${userId}:${yearNumber}`;
+    const doc = yearlyDocuments[docId];
+    if (doc) {
+      setViewingYearlyDoc(doc);
+    } else {
+      alert("No summary document generated yet for this year.");
     }
   };
 
@@ -2929,21 +2955,31 @@ function AdminDashboardContent() {
                                     <span className="font-medium text-slate-700">{t('employmentYear')} {year.yearNumber}</span>
                                     <span className="text-slate-400 ml-2">({year.periodStart} - {year.periodEnd})</span>
                                   </div>
-                                  {isSigned ? (
-                                    <span className="flex items-center text-[10px] font-bold text-emerald-600">
-                                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                      </svg>
-                                      {t('consentSigned').toUpperCase()}
-                                    </span>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleSignConsent(u.id, year.yearNumber)}
-                                      className="text-[10px] font-bold text-primary-600 hover:text-primary-800 transition-colors underline uppercase"
-                                    >
-                                      {t('signConsent')}
-                                    </button>
-                                  )}
+                                  <div className="flex items-center space-x-2">
+                                    {(yearlyDocuments[`YEARLY:${u.id}:${year.yearNumber}`]) && (
+                                      <button
+                                        onClick={() => handleViewYearlyDocument(u.id, year.yearNumber)}
+                                        className="text-[10px] font-bold text-slate-500 hover:text-slate-700 transition-colors underline uppercase"
+                                      >
+                                        {t('viewSummary') || 'View Summary'}
+                                      </button>
+                                    )}
+                                    {isSigned ? (
+                                      <span className="flex items-center text-[10px] font-bold text-emerald-600">
+                                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        {t('consentSigned').toUpperCase()}
+                                      </span>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleSignConsent(u.id, year.yearNumber)}
+                                        className="text-[10px] font-bold text-primary-600 hover:text-primary-800 transition-colors underline uppercase"
+                                      >
+                                        {t('signConsent')}
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}
@@ -3432,6 +3468,44 @@ function AdminDashboardContent() {
                     Staff checking in outside this radius will be marked as "Out of Range" in reports. Settings are saved automatically.
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Yearly Document Viewer Modal */}
+        {viewingYearlyDoc && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 className="font-bold text-slate-900">
+                  {t('employmentYear')} {viewingYearlyDoc.request_id.split(':').pop()} - {t('vacationManagement')}
+                </h3>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => window.print()}
+                    className="flex items-center px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors shadow-sm"
+                  >
+                    <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    {t('downloadPdfPrint')}
+                  </button>
+                  <button 
+                    onClick={() => setViewingYearlyDoc(null)}
+                    className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-8 bg-slate-100/30">
+                <div 
+                  className="bg-white shadow-sm border border-slate-200 p-12 mx-auto max-w-[210mm] min-h-[297mm] prose prose-slate"
+                  dangerouslySetInnerHTML={{ __html: viewingYearlyDoc.content }}
+                />
               </div>
             </div>
           </div>

@@ -466,6 +466,11 @@ export const translations = {
     signing: 'Signing...',
     downloadPdfPrint: 'Download PDF / Print',
     downloadDefaultTemplate: 'Download Default Template',
+    viewSummary: "View Summary",
+    vacation: "Vacation",
+    signed: "Signed",
+    needsSigning: "Needs Signing",
+    employmentYear: "Employment Year",
   },
   es: {
     // General
@@ -932,7 +937,12 @@ export const translations = {
     signing: 'Firmando...',
     downloadPdfPrint: 'Descargar PDF / Imprimir',
     downloadDefaultTemplate: 'Descargar Plantilla Predeterminada',
-  }
+    viewSummary: 'Ver Resumen',
+    vacation: "Vacaciones",
+    signed: "Firmado",
+    needsSigning: "Pendiente de Firma",
+    employmentYear: "Año de Empleo",
+  },
 };
 
 export type TranslationKey = keyof typeof translations.en;
