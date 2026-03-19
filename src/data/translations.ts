@@ -465,6 +465,7 @@ export const translations = {
     declareConformity: 'I DECLARE CONFORMITY AND SIGN',
     signing: 'Signing...',
     downloadPdfPrint: 'Download PDF / Print',
+    downloadDefaultTemplate: 'Download Default Template',
   },
   es: {
     // General
@@ -930,6 +931,7 @@ export const translations = {
     declareConformity: 'DECLARO CONFORMIDAD Y FIRMO',
     signing: 'Firmando...',
     downloadPdfPrint: 'Descargar PDF / Imprimir',
+    downloadDefaultTemplate: 'Descargar Plantilla Predeterminada',
   }
 };
 

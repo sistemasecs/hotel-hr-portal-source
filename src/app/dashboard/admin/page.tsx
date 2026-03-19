@@ -562,6 +562,39 @@ function AdminDashboardContent() {
   const currentEotm = employeesOfTheMonth.find(e => e.month === currentMonthStr);
 
   // Document Template Handlers
+  const handleDownloadDefaultTemplate = () => {
+    const defaultTemplate = `
+<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+  <h1 style="text-align: center; color: #1a365d;">CONSENTIMIENTO DE VACACIONES / VACATION CONSENT</h1>
+  <p style="text-align: right;"><strong>Fecha / Date:</strong> {{today}}</p>
+  
+  <p>Estimado/a <strong>{{userName}}</strong>,</p>
+  
+  <p>Por medio de la presente, se hace constar la aprobación de su solicitud de vacaciones para el periodo comprendido entre el <strong>{{startDate}}</strong> y el <strong>{{endDate}}</strong>.</p>
+  
+  <p>Al firmar este documento, usted declara estar de acuerdo con las fechas establecidas y se compromete a cumplir con las políticas de la empresa durante su ausencia. Su solicitud ha sido registrada bajo el folio <strong>#{{requestId}}</strong> para el departamento de <strong>{{department}}</strong>.</p>
+  
+  <hr style="border: 0; border-top: 1px solid #eee; margin: 40px 0;" />
+  
+  <div style="margin-top: 50px; text-align: center;">
+    <div style="display: inline-block; width: 300px; border-top: 1px solid #333; padding-top: 5px;">
+      Firma del Empleado / Employee Signature
+    </div>
+  </div>
+</div>
+    `.trim();
+
+    const blob = new Blob([defaultTemplate], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'default_vacation_template.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleSaveTemplate = async () => {
     if (!templateForm.title || !templateForm.content) {
       alert('Title and Content are required');
@@ -2971,16 +3004,25 @@ function AdminDashboardContent() {
                 <h2 className="text-xl font-semibold text-slate-800">{t('documentTemplates')}</h2>
                 <p className="text-sm text-slate-500 mt-1">{t('manageTemplatesDesc')}</p>
               </div>
-              <button
-                onClick={() => {
-                  setEditingTemplate(null);
-                  setTemplateForm({ title: '', requestType: 'Vacation', content: '' });
-                  setIsDocumentModalOpen(true);
-                }}
-                className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors"
-              >
-                + {t('addTemplate')}
-              </button>
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleDownloadDefaultTemplate}
+                  className="px-4 py-2 bg-white text-slate-700 text-sm font-medium rounded-md border border-slate-300 hover:bg-slate-50 transition-colors flex items-center"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  {t('downloadDefaultTemplate')}
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingTemplate(null);
+                    setTemplateForm({ title: '', requestType: 'Vacation', content: '' });
+                    setIsDocumentModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors"
+                >
+                  + {t('addTemplate')}
+                </button>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
