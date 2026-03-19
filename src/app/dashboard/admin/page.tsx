@@ -252,11 +252,15 @@ function AdminDashboardContent() {
   const [documentTemplates, setDocumentTemplates] = useState<any[]>([]);
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<any | null>(null);
-  const [templateForm, setTemplateForm] = useState({ title: '', requestType: 'Vacation', content: '' });
+  const [templateForm, setTemplateForm] = useState({
+    name: '',
+    requestType: 'Vacation',
+    content: ''
+  });
 
   const fetchTemplates = async () => {
     try {
-      const res = await fetch('/api/admin/document-templates');
+      const res = await fetch('/api/document-templates');
       if (res.ok) {
         const data = await res.json();
         setDocumentTemplates(data);
@@ -596,18 +600,18 @@ function AdminDashboardContent() {
   };
 
   const handleSaveTemplate = async () => {
-    if (!templateForm.title || !templateForm.content) {
-      alert('Title and Content are required');
+    if (!templateForm.name || !templateForm.content) {
+      alert('Name and Content are required');
       return;
     }
 
     try {
       const url = editingTemplate 
-        ? `/api/admin/document-templates/${editingTemplate.id}` 
-        : '/api/admin/document-templates';
+        ? `/api/document-templates/${editingTemplate.id}` 
+        : '/api/document-templates';
       
       const res = await fetch(url, {
-        method: editingTemplate ? 'PATCH' : 'POST',
+        method: editingTemplate ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(templateForm)
       });
@@ -615,7 +619,7 @@ function AdminDashboardContent() {
       if (res.ok) {
         setIsDocumentModalOpen(false);
         setEditingTemplate(null);
-        setTemplateForm({ title: '', requestType: 'Vacation', content: '' });
+        setTemplateForm({ name: '', requestType: 'Vacation', content: '' });
         fetchTemplates();
       } else {
         alert('Failed to save template');
@@ -629,7 +633,7 @@ function AdminDashboardContent() {
     if (!window.confirm('Are you sure you want to delete this template?')) return;
 
     try {
-      const res = await fetch(`/api/admin/document-templates/${id}`, {
+      const res = await fetch(`/api/document-templates/${id}`, {
         method: 'DELETE'
       });
 
@@ -3015,7 +3019,7 @@ function AdminDashboardContent() {
                 <button
                   onClick={() => {
                     setEditingTemplate(null);
-                    setTemplateForm({ title: '', requestType: 'Vacation', content: '' });
+                    setTemplateForm({ name: '', requestType: 'Vacation', content: '' });
                     setIsDocumentModalOpen(true);
                   }}
                   className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors"
@@ -3037,16 +3041,16 @@ function AdminDashboardContent() {
                 <tbody className="divide-y divide-slate-100">
                   {documentTemplates.map(template => (
                     <tr key={template.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-4 text-sm font-medium text-slate-900">{template.title}</td>
-                      <td className="p-4 text-sm text-slate-600">{template.request_type}</td>
-                      <td className="p-4 text-sm text-slate-500">{new Date(template.updated_at).toLocaleDateString()}</td>
+                      <td className="p-4 text-sm font-medium text-slate-900">{template.name}</td>
+                      <td className="p-4 text-sm text-slate-600">{template.requestType}</td>
+                      <td className="p-4 text-sm text-slate-500">{new Date(template.updatedAt).toLocaleDateString()}</td>
                       <td className="p-4 text-right space-x-3">
                         <button
                           onClick={() => {
                             setEditingTemplate(template);
                             setTemplateForm({
-                              title: template.title,
-                              requestType: template.request_type,
+                              name: template.name,
+                              requestType: template.requestType,
                               content: template.content
                             });
                             setIsDocumentModalOpen(true);
@@ -3094,9 +3098,9 @@ function AdminDashboardContent() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">{t('title')}</label>
                 <input
                   type="text"
-                  value={templateForm.title}
-                  onChange={e => setTemplateForm({ ...templateForm, title: e.target.value })}
-                  className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                  value={templateForm.name}
+                  onChange={e => setTemplateForm({ ...templateForm, name: e.target.value })}
+                  className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-primary-500 focus:border-primary-500 text-slate-900"
                   placeholder="e.g. Vacation Approval Consent"
                 />
               </div>
