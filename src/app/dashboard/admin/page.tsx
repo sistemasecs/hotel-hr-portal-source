@@ -27,7 +27,7 @@ function AdminDashboardContent() {
   const { primaryColor, setPrimaryColor } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'Directory' | 'Hierarchy' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Attendance' | 'Vacations' | 'Activity' | 'Settings'>('Directory');
+  const [activeTab, setActiveTab] = useState<'Directory' | 'Hierarchy' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Attendance' | 'Vacations' | 'Documents' | 'Activity' | 'Settings'>('Directory');
   const [attendanceSubTab, setAttendanceSubTab] = useState<'Logs' | 'Reports'>('Logs');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
@@ -208,7 +208,7 @@ function AdminDashboardContent() {
   // Read tab from URL on mount and when searchParams change
   useEffect(() => {
     const tab = searchParams.get('tab');
-    const validTabs = ['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Attendance', 'Vacations', 'Activity', 'Settings'];
+    const validTabs = ['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Attendance', 'Vacations', 'Documents', 'Activity', 'Settings'];
     if (tab && validTabs.includes(tab)) {
       setActiveTab(tab as any);
     }
@@ -246,8 +246,31 @@ function AdminDashboardContent() {
   const [newEventTypeName, setNewEventTypeName] = useState('');
   const [editingEventType, setEditingEventType] = useState<{ id: string, newName: string } | null>(null);
 
-  // Vacation State
   const [allVacationRequests, setAllVacationRequests] = useState<EmployeeRequest[]>([]);
+
+  // Document Templates State
+  const [documentTemplates, setDocumentTemplates] = useState<any[]>([]);
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<any | null>(null);
+  const [templateForm, setTemplateForm] = useState({ title: '', requestType: 'Vacation', content: '' });
+
+  const fetchTemplates = async () => {
+    try {
+      const res = await fetch('/api/admin/document-templates');
+      if (res.ok) {
+        const data = await res.json();
+        setDocumentTemplates(data);
+      }
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'Documents') {
+      fetchTemplates();
+    }
+  }, [activeTab]);
   const [vacationConsents, setVacationConsents] = useState<any[]>([]);
 
   const fetchVacationConsents = async () => {
@@ -537,6 +560,55 @@ function AdminDashboardContent() {
 
   const leaderboard = calculateLeaderboard();
   const currentEotm = employeesOfTheMonth.find(e => e.month === currentMonthStr);
+
+  // Document Template Handlers
+  const handleSaveTemplate = async () => {
+    if (!templateForm.title || !templateForm.content) {
+      alert('Title and Content are required');
+      return;
+    }
+
+    try {
+      const url = editingTemplate 
+        ? `/api/admin/document-templates/${editingTemplate.id}` 
+        : '/api/admin/document-templates';
+      
+      const res = await fetch(url, {
+        method: editingTemplate ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(templateForm)
+      });
+
+      if (res.ok) {
+        setIsDocumentModalOpen(false);
+        setEditingTemplate(null);
+        setTemplateForm({ title: '', requestType: 'Vacation', content: '' });
+        fetchTemplates();
+      } else {
+        alert('Failed to save template');
+      }
+    } catch (error) {
+      console.error('Error saving template:', error);
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this template?')) return;
+
+    try {
+      const res = await fetch(`/api/admin/document-templates/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        fetchTemplates();
+      } else {
+        alert('Failed to delete template');
+      }
+    } catch (error) {
+      console.error('Error deleting template:', error);
+    }
+  };
 
   const handleAwardEotm = (userId: string) => {
     if (window.confirm('¿Estás seguro de que quieres otorgar el premio de EDM a este usuario?')) {
@@ -2885,6 +2957,146 @@ function AdminDashboardContent() {
                     )}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Documents' && (
+        <div className="space-y-8">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden text-slate-900">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-800">{t('documentTemplates')}</h2>
+                <p className="text-sm text-slate-500 mt-1">{t('manageTemplatesDesc')}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingTemplate(null);
+                  setTemplateForm({ title: '', requestType: 'Vacation', content: '' });
+                  setIsDocumentModalOpen(true);
+                }}
+                className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors"
+              >
+                + {t('addTemplate')}
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                    <th className="p-4 font-semibold">{t('templateTitle')}</th>
+                    <th className="p-4 font-semibold">{t('type')}</th>
+                    <th className="p-4 font-semibold">{language === 'es' ? 'ACTUALIZADO' : 'UPDATED'}</th>
+                    <th className="p-4 font-semibold text-right">{t('actions')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {documentTemplates.map(template => (
+                    <tr key={template.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-4 text-sm font-medium text-slate-900">{template.title}</td>
+                      <td className="p-4 text-sm text-slate-600">{template.request_type}</td>
+                      <td className="p-4 text-sm text-slate-500">{new Date(template.updated_at).toLocaleDateString()}</td>
+                      <td className="p-4 text-right space-x-3">
+                        <button
+                          onClick={() => {
+                            setEditingTemplate(template);
+                            setTemplateForm({
+                              title: template.title,
+                              requestType: template.request_type,
+                              content: template.content
+                            });
+                            setIsDocumentModalOpen(true);
+                          }}
+                          className="text-primary-600 hover:text-primary-900 text-sm font-medium"
+                        >
+                          {t('edit')}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTemplate(template.id)}
+                          className="text-red-600 hover:text-red-900 text-sm font-medium"
+                        >
+                          {t('delete')}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {documentTemplates.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="p-8 text-center text-slate-500 italic">
+                        No templates found. Click "+ {t('addTemplate')}" to create one.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Template Modal */}
+      {isDocumentModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto text-slate-900">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-slate-900">{editingTemplate ? t('editTemplate') : t('addTemplate')}</h2>
+              <button onClick={() => setIsDocumentModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('title')}</label>
+                <input
+                  type="text"
+                  value={templateForm.title}
+                  onChange={e => setTemplateForm({ ...templateForm, title: e.target.value })}
+                  className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="e.g. Vacation Approval Consent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('type')}</label>
+                <select
+                  value={templateForm.requestType}
+                  onChange={e => setTemplateForm({ ...templateForm, requestType: e.target.value })}
+                  className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-primary-500 focus:border-primary-500 text-slate-900"
+                >
+                  <option value="Vacation">Vacation</option>
+                  <option value="Absence">Absence</option>
+                  <option value="Permit">Permit</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('templateContent')}</label>
+                <div className="mb-2 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                  {t('placeholdersHint')}
+                </div>
+                <textarea
+                  value={templateForm.content}
+                  onChange={e => setTemplateForm({ ...templateForm, content: e.target.value })}
+                  rows={12}
+                  className="w-full border border-slate-300 rounded-md p-2 text-sm font-mono focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Enter document content with placeholders..."
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  onClick={() => setIsDocumentModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  onClick={handleSaveTemplate}
+                  className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md hover:bg-primary-700"
+                >
+                  {editingTemplate ? t('updateTemplate') : t('createTemplate')}
+                </button>
               </div>
             </div>
           </div>

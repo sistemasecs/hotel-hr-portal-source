@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { logActivity } from '@/lib/activityLogger';
+import { generateDocumentForRequest } from '@/lib/documentGenerator';
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
     try {
@@ -68,8 +69,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         const updatedRequest = result.rows[0];
         await logActivity(userId || null, 'UPDATE', 'REQUEST', updatedRequest.id, { status: updatedRequest.status });
 
-        // Add Notification on Approval
+        // Add Notification and Generate Document on Approval
         if (status === 'Approved') {
+            // Fetch user info for the notification and document
+            const userRes = await pool.query('SELECT name, department FROM users WHERE id = $1', [updatedRequest.userId]);
+            const userData = userRes.rows[0];
+
             await pool.query(`
                 INSERT INTO notifications (user_id, type, title, message, link)
                 VALUES ($1, $2, $3, $4, $5)
@@ -80,6 +85,22 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
                 `Your ${updatedRequest.type} request has been approved.`,
                 '/dashboard/requests'
             ]);
+
+            // Attempt to generate document if a template exists
+            try {
+                await generateDocumentForRequest(
+                    updatedRequest.id, 
+                    updatedRequest.type, 
+                    updatedRequest.data, 
+                    {
+                        name: userData?.name,
+                        department: userData?.department
+                    }
+                );
+            } catch (err) {
+                console.error('Non-blocking error generating document:', err);
+                // We don't fail the request update if document generation fails
+            }
         }
 
         return NextResponse.json(updatedRequest);

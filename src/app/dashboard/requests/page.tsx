@@ -8,10 +8,14 @@ import { EmployeeRequest } from '@/types';
 
 export default function MyRequestsPage() {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [requests, setRequests] = useState<EmployeeRequest[]>([]);
   const [requestsToCover, setRequestsToCover] = useState<EmployeeRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [documents, setDocuments] = useState<Record<string, any>>({});
+  const [isSignModalOpen, setIsSignModalOpen] = useState(false);
+  const [activeDoc, setActiveDoc] = useState<any>(null);
+  const [isSigning, setIsSigning] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -26,11 +30,53 @@ export default function MyRequestsPage() {
       if (res.ok) {
         const data = await res.json();
         setRequests(data);
+        // After fetching requests, fetch their documents
+        fetchDocuments(data.map((r: any) => r.id));
       }
     } catch (error) {
       console.error('Failed to fetch requests:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchDocuments = async (requestIds: string[]) => {
+    if (requestIds.length === 0) return;
+    try {
+      const res = await fetch(`/api/requests/documents?requestIds=${requestIds.join(',')}`);
+      if (res.ok) {
+        const data = await res.json();
+        const docMap: Record<string, any> = {};
+        data.forEach((doc: any) => {
+          docMap[doc.request_id] = doc;
+        });
+        setDocuments(docMap);
+      }
+    } catch (error) {
+      console.error('Failed to fetch documents:', error);
+    }
+  };
+
+  const handleSignDocument = async () => {
+    if (!activeDoc) return;
+    setIsSigning(true);
+    try {
+      const res = await fetch('/api/requests/documents', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: activeDoc.request_id })
+      });
+
+      if (res.ok) {
+        setIsSignModalOpen(false);
+        fetchRequests(); // Refresh to update document state
+      } else {
+        alert('Failed to sign document');
+      }
+    } catch (error) {
+      console.error('Error signing document:', error);
+    } finally {
+      setIsSigning(false);
     }
   };
 
@@ -254,6 +300,33 @@ export default function MyRequestsPage() {
                               Note: {request.hrNotes}
                             </div>
                           )}
+                          {documents[request.id] && (
+                            <div className="mt-2">
+                              {documents[request.id].signed_at ? (
+                                <button
+                                  onClick={() => {
+                                    setActiveDoc(documents[request.id]);
+                                    setIsSignModalOpen(true);
+                                  }}
+                                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline flex items-center"
+                                >
+                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                  {t('viewSignedDocument')}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setActiveDoc(documents[request.id]);
+                                    setIsSignModalOpen(true);
+                                  }}
+                                  className="text-xs font-bold text-primary-600 hover:text-primary-700 underline flex items-center"
+                                >
+                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                  {t('signDocument')}
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -263,6 +336,73 @@ export default function MyRequestsPage() {
             </div>
           )}
         </>
+      )}
+      {/* Signature Modal */}
+      {isSignModalOpen && activeDoc && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-slate-900">
+                {activeDoc.signed_at ? t('viewSignedDocument') : t('signDocument')}
+              </h2>
+              <button onClick={() => setIsSignModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto bg-slate-50 p-8 rounded-lg border border-slate-200 shadow-inner mb-6 text-slate-900">
+              <div 
+                className="max-w-2xl mx-auto bg-white p-12 shadow-sm min-h-[600px] prose prose-slate"
+                dangerouslySetInnerHTML={{ __html: activeDoc.content.replace(/\n/g, '<br/>') }}
+              />
+              {activeDoc.signed_at && (
+                <div className="max-w-2xl mx-auto mt-8 pt-8 border-t border-slate-200">
+                  <div className="flex flex-col items-center">
+                    <div className="font-cursive text-3xl text-slate-800 mb-2" style={{ fontFamily: 'Dancing Script, cursive' }}>
+                      {user?.name}
+                    </div>
+                    <div className="h-px w-64 bg-slate-900 mb-2"></div>
+                    <p className="text-xs text-slate-500 uppercase tracking-widest text-center">
+                      {t('digitallySignedOn')}: {new Date(activeDoc.signed_at).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setIsSignModalOpen(false)}
+                className="px-6 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                {activeDoc.signed_at ? t('close') : t('cancel')}
+              </button>
+              
+              {activeDoc.signed_at ? (
+                <button
+                  onClick={() => window.print()}
+                  className="px-6 py-2 text-sm font-medium text-white bg-slate-800 rounded-lg hover:bg-slate-900 transition-colors flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 00-2 2h2m2 4h10a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                  <span>{t('downloadPdfPrint')}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleSignDocument}
+                  disabled={isSigning}
+                  className="px-8 py-2 text-sm font-bold text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-all shadow-lg flex items-center space-x-2"
+                >
+                  {isSigning ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                  )}
+                  <span>{isSigning ? t('signing') : t('declareConformity')}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

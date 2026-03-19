@@ -8,6 +8,7 @@ export const translations = {
     cancel: 'Cancel',
     saveChanges: 'Save Changes',
     saving: 'Saving...',
+    close: 'Close',
 
     // Login Page
     signIn: 'Sign in',
@@ -447,6 +448,23 @@ export const translations = {
     datesAffectedPlaceholder: 'e.g., Oct 12 - Oct 14',
     hoursPlaceholder: 'e.g., 16',
     proposedSchedulePlaceholder: 'e.g., Will work 2 extra hours every day next week...',
+    documentTemplates: 'Document Templates',
+    manageTemplatesDesc: 'Manage templates for automatically generated request documents (e.g., Vacation Consent).',
+    addTemplate: 'Add Template',
+    editTemplate: 'Edit Template',
+    updateTemplate: 'Update Template',
+    createTemplate: 'Create Template',
+    templateTitle: 'Title',
+    templateContent: 'Template Content (HTML/Markdown supported)',
+    placeholdersHint: 'Available placeholders: {{userName}}, {{department}}, {{requestType}}, {{startDate}}, {{endDate}}, {{today}}, {{requestId}}',
+    templateSavedSuccess: 'Template saved successfully!',
+    templateDeleteConfirm: 'Are you sure you want to delete this template?',
+    signDocument: 'SIGN DOCUMENT',
+    viewSignedDocument: 'VIEW SIGNED DOCUMENT',
+    digitallySignedOn: 'DIGITALLY SIGNED ON',
+    declareConformity: 'I DECLARE CONFORMITY AND SIGN',
+    signing: 'Signing...',
+    downloadPdfPrint: 'Download PDF / Print',
   },
   es: {
     // General
@@ -455,6 +473,7 @@ export const translations = {
     cancel: 'Cancelar',
     saveChanges: 'Guardar Cambios',
     saving: 'Guardando...',
+    close: 'Cerrar',
 
     // Login Page
     signIn: 'Iniciar sesión',
@@ -894,6 +913,23 @@ export const translations = {
     datesAffectedPlaceholder: 'ej., 12 Oct - 14 Oct',
     hoursPlaceholder: 'ej., 16',
     proposedSchedulePlaceholder: 'ej., Trabajaré 2 horas extra cada día la próxima semana...',
+    documentTemplates: 'Plantillas de Documentos',
+    manageTemplatesDesc: 'Gestiona las plantillas para documentos generados automáticamente (ej., Consentimiento de Vacaciones).',
+    addTemplate: 'Añadir Plantilla',
+    editTemplate: 'Editar Plantilla',
+    updateTemplate: 'Actualizar Plantilla',
+    createTemplate: 'Crear Plantilla',
+    templateTitle: 'Título',
+    templateContent: 'Contenido de la Plantilla (HTML/Markdown soportado)',
+    placeholdersHint: 'Espacios disponibles: {{userName}}, {{department}}, {{requestType}}, {{startDate}}, {{endDate}}, {{today}}, {{requestId}}',
+    templateSavedSuccess: '¡Plantilla guardada con éxito!',
+    templateDeleteConfirm: '¿Estás seguro de que quieres eliminar esta plantilla?',
+    signDocument: 'FIRMAR DOCUMENTO',
+    viewSignedDocument: 'VER DOCUMENTO FIRMADO',
+    digitallySignedOn: 'FIRMADO DIGITALMENTE EL',
+    declareConformity: 'DECLARO CONFORMIDAD Y FIRMO',
+    signing: 'Firmando...',
+    downloadPdfPrint: 'Descargar PDF / Imprimir',
   }
 };
 
