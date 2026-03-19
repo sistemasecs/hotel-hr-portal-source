@@ -70,38 +70,41 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         await logActivity(userId || null, 'UPDATE', 'REQUEST', updatedRequest.id, { status: updatedRequest.status });
 
         // Add Notification and Generate Document on Approval
-        if (status === 'Approved') {
+        if (status === 'Approved' || status === 'Rejected') {
             // Fetch user info for the notification and document
             const userRes = await pool.query('SELECT name, department, hire_date as "hireDate" FROM users WHERE id = $1', [updatedRequest.userId]);
             const userData = userRes.rows[0];
 
+            const isApproved = status === 'Approved';
             await pool.query(`
                 INSERT INTO notifications (user_id, type, title, message, link)
                 VALUES ($1, $2, $3, $4, $5)
             `, [
                 updatedRequest.userId, 
-                'REQUEST_APPROVED', 
-                'Request Approved', 
-                `Your ${updatedRequest.type} request has been approved.`,
-                '/dashboard/requests'
+                isApproved ? 'REQUEST_APPROVED' : 'REQUEST_REJECTED',
+                isApproved ? 'Request Approved ✅' : 'Request Update',
+                `Your ${updatedRequest.type} request has been ${status.toLowerCase()}.${hrNotes ? ` Note: ${hrNotes}` : ''}`,
+                `/dashboard/requests?highlight=${updatedRequest.id}`
             ]);
 
-            // Attempt to generate document if a template exists
-            try {
-                await generateDocumentForRequest(
-                    updatedRequest.id, 
-                    updatedRequest.type, 
-                    updatedRequest.data, 
-                    {
-                        id: updatedRequest.userId,
-                        name: userData?.name,
-                        department: userData?.department,
-                        hireDate: userData?.hireDate
-                    }
-                );
-            } catch (err) {
-                console.error('Non-blocking error generating document:', err);
-                // We don't fail the request update if document generation fails
+            if (isApproved) {
+                // Attempt to generate document if a template exists
+                try {
+                    await generateDocumentForRequest(
+                        updatedRequest.id, 
+                        updatedRequest.type, 
+                        updatedRequest.data, 
+                        {
+                            id: updatedRequest.userId,
+                            name: userData?.name,
+                            department: userData?.department,
+                            hireDate: userData?.hireDate
+                        }
+                    );
+                } catch (err) {
+                    console.error('Non-blocking error generating document:', err);
+                    // We don't fail the request update if document generation fails
+                }
             }
         }
 

@@ -1,14 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useSearchParams } from 'next/navigation';
 import { EmployeeRequest } from '@/types';
 
 export default function MyRequestsPage() {
   const { user } = useAuth();
   const { t, language } = useLanguage();
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get('highlight');
+  const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(null);
+  const highlightRef = useRef<HTMLDivElement | null>(null);
   const [requests, setRequests] = useState<EmployeeRequest[]>([]);
   const [requestsToCover, setRequestsToCover] = useState<EmployeeRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,6 +29,23 @@ export default function MyRequestsPage() {
       fetchYearlyDocuments();
     }
   }, [user]);
+
+  // Highlight the request from the notification link
+  useEffect(() => {
+    if (highlightId && requests.length > 0) {
+      setHighlightedRequestId(highlightId);
+      // Give time for render then scroll
+      setTimeout(() => {
+        const el = document.getElementById(`request-${highlightId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+      // Remove highlight after 4 seconds
+      const timer = setTimeout(() => setHighlightedRequestId(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightId, requests]);
 
   const [yearlyDocs, setYearlyDocs] = useState<any[]>([]);
 
@@ -270,7 +292,11 @@ export default function MyRequestsPage() {
                   </thead>
                   <tbody className="bg-white divide-y divide-slate-200">
                     {requests.map((request) => (
-                      <tr key={request.id} className="hover:bg-slate-50">
+                      <tr 
+                        key={request.id} 
+                        id={`request-${request.id}`}
+                        className={`hover:bg-slate-50 transition-colors ${highlightedRequestId === request.id ? 'ring-2 ring-inset ring-primary-400 bg-primary-50 animate-pulse' : ''}`}
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-slate-900">{getTranslatedType(request.type)}</div>
                         </td>
