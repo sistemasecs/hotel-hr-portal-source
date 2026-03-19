@@ -470,7 +470,6 @@ export const translations = {
     vacation: "Vacation",
     signed: "Signed",
     needsSigning: "Needs Signing",
-    employmentYear: "Employment Year",
   },
   es: {
     // General
@@ -941,7 +940,6 @@ export const translations = {
     vacation: "Vacaciones",
     signed: "Firmado",
     needsSigning: "Pendiente de Firma",
-    employmentYear: "Año de Empleo",
   },
 };
 
