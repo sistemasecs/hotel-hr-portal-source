@@ -8,7 +8,7 @@ import VacationCalendar from '@/components/requests/VacationCalendar';
 
 export default function ApprovalsPage() {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [requests, setRequests] = useState<EmployeeRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<EmployeeRequest | null>(null);
@@ -94,7 +94,7 @@ export default function ApprovalsPage() {
       const res = await fetch(`/api/requests/${selectedRequest.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, hrNotes, userId: user?.id })
+        body: JSON.stringify({ status, hrNotes, userId: user?.id, language })
       });
 
       if (res.ok) {

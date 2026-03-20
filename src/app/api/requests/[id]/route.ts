@@ -7,7 +7,23 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     try {
         const { id } = await context.params;
         const body = await request.json();
-        const { status, hrNotes, data, userId } = body;
+        const { status, hrNotes, data, userId, language } = body;
+
+        // Localized request type names
+        const requestTypeNames: Record<string, Record<string, string>> = {
+            en: {
+                'Vacation': 'Vacation', 'Absence': 'Absence', 'Absence Proof': 'Absence Proof',
+                'Shift Change': 'Shift Change', 'Uniform': 'Uniform', 'Without Uniform': 'Without Uniform',
+                'Data Update': 'Data Update', 'Document': 'Document', 'Discount': 'Discount',
+                'Responsibility': 'Responsibility', 'Health Make-up': 'Health Make-up',
+            },
+            es: {
+                'Vacation': 'Vacaciones', 'Absence': 'Ausencia', 'Absence Proof': 'Comprobante de Ausencia',
+                'Shift Change': 'Cambio de Turno', 'Uniform': 'Uniforme', 'Without Uniform': 'Sin Uniforme',
+                'Data Update': 'Actualización de Datos', 'Document': 'Documento', 'Discount': 'Descuento',
+                'Responsibility': 'Responsabilidad', 'Health Make-up': 'Recuperación de Salud',
+            }
+        };
 
         // Allow updating either status or data (for colleague agreement)
         if (!status && !data) {
@@ -76,14 +92,29 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             const userData = userRes.rows[0];
 
             const isApproved = status === 'Approved';
+            const lang = language === 'es' ? 'es' : 'en';
+            const localizedType = requestTypeNames[lang][updatedRequest.type] || updatedRequest.type;
+
+            const notifTitle = isApproved
+                ? (lang === 'es' ? `Solicitud Aprobada ✅` : `Request Approved ✅`)
+                : (lang === 'es' ? `Actualización de Solicitud` : `Request Update`);
+
+            const notifMessage = isApproved
+                ? (lang === 'es'
+                    ? `Tu solicitud de ${localizedType} ha sido aprobada.${hrNotes ? ` Nota: ${hrNotes}` : ''}`
+                    : `Your ${localizedType} request has been approved.${hrNotes ? ` Note: ${hrNotes}` : ''}`)
+                : (lang === 'es'
+                    ? `Tu solicitud de ${localizedType} ha sido rechazada.${hrNotes ? ` Nota: ${hrNotes}` : ''}`
+                    : `Your ${localizedType} request has been rejected.${hrNotes ? ` Note: ${hrNotes}` : ''}`);
+
             await pool.query(`
                 INSERT INTO notifications (user_id, type, title, message, link)
                 VALUES ($1, $2, $3, $4, $5)
             `, [
                 updatedRequest.userId, 
                 isApproved ? 'REQUEST_APPROVED' : 'REQUEST_REJECTED',
-                isApproved ? 'Request Approved ✅' : 'Request Update',
-                `Your ${updatedRequest.type} request has been ${status.toLowerCase()}.${hrNotes ? ` Note: ${hrNotes}` : ''}`,
+                notifTitle,
+                notifMessage,
                 `/dashboard/requests?highlight=${updatedRequest.id}`
             ]);
 
@@ -103,7 +134,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
                     );
                 } catch (err) {
                     console.error('Non-blocking error generating document:', err);
-                    // We don't fail the request update if document generation fails
                 }
             }
         }
