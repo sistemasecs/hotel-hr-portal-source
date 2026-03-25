@@ -62,7 +62,7 @@ export async function POST(request: Request) {
         INSERT INTO notifications (user_id, type, title, message, link)
         SELECT id, $1, $2, $3, $4
         FROM users
-        WHERE status = 'Active' OR status IS NULL
+        WHERE is_active = true
         RETURNING *
       `;
       const { rows } = await pool.query(query, [type, title, message, link || null]);
