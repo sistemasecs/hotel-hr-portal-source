@@ -28,6 +28,10 @@ export async function GET() {
                 targetDepartments: module.target_departments,
                 required: module.required,
                 contentUrl: module.content_url,
+                contentType: module.content_type,
+                fileName: module.file_name,
+                fileSize: module.file_size,
+                mimeType: module.mime_type,
                 passingScore: module.passing_score,
                 isOnboardingRequirement: module.is_onboarding_requirement,
                 questions: moduleQuestions.length > 0 ? moduleQuestions : undefined,
@@ -56,18 +60,24 @@ export async function POST(request: Request) {
         if (id) {
             moduleResult = await client.query(
                 `INSERT INTO training_modules 
-         (id, title, description, type, duration, target_departments, required, content_url, passing_score, is_onboarding_requirement) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-                [id, module.title, module.description, module.type, module.duration, module.targetDepartments || [],
-                    module.required || false, module.contentUrl, module.passingScore, module.isOnboardingRequirement || false]
+         (id, title, description, type, duration, target_departments, required, content_url, passing_score, is_onboarding_requirement, content_type, file_name, file_size, mime_type) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+                [
+                    id, module.title, module.description, module.type, module.duration, module.targetDepartments || [],
+                    module.required || false, module.contentUrl, module.passingScore, module.isOnboardingRequirement || false,
+                    module.contentType || 'Url', module.fileName || null, module.fileSize || null, module.mimeType || null
+                ]
             );
         } else {
             moduleResult = await client.query(
                 `INSERT INTO training_modules 
-         (title, description, type, duration, target_departments, required, content_url, passing_score, is_onboarding_requirement) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-                [module.title, module.description, module.type, module.duration, module.targetDepartments || [],
-                module.required || false, module.contentUrl, module.passingScore, module.isOnboardingRequirement || false]
+         (title, description, type, duration, target_departments, required, content_url, passing_score, is_onboarding_requirement, content_type, file_name, file_size, mime_type) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+                [
+                    module.title, module.description, module.type, module.duration, module.targetDepartments || [],
+                    module.required || false, module.contentUrl, module.passingScore, module.isOnboardingRequirement || false,
+                    module.contentType || 'Url', module.fileName || null, module.fileSize || null, module.mimeType || null
+                ]
             );
         }
 
@@ -110,6 +120,10 @@ export async function POST(request: Request) {
             targetDepartments: moduleResult.rows[0].target_departments,
             required: moduleResult.rows[0].required,
             contentUrl: moduleResult.rows[0].content_url,
+            contentType: moduleResult.rows[0].content_type,
+            fileName: moduleResult.rows[0].file_name,
+            fileSize: moduleResult.rows[0].file_size,
+            mimeType: moduleResult.rows[0].mime_type,
             passingScore: moduleResult.rows[0].passing_score,
             isOnboardingRequirement: moduleResult.rows[0].is_onboarding_requirement,
             questions: questionsResult.length > 0 ? questionsResult : undefined

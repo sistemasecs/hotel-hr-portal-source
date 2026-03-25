@@ -76,6 +76,10 @@ export interface TrainingModule {
   targetDepartments: string[];
   required: boolean;
   contentUrl?: string; // For Video/Document
+  contentType?: 'Url' | 'File'; // New field
+  fileName?: string; // New field
+  fileSize?: number; // New field
+  mimeType?: string; // New field
   questions?: QuizQuestion[]; // For Quiz
   passingScore?: number; // For Quiz
   isOnboardingRequirement?: boolean;

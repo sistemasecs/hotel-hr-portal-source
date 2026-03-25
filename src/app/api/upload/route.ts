@@ -10,12 +10,22 @@ export async function POST(request: Request): Promise<NextResponse> {
             return NextResponse.json({ error: 'No file provided' }, { status: 400 });
         }
 
-        if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
-            return NextResponse.json({ error: 'Only image and PDF files are allowed' }, { status: 400 });
+        const allowedTypes = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+        ];
+
+        if (!file.type.startsWith('image/') && !file.type.startsWith('video/') && !allowedTypes.includes(file.type)) {
+            return NextResponse.json({ error: 'Unsupported file type. Please upload an image, video, PDF, or Office document.' }, { status: 400 });
         }
 
-        if (file.size > 10 * 1024 * 1024) {
-            return NextResponse.json({ error: 'File too large. Maximum size is 10MB.' }, { status: 400 });
+        if (file.size > 25 * 1024 * 1024) {
+            return NextResponse.json({ error: 'File too large. Maximum size is 25MB.' }, { status: 400 });
         }
 
         // Generate a unique filename to avoid overwrites

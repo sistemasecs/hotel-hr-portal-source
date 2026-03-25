@@ -22,6 +22,12 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
   const [required, setRequired] = useState(initialData?.required || false);
   const [isOnboardingRequirement, setIsOnboardingRequirement] = useState(initialData?.isOnboardingRequirement || false);
   const [contentUrl, setContentUrl] = useState(initialData?.contentUrl || '');
+  const [contentType, setContentType] = useState<'Url' | 'File'>(initialData?.contentType || 'Url');
+  const [fileName, setFileName] = useState(initialData?.fileName || '');
+  const [fileSize, setFileSize] = useState<number | undefined>(initialData?.fileSize);
+  const [mimeType, setMimeType] = useState(initialData?.mimeType || '');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [questions, setQuestions] = useState<QuizQuestion[]>(initialData?.questions || []);
   const [passingScore, setPassingScore] = useState<number>(initialData?.passingScore || 0);
 
@@ -71,6 +77,15 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Automatically convert Google Drive URLs to preview mode
+    let finalUrl = contentUrl;
+    if (contentType === 'Url' && type !== 'Quiz' && finalUrl) {
+      if (finalUrl.includes('drive.google.com/file/d/') && finalUrl.includes('/view')) {
+        finalUrl = finalUrl.replace('/view', '/preview');
+      }
+    }
+
     onSubmit({
       title,
       description,
@@ -79,7 +94,11 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
       targetDepartments,
       required,
       isOnboardingRequirement,
-      contentUrl: type !== 'Quiz' ? contentUrl : undefined,
+      contentUrl: type !== 'Quiz' ? finalUrl : undefined,
+      contentType: type !== 'Quiz' ? contentType : undefined,
+      fileName: type !== 'Quiz' && contentType === 'File' ? fileName : undefined,
+      fileSize: type !== 'Quiz' && contentType === 'File' ? fileSize : undefined,
+      mimeType: type !== 'Quiz' && contentType === 'File' ? mimeType : undefined,
       questions: type === 'Quiz' ? questions : undefined,
       passingScore: type === 'Quiz' ? passingScore : undefined,
     });
@@ -191,18 +210,154 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
           <h3 className="text-lg font-medium text-slate-900">{t('moduleContent')}</h3>
           
           {type !== 'Quiz' ? (
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-slate-700">
-                {type === 'Video' ? t('videoUrl') : t('documentUrl')}
-              </label>
-              <input
-                type="url"
-                required
-                value={contentUrl}
-                onChange={(e) => setContentUrl(e.target.value)}
-                placeholder="https://"
-                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
+            <div className="space-y-6">
+              <div className="flex space-x-6 border-b border-slate-200 pb-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={contentType === 'Url'}
+                    onChange={() => setContentType('Url')}
+                    className="text-primary-600 focus:ring-primary-500 w-4 h-4"
+                  />
+                  <span className="text-sm font-medium text-slate-700">External URL (e.g., YouTube, Google Drive)</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={contentType === 'File'}
+                    onChange={() => setContentType('File')}
+                    className="text-primary-600 focus:ring-primary-500 w-4 h-4"
+                  />
+                  <span className="text-sm font-medium text-slate-700">Upload File directly</span>
+                </label>
+              </div>
+
+              {contentType === 'Url' ? (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    {type === 'Video' ? t('videoUrl') : t('documentUrl')}
+                  </label>
+                  <input
+                    type="url"
+                    required={contentType === 'Url'}
+                    value={contentUrl}
+                    onChange={(e) => setContentUrl(e.target.value)}
+                    placeholder="https://"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <p className="text-xs text-slate-500 mt-1 flex items-center">
+                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Google Drive link? We&#39;ll automatically lock it down to preview-only for security.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    {type === 'Video' ? 'Upload Video File (.mp4, .webm)' : 'Upload Document File (PDF, Word, Excel, PPT)'}
+                  </label>
+                  
+                  {contentUrl && fileName ? (
+                    <div className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                      <div className="flex items-center space-x-3 overflow-hidden pr-4">
+                        <div className="w-10 h-10 rounded bg-primary-100 flex items-center justify-center flex-shrink-0 text-primary-600">
+                          {type === 'Video' ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                          )}
+                        </div>
+                        <div className="truncate">
+                          <p className="text-sm font-medium text-slate-900 truncate">{fileName}</p>
+                          <p className="text-xs text-slate-500">{fileSize ? (fileSize / 1024 / 1024).toFixed(2) : 0} MB</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setContentUrl('');
+                          setFileName('');
+                          setFileSize(undefined);
+                          setMimeType('');
+                        }}
+                        className="text-red-500 hover:text-red-700 text-sm font-semibold whitespace-nowrap bg-red-50 px-3 py-1.5 rounded-md hover:bg-red-100 transition-colors"
+                      >
+                        Remove file
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative border-2 border-dashed border-slate-300 rounded-lg p-6 hover:bg-slate-50 transition-colors text-center group">
+                      <input
+                        type="file"
+                        accept={type === 'Video' ? 'video/mp4,video/webm' : '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx'}
+                        required={contentType === 'File' && !contentUrl}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          if (file.size > 25 * 1024 * 1024) {
+                            alert('File too large. Maximum size is 25MB.');
+                            e.target.value = '';
+                            return;
+                          }
+                          
+                          setIsUploading(true);
+                          setUploadProgress(15);
+                          
+                          const formData = new FormData();
+                          formData.append('file', file);
+                          
+                          try {
+                            setUploadProgress(45);
+                            const res = await fetch('/api/upload', {
+                              method: 'POST',
+                              body: formData,
+                            });
+                            
+                            const data = await res.json();
+                            if (res.ok) {
+                              setContentUrl(data.url);
+                              setFileName(file.name);
+                              setFileSize(file.size);
+                              setMimeType(file.type);
+                              setUploadProgress(100);
+                            } else {
+                              alert(data.error || 'Upload failed');
+                              e.target.value = '';
+                            }
+                          } catch (err) {
+                            alert('Upload failed. Please try again.');
+                            e.target.value = '';
+                          } finally {
+                            setTimeout(() => {
+                              setIsUploading(false);
+                              setUploadProgress(0);
+                            }, 500);
+                          }
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
+                      
+                      {isUploading ? (
+                        <div className="flex flex-col items-center justify-center space-y-3">
+                          <div className="w-full max-w-xs bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                            <div 
+                              className="bg-primary-600 h-2.5 rounded-full transition-all duration-300 ease-out" 
+                              style={{ width: `${uploadProgress}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-medium text-slate-600 animate-pulse">Uploading securely...</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center space-y-2 text-slate-500 group-hover:text-primary-600 transition-colors">
+                          <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                          <p className="text-sm font-medium">Click or drag file to upload</p>
+                          <p className="text-xs opacity-75">Max file size: 25MB</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-6">
