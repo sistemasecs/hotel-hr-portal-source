@@ -113,12 +113,16 @@ export default function ModulePlayerPage() {
                       
                       if (isGoogleDriveUrl) {
                         return (
-                          <iframe
-                            src={module.contentUrl}
-                            className="w-full h-[600px]"
-                            allow="autoplay"
-                            title={module.title}
-                          />
+                          <div className="relative w-full h-[600px]">
+                            <iframe
+                              src={module.contentUrl}
+                              className="w-full h-full"
+                              allow="autoplay"
+                              title={module.title}
+                            />
+                            {/* Invisible overlay to block the Google Drive "Pop-out" button */}
+                            <div className="absolute top-0 right-0 w-24 h-20 bg-transparent z-10" title="External link disabled" />
+                          </div>
                         );
                       }
                       
@@ -142,9 +146,10 @@ export default function ModulePlayerPage() {
                     })()}
                   </div>
                 ) : (
-                  <div className="aspect-video w-full bg-slate-900 rounded-lg shadow-inner overflow-hidden border border-slate-800 flex items-center justify-center">
+                  <div className="aspect-video w-full bg-slate-900 rounded-lg shadow-inner overflow-hidden border border-slate-800 flex items-center justify-center relative">
                     {(() => {
                       const isNativeVideo = module.contentType === 'File' || module.contentUrl.toLowerCase().endsWith('.mp4') || module.contentUrl.toLowerCase().endsWith('.webm');
+                      const isGoogleDriveUrl = module.contentUrl.includes('drive.google.com');
                       
                       if (isNativeVideo) {
                         return (
@@ -160,13 +165,19 @@ export default function ModulePlayerPage() {
                       }
                       
                       return (
-                        <iframe
-                          src={module.contentUrl}
-                          className="w-full h-full"
-                          allowFullScreen
-                          allow="autoplay"
-                          title={module.title}
-                        />
+                        <>
+                          <iframe
+                            src={module.contentUrl}
+                            className="w-full h-full"
+                            allowFullScreen
+                            allow="autoplay"
+                            title={module.title}
+                          />
+                          {/* Invisible overlay to block the Google Drive "Pop-out" button for videos */}
+                          {isGoogleDriveUrl && (
+                            <div className="absolute top-0 right-0 w-24 h-20 bg-transparent z-10" title="External link disabled" />
+                          )}
+                        </>
                       );
                     })()}
                   </div>
