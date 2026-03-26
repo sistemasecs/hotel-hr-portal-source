@@ -122,7 +122,7 @@ export default function PresenceBar() {
                                     <Info className="w-3 h-3 mr-1 opacity-70" />
                                     Next: {new Intl.DateTimeFormat([], {
                                         hour: '2-digit', minute: '2-digit', timeZone: 'America/Guatemala', hour12: true
-                                    }).format(ensureGuatemalaDate(upcomingShift.start_time))}
+                                    }).format(new Date(ensureGuatemalaDate(upcomingShift.start_time)))}
                                 </p>
                             )}
                         </div>
