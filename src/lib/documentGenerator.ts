@@ -75,12 +75,21 @@ export async function generateYearlyVacationDocument(userId: string, yearNumber:
         const user = userRes.rows[0];
         if (!user) return;
 
-        const requestsRes = await pool.query('SELECT * FROM employee_requests WHERE user_id = $1', [userId]);
+        const requestsRes = await pool.query(`
+            SELECT 
+                r.*, 
+                COALESCE(rd.is_signed, FALSE) as is_signed
+            FROM employee_requests r
+            LEFT JOIN request_documents rd ON r.id = rd.request_id
+            WHERE r.user_id = $1
+        `, [userId]);
+        
         const requests = requestsRes.rows.map(r => ({
             ...r,
             userId: r.user_id,
             requestType: r.type,
-            data: r.data
+            data: r.data,
+            isSigned: r.is_signed
         }));
 
         const history = getVacationHistory(user.hire_date, requests);

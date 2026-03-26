@@ -1676,7 +1676,7 @@ function AdminDashboardContent() {
 
                   <div className="space-y-2">
                     <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{t('vacations')}</div>
-                    {allVacationRequests.filter(r => r.userId === editingUser.id && r.status === 'Approved').length === 0 ? (
+                    {allVacationRequests.filter(r => r.userId === editingUser.id && r.status === 'Approved' && r.isSigned).length === 0 ? (
                       <div className="text-sm text-slate-400 italic py-2">{t('noVacationsTaken')}</div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -3025,7 +3025,7 @@ function AdminDashboardContent() {
                           </div>
                         </div>
                       ))}
-                    {allVacationRequests.filter(r => r.status === 'Approved').length === 0 && (
+                    {allVacationRequests.filter(r => r.status === 'Approved' && r.isSigned).length === 0 && (
                       <div className="p-8 text-center text-slate-500 text-sm">No vacations scheduled</div>
                     )}
                   </div>

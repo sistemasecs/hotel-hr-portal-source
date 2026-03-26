@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { RequestType, User } from '@/types';
+import { RequestType, User, EmployeeRequest } from '@/types';
+import { calculateVacationBalance, getDurationInDays } from '@/lib/vacationUtils';
 
 export default function NewRequestPage() {
   const { user } = useAuth();
@@ -165,6 +166,22 @@ export default function NewRequestPage() {
 
     setIsSubmitting(true);
     try {
+      // Balance Validation for Vacation
+      if (selectedType === 'Vacation') {
+        const reqsRes = await fetch(`/api/requests?userId=${user.id}`);
+        if (reqsRes.ok) {
+          const cloudRequests: EmployeeRequest[] = await reqsRes.json();
+          const { balance } = calculateVacationBalance(user.hireDate, cloudRequests);
+          const requestedDays = getDurationInDays(formData.startDate, formData.endDate);
+          
+          if (requestedDays > balance) {
+            alert(`${t('insufficientBalance')} (${balance} ${t('days')} ${t('available')})`);
+            setIsSubmitting(false);
+            return;
+          }
+        }
+      }
+
       let fileUrl = null;
 
       // Upload file if present

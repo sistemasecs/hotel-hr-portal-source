@@ -470,7 +470,7 @@ export const translations = {
     vacation: "Vacation",
     signed: "Signed",
     needsSigning: "Needs Signing",
-    announcements: 'Announcements',
+    insufficientBalance: 'Insufficient vacation balance',
   },
   es: {
     // General
@@ -941,7 +941,7 @@ export const translations = {
     vacation: "Vacaciones",
     signed: "Firmado",
     needsSigning: "Pendiente de Firma",
-    announcements: 'Anuncios',
+    insufficientBalance: 'Saldo de vacaciones insuficiente',
   },
 };
 

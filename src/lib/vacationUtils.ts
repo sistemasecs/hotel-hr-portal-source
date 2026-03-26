@@ -50,7 +50,7 @@ export interface VacationYearBreakdown {
 export const getVacationHistory = (hireDate: string, requests: EmployeeRequest[]): VacationYearBreakdown[] => {
   const hire = new Date(hireDate);
   const now = new Date();
-  const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved');
+  const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved' && r.isSigned);
   
   const history: VacationYearBreakdown[] = [];
   let currentStart = new Date(hire);
@@ -99,7 +99,7 @@ export const getVacationHistory = (hireDate: string, requests: EmployeeRequest[]
  */
 export const calculateVacationBalance = (hireDate: string, requests: EmployeeRequest[]) => {
   const accrued = getAccruedDays(hireDate);
-  const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved');
+  const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved' && r.isSigned);
   const taken = approvedVacations.reduce((sum, r) => sum + getDurationInDays(r.data.startDate, r.data.endDate), 0);
   
   return {
@@ -114,7 +114,7 @@ export const calculateVacationBalance = (hireDate: string, requests: EmployeeReq
  * Returns null if no vacations have been taken.
  */
 export const getDaysSinceLastVacation = (requests: EmployeeRequest[]): number | null => {
-  const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved');
+  const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved' && r.isSigned);
   if (approvedVacations.length === 0) return null;
 
   const dates = approvedVacations.map(r => new Date(r.data.endDate).getTime());

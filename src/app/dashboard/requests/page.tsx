@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSearchParams } from 'next/navigation';
 import { EmployeeRequest } from '@/types';
+import { calculateVacationBalance } from '@/lib/vacationUtils';
 
 export default function MyRequestsPage() {
   const { user } = useAuth();
@@ -224,6 +225,31 @@ export default function MyRequestsPage() {
         </div>
       ) : (
         <>
+          {/* Vacation Balance Summary */}
+          {user?.hireDate && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+              {(() => {
+                const { accrued, taken, balance } = calculateVacationBalance(user.hireDate, requests);
+                return (
+                  <>
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                      <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('accrued')}</p>
+                      <p className="text-2xl font-bold text-slate-900 mt-1">{accrued} {t('days')}</p>
+                    </div>
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                      <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('taken')}</p>
+                      <p className="text-2xl font-bold text-slate-900 mt-1">{taken} {t('days')}</p>
+                    </div>
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-primary-100 bg-primary-50/30">
+                      <p className="text-sm font-medium text-primary-600 uppercase tracking-wider">{t('remaining')}</p>
+                      <p className="text-2xl font-bold text-primary-700 mt-1">{balance} {t('days')}</p>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
           {requestsToCover.length > 0 && (
             <div className="mb-12">
               <h2 className="text-2xl font-bold text-slate-900 mb-4">{t('requestsToCover')}</h2>

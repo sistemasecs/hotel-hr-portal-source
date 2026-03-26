@@ -168,6 +168,7 @@ export interface EmployeeRequest {
   data: any; // JSON data specific to the request type
   supervisorId?: string | null;
   hrNotes?: string | null;
+  isSigned?: boolean;
   createdAt: string;
   updatedAt: string;
 }
