@@ -95,3 +95,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json();
+    const { title, message, broadcast } = body;
+
+    if (broadcast) {
+      if (!title || !message) {
+        return NextResponse.json({ error: 'Title and message required to delete broadcast' }, { status: 400 });
+      }
+
+      const query = `
+        DELETE FROM notifications 
+        WHERE type = 'BROADCAST' AND title = $1 AND message = $2
+        RETURNING id
+      `;
+      const { rows } = await pool.query(query, [title, message]);
+      return NextResponse.json({ success: true, deletedCount: rows.length });
+    }
+
+    return NextResponse.json({ error: 'Invalid delete request' }, { status: 400 });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}

@@ -7,10 +7,11 @@ import { formatDistanceToNow } from 'date-fns';
 import { Notification } from '@/types';
 
 export default function BroadcastsWallPage() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { t } = useLanguage();
   const [broadcasts, setBroadcasts] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -41,6 +42,36 @@ export default function BroadcastsWallPage() {
 
     fetchBroadcasts();
   }, [user?.id]);
+
+  const handleDeleteBroadcast = async (broadcast: Notification) => {
+    if (!window.confirm('Are you sure you want to delete this broadcast? This will remove it for ALL users.')) {
+      return;
+    }
+
+    setIsDeleting(broadcast.id);
+    try {
+      const res = await fetch('/api/notifications', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          broadcast: true,
+          title: broadcast.title,
+          message: broadcast.message
+        })
+      });
+
+      if (res.ok) {
+        setBroadcasts(prev => prev.filter(b => b.title !== broadcast.title || b.message !== broadcast.message));
+      } else {
+        alert('Failed to delete broadcast');
+      }
+    } catch (error) {
+      console.error('Error deleting broadcast:', error);
+      alert('An error occurred');
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   if (!user) return null;
 
@@ -77,9 +108,27 @@ export default function BroadcastsWallPage() {
                   <h2 className="text-xl font-bold text-slate-900 leading-tight">
                     {broadcast.title}
                   </h2>
-                  <span className="bg-primary-50 text-primary-700 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap ml-4">
-                    {formatDistanceToNow(new Date(broadcast.created_at), { addSuffix: true })}
-                  </span>
+                  <div className="flex items-center space-x-3 ml-4">
+                    <span className="bg-primary-50 text-primary-700 text-xs font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                      {formatDistanceToNow(new Date(broadcast.created_at), { addSuffix: true })}
+                    </span>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDeleteBroadcast(broadcast)}
+                        disabled={isDeleting === broadcast.id}
+                        className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded-md transition-colors disabled:opacity-50"
+                        title="Delete broadcast for all users"
+                      >
+                        {isDeleting === broadcast.id ? (
+                          <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="prose prose-slate max-w-none text-slate-700 whitespace-pre-wrap">
