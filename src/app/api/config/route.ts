@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 
 export async function GET() {
     try {
-        const result = await pool.query("SELECT key, value FROM hotel_config WHERE key IN ('hotel_logo', 'event_types', 'hotel_latitude', 'hotel_longitude', 'hotel_geofence_radius', 'clock_in_window_minutes', 'working_days')");
+        const result = await pool.query("SELECT key, value FROM hotel_config WHERE key IN ('hotel_logo', 'event_types', 'hotel_latitude', 'hotel_longitude', 'hotel_geofence_radius', 'clock_in_window_minutes', 'working_days', 'hotel_timezone')");
 
         const config: Record<string, any> = {
             hotelLogo: null,
@@ -12,7 +12,8 @@ export async function GET() {
             hotelLongitude: null,
             hotelGeofenceRadius: null,
             clockInWindowMinutes: null,
-            workingDays: [1, 2, 3, 4, 5] // Default Mon-Fri
+            workingDays: [1, 2, 3, 4, 5], // Default Mon-Fri
+            hotelTimezone: 'America/Guatemala'
         };
 
         result.rows.forEach(row => {
@@ -35,6 +36,7 @@ export async function GET() {
                     config.workingDays = [1, 2, 3, 4, 5];
                 }
             }
+            if (row.key === 'hotel_timezone') config.hotelTimezone = row.value;
         });
 
         return NextResponse.json(config);
@@ -47,7 +49,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { hotelLogo, eventTypes, hotelLatitude, hotelLongitude, hotelGeofenceRadius, clockInWindowMinutes, workingDays } = body;
+        const { hotelLogo, eventTypes, hotelLatitude, hotelLongitude, hotelGeofenceRadius, clockInWindowMinutes, workingDays, hotelTimezone } = body;
 
         if (hotelLogo !== undefined) {
             if (hotelLogo === null) {
@@ -103,6 +105,12 @@ export async function POST(request: Request) {
             await pool.query(
                 "INSERT INTO hotel_config (key, value) VALUES ('working_days', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
                 [JSON.stringify(workingDays)]
+            );
+        }
+        if (hotelTimezone !== undefined) {
+            await pool.query(
+                "INSERT INTO hotel_config (key, value) VALUES ('hotel_timezone', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                [hotelTimezone]
             );
         }
         

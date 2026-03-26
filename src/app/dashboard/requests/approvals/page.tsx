@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { formatDisplayDate } from '@/lib/dateUtils';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { EmployeeRequest } from '@/types';
@@ -168,7 +169,7 @@ export default function ApprovalsPage() {
                     >
                       <div className="flex justify-between items-start mb-1">
                         <span className="font-medium text-slate-900">{req.userName}</span>
-                        <span className="text-xs text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</span>
+                        <span className="text-xs text-slate-500">{formatDisplayDate(req.createdAt)}</span>
                       </div>
                       <div className="text-sm text-slate-600 font-medium">{getTranslatedType(req.type)}</div>
                       <div className="text-xs text-slate-500 mt-1 truncate">{req.userDepartment}</div>

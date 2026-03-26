@@ -24,6 +24,7 @@ interface DataContextType {
     hotelGeofenceRadius: number | null;
     clockInWindowMinutes: number | null;
     workingDays: number[];
+    hotelTimezone: string;
   };
   assignTraining: (userId: string, moduleId: string) => void;
   updateTrainingStatus: (userId: string, moduleId: string, status: UserTraining['status']) => void;
@@ -100,12 +101,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hotelGeofenceRadius: number | null;
     clockInWindowMinutes: number | null;
     workingDays: number[];
+    hotelTimezone: string;
   }>({
     hotelLatitude: null,
     hotelLongitude: null,
     hotelGeofenceRadius: null,
     clockInWindowMinutes: null,
     workingDays: [1, 2, 3, 4, 5],
+    hotelTimezone: 'America/Guatemala',
   });
 
   const fetchActivityLogs = async () => {
@@ -135,6 +138,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             hotelGeofenceRadius: null,
             clockInWindowMinutes: null,
             workingDays: [1, 2, 3, 4, 5],
+            hotelTimezone: 'America/Guatemala',
           };
 
           // Assuming config is an array of { key: string, value: string } or similar
@@ -144,6 +148,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (config.hotelGeofenceRadius !== undefined) newConfig.hotelGeofenceRadius = parseFloat(config.hotelGeofenceRadius);
           if (config.clockInWindowMinutes !== undefined) newConfig.clockInWindowMinutes = parseInt(config.clockInWindowMinutes);
           if (config.workingDays !== undefined) newConfig.workingDays = config.workingDays;
+          if (config.hotelTimezone !== undefined) newConfig.hotelTimezone = config.hotelTimezone;
  
           setHotelConfig(newConfig);
         }
@@ -731,6 +736,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           hotelGeofenceRadius: newConfig.hotelGeofenceRadius,
           clockInWindowMinutes: newConfig.clockInWindowMinutes,
           workingDays: newConfig.workingDays,
+          hotelTimezone: newConfig.hotelTimezone,
         })
       });
       if (response.ok) {

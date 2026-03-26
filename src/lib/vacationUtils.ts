@@ -1,12 +1,13 @@
 import { EmployeeRequest } from '@/types';
+import { parseLocalDate, formatDisplayDate } from './dateUtils';
 
 /**
  * Calculates the number of days between two dates inclusive.
  * Assumes dates are in YYYY-MM-DD format.
  */
 export const getDurationInDays = (startDate: string, endDate: string, holidays: any[] = [], workingDays: number[] = [0, 1, 2, 3, 4, 5, 6]): number => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = parseLocalDate(startDate);
+  const end = parseLocalDate(endDate);
   
   // Set to midnight to avoid DST issues
   start.setHours(0, 0, 0, 0);
@@ -22,10 +23,8 @@ export const getDurationInDays = (startDate: string, endDate: string, holidays: 
     if (isWorkingDay) {
       const dateStr = current.toISOString().split('T')[0];
       const isHoliday = holidays.some(h => {
-        const hStart = new Date(h.start_date);
-        const hEnd = new Date(h.end_date);
-        hStart.setHours(0, 0, 0, 0);
-        hEnd.setHours(0, 0, 0, 0);
+        const hStart = parseLocalDate(h.start_date);
+        const hEnd = parseLocalDate(h.end_date);
         return current >= hStart && current <= hEnd;
       });
       
@@ -43,8 +42,8 @@ export const getDurationInDays = (startDate: string, endDate: string, holidays: 
  * Calculates total accrued vacation days since hire date (15 days per completed year).
  */
 export const getAccruedDays = (hireDate: string, currentDate: string = new Date().toISOString().split('T')[0]): number => {
-  const hire = new Date(hireDate);
-  const current = new Date(currentDate);
+  const hire = parseLocalDate(hireDate);
+  const current = parseLocalDate(currentDate);
   
   if (isNaN(hire.getTime()) || isNaN(current.getTime())) {
     return 0;
@@ -75,7 +74,7 @@ export interface VacationYearBreakdown {
  * Groups approved vacation requests by employment year.
  */
 export const getVacationHistory = (hireDate: string, requests: EmployeeRequest[], yearlyDocs: any[] = [], holidays: any[] = [], workingDays: number[] = [0, 1, 2, 3, 4, 5, 6]): VacationYearBreakdown[] => {
-  const hire = new Date(hireDate);
+  const hire = parseLocalDate(hireDate);
   const now = new Date();
   const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved' && r.isSigned);
   
@@ -90,12 +89,12 @@ export const getVacationHistory = (hireDate: string, requests: EmployeeRequest[]
     periodEnd.setDate(periodEnd.getDate() - 1);
     
     // Period string formats
-    const startStr = periodStart.toISOString().split('T')[0];
-    const endStr = periodEnd.toISOString().split('T')[0];
+    const startStr = formatDisplayDate(periodStart);
+    const endStr = formatDisplayDate(periodEnd);
     
     // Find requests that fall within this year
     const yearRequests = approvedVacations.filter(r => {
-      const reqStart = new Date(r.data.startDate);
+      const reqStart = parseLocalDate(r.data.startDate);
       return reqStart >= periodStart && reqStart <= periodEnd;
     });
  
@@ -158,7 +157,7 @@ export const getDaysSinceLastVacation = (requests: EmployeeRequest[]): number | 
   const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved' && r.isSigned);
   if (approvedVacations.length === 0) return null;
 
-  const dates = approvedVacations.map(r => new Date(r.data.endDate).getTime());
+  const dates = approvedVacations.map(r => parseLocalDate(r.data.endDate).getTime());
   const lastEndDate = new Date(Math.max(...dates));
   const now = new Date();
   

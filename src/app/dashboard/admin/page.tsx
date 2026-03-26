@@ -9,7 +9,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { User, Event, TrainingModule, EmployeeRequest } from '@/types';
 import ModuleForm from '@/components/admin/ModuleForm';
 import AttendanceReports from '@/components/admin/AttendanceReports';
-import { calculateVacationBalance, getVacationHistory, getDurationInDays, getDaysSinceLastVacation, VacationYearBreakdown } from '@/lib/vacationUtils';
+import { getAccruedDays, getVacationHistory, getDaysSinceLastVacation, calculateVacationBalance, getDurationInDays } from '@/lib/vacationUtils';
+import { formatDisplayDate, parseLocalDate } from '@/lib/dateUtils';
 import Papa from 'papaparse';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -471,7 +472,7 @@ function AdminDashboardContent() {
           userId: targetUserId,
           yearNumber,
           signedById: user?.id,
-          notes: `Signed via Admin Dashboard - ${new Date().toLocaleDateString()}`
+          notes: `Signed via Admin Dashboard - ${formatDisplayDate(new Date())}`
         })
       });
 
@@ -1121,7 +1122,7 @@ function AdminDashboardContent() {
                       </div>
                     </td>
                     <td className="p-4 text-sm text-slate-600">{u.area || '-'}</td>
-                    <td className="p-4 text-sm text-slate-600 font-medium">{parseDate(u.hireDate).toLocaleDateString()}</td>
+                    <td className="p-4 text-sm text-slate-600 font-medium">{formatDisplayDate(u.hireDate)}</td>
                     <td className="p-4">
                       {u.emergencyContactName ? (
                         <div className="flex flex-col">
@@ -1729,7 +1730,7 @@ function AdminDashboardContent() {
                             <tr key={year.yearNumber} className="hover:bg-slate-50">
                               <td className="px-4 py-2 font-medium">#{year.yearNumber}</td>
                               <td className="px-4 py-2 text-slate-500 text-xs">
-                                {new Date(year.periodStart).toLocaleDateString()} - {new Date(year.periodEnd).toLocaleDateString()}
+                                {formatDisplayDate(year.periodStart)} - {formatDisplayDate(year.periodEnd)}
                               </td>
                               <td className="px-4 py-2 text-center">{year.accrued}</td>
                               <td className="px-4 py-2 text-center">{year.taken}</td>
@@ -1754,7 +1755,7 @@ function AdminDashboardContent() {
                             <div key={r.id} className="bg-white border border-slate-200 p-3 rounded-lg shadow-sm">
                               <div className="flex justify-between items-start mb-1">
                                 <span className="text-xs font-bold text-slate-900">
-                                  {new Date(r.data.startDate).toLocaleDateString()} - {new Date(r.data.endDate).toLocaleDateString()}
+                                  {formatDisplayDate(r.data.startDate)} - {formatDisplayDate(r.data.endDate)}
                                 </span>
                                 <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
                                   {getDurationInDays(r.data.startDate, r.data.endDate, holidays, hotelConfig.workingDays)} {t('days')}
@@ -2091,7 +2092,7 @@ function AdminDashboardContent() {
                             </span>
                           </td>
                           <td className="p-4 text-sm text-slate-600">
-                            {ut.completionDate ? new Date(ut.completionDate).toLocaleDateString() : '-'}
+                            {ut.completionDate ? formatDisplayDate(ut.completionDate) : '-'}
                           </td>
                         </tr>
                       );
@@ -2449,7 +2450,7 @@ function AdminDashboardContent() {
                         <p className="text-xs text-slate-500 truncate max-w-xs">{e.description}</p>
                       </td>
                       <td className="p-4">
-                        <p className="text-sm text-slate-600">{new Date(e.date).toLocaleDateString()}</p>
+                        <p className="text-sm text-slate-600">{formatDisplayDate(e.date)}</p>
                         {e.time && <p className="text-xs text-slate-500">{e.time}</p>}
                       </td>
                       <td className="p-4">
@@ -3147,7 +3148,7 @@ function AdminDashboardContent() {
                     <tr key={template.id} className="hover:bg-slate-50 transition-colors">
                       <td className="p-4 text-sm font-medium text-slate-900">{template.name}</td>
                       <td className="p-4 text-sm text-slate-600">{template.requestType}</td>
-                      <td className="p-4 text-sm text-slate-500">{new Date(template.updatedAt).toLocaleDateString()}</td>
+                      <td className="p-4 text-sm text-slate-500">{formatDisplayDate(template.updatedAt)}</td>
                       <td className="p-4 text-right space-x-3">
                         <button
                           onClick={() => {
@@ -3496,7 +3497,7 @@ function AdminDashboardContent() {
                   <tr key={holiday.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="p-4 text-sm font-medium text-slate-900">{holiday.name}</td>
                     <td className="p-4 text-sm text-slate-500">
-                      {new Date(holiday.start_date).toLocaleDateString()} - {new Date(holiday.end_date).toLocaleDateString()}
+                      {formatDisplayDate(holiday.start_date)} - {formatDisplayDate(holiday.end_date)}
                     </td>
                     <td className="p-4">
                       <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-lg">
@@ -3605,6 +3606,36 @@ function AdminDashboardContent() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+              <div className="p-6 border-b border-slate-100">
+                <h2 className="text-xl font-semibold text-slate-800">Timezone Settings</h2>
+                <p className="text-sm text-slate-500 mt-1">Configure the local timezone for all date calculations.</p>
+              </div>
+              <div className="p-6 space-y-6">
+                <div className="max-w-md space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Hotel Timezone</label>
+                    <select
+                      value={hotelConfig.hotelTimezone || 'America/Guatemala'}
+                      onChange={(e) => updateHotelConfig({ hotelTimezone: e.target.value })}
+                      className="w-full border border-slate-200 rounded-lg p-2 text-sm bg-white text-slate-900"
+                    >
+                      <option value="America/Guatemala">GMT-6 (Guatemala / Central America)</option>
+                      <option value="America/Mexico_City">GMT-6 (Mexico City)</option>
+                      <option value="America/New_York">GMT-5 (Eastern Time)</option>
+                      <option value="America/Chicago">GMT-6 (Central Time)</option>
+                      <option value="America/Denver">GMT-7 (Mountain Time)</option>
+                      <option value="America/Los_Angeles">GMT-8 (Pacific Time)</option>
+                      <option value="UTC">UTC (Coordinated Universal Time)</option>
+                    </select>
+                    <p className="text-[10px] text-slate-500 mt-1 italic">
+                      This ensures that vacations, shifts, and reports align precisely with the hotel's local calendar days, preventing "one day off" errors.
+                    </p>
+                  </div>
+                </div>
+              </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">

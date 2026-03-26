@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { formatDisplayDate } from '@/lib/dateUtils';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSearchParams } from 'next/navigation';
@@ -414,7 +415,7 @@ export default function MyRequestsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-slate-500">
-                            {new Date(request.createdAt).toLocaleDateString()}
+                            {formatDisplayDate(request.createdAt)}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -502,7 +503,7 @@ export default function MyRequestsPage() {
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-900">{t('employmentYear')} {doc.request_id.split(':').pop()}</h3>
-                        <p className="text-xs text-slate-500">{new Date(doc.created_at).toLocaleDateString()}</p>
+                        <p className="text-xs text-slate-500">{formatDisplayDate(doc.created_at)}</p>
                       </div>
                     </div>
                     {doc.is_signed ? (
