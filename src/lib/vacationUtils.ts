@@ -23,6 +23,10 @@ export const getAccruedDays = (hireDate: string, currentDate: string = new Date(
   const hire = new Date(hireDate);
   const current = new Date(currentDate);
   
+  if (isNaN(hire.getTime()) || isNaN(current.getTime())) {
+    return 0;
+  }
+  
   let years = current.getFullYear() - hire.getFullYear();
   
   // Adjust if anniversary hasn't happened yet this year

@@ -31,9 +31,11 @@ export async function GET(request: Request) {
                 r.created_at as "createdAt", 
                 r.updated_at as "updatedAt",
                 u.name as "userName",
-                u.department as "userDepartment"
+                u.department as "userDepartment",
+                COALESCE(rd.is_signed, FALSE) as "isSigned"
             FROM employee_requests r
             JOIN users u ON r.user_id = u.id
+            LEFT JOIN request_documents rd ON r.id = rd.request_id
             WHERE r.type = 'Vacation'
         `;
         
