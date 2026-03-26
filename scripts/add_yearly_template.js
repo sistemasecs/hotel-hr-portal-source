@@ -50,7 +50,6 @@ async function addTemplate() {
     await pool.query(`
       INSERT INTO document_templates (name, request_type, content)
       VALUES ($1, $2, $3)
-      ON CONFLICT (name) DO NOTHING
     `, ['Yearly Vacation Consent', 'YearlyVacation', content]);
 
     console.log('Yearly Vacation Consent template added successfully.');

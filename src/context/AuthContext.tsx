@@ -17,12 +17,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  // Simulate checking local storage on mount
+  // Check local storage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem('hotel_hr_user');
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed);
+        
+        // If hireDate is missing (stale data), we should re-fetch 
+        // to ensure vacation balance works.
+        if (parsed && !parsed.hireDate && parsed.id) {
+          fetch(`/api/users/${parsed.id}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.hireDate) {
+                const updated = { ...parsed, hireDate: data.hireDate };
+                setUser(updated);
+                localStorage.setItem('hotel_hr_user', JSON.stringify(updated));
+              }
+            });
+        }
       } catch (e) {
         console.error('Failed to parse stored user', e);
       }
