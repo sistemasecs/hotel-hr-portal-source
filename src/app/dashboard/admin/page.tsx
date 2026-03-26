@@ -61,7 +61,7 @@ function AdminDashboardContent() {
           type: 'BROADCAST',
           title: broadcastTitle,
           message: broadcastMessage,
-          link: '/dashboard'
+          link: '/dashboard/broadcasts'
         })
       });
 

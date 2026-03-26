@@ -10,13 +10,22 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'UserId is required' }, { status: 400 });
     }
 
-    const query = `
+    const typeParam = searchParams.get('type');
+
+    let query = `
       SELECT * FROM notifications 
       WHERE user_id = $1 
-      ORDER BY created_at DESC 
-      LIMIT 50
     `;
-    const { rows } = await pool.query(query, [userId]);
+    const params: any[] = [userId];
+
+    if (typeParam) {
+      query += ` AND type = $2 `;
+      params.push(typeParam);
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT 100 `;
+    
+    const { rows } = await pool.query(query, params);
 
     return NextResponse.json(rows);
   } catch (error) {

@@ -22,10 +22,21 @@ export default function PresenceBar() {
     const [showNotifications, setShowNotifications] = useState(false);
 
     useEffect(() => {
+        let intervalId: NodeJS.Timeout;
+
         if (user?.id) {
             fetchUserShifts(user.id);
             fetchNotifications(user.id);
+
+            // Poll for live notifications every 60 seconds
+            intervalId = setInterval(() => {
+                fetchNotifications(user.id);
+            }, 60000);
         }
+
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+        };
     }, [user?.id]);
 
     // Unread count
