@@ -3505,10 +3505,31 @@ function AdminDashboardContent() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-8 bg-slate-100/30">
-                <div 
-                  className="bg-white shadow-sm border border-slate-200 p-12 mx-auto max-w-[210mm] min-h-[297mm] prose prose-slate"
-                  dangerouslySetInnerHTML={{ __html: viewingYearlyDoc.content }}
-                />
+                <div className="bg-white shadow-sm border border-slate-200 p-12 mx-auto max-w-[210mm] min-h-[297mm] flex flex-col">
+                  <div 
+                    className="prose prose-slate flex-1"
+                    dangerouslySetInnerHTML={{ __html: viewingYearlyDoc.content }}
+                  />
+                  {viewingYearlyDoc.is_signed && (
+                    <div className="mt-8 pt-8 border-t border-slate-200 flex flex-col items-center">
+                      {viewingYearlyDoc.signature_data ? (
+                        <img 
+                          src={viewingYearlyDoc.signature_data} 
+                          alt="Signature" 
+                          className="h-24 object-contain mb-2"
+                        />
+                      ) : (
+                        <div className="font-cursive text-3xl text-slate-800 mb-2">
+                          Digitally Signed
+                        </div>
+                      )}
+                      <div className="h-px w-64 bg-slate-900 mb-2"></div>
+                      <p className="text-xs text-slate-500 uppercase tracking-widest text-center">
+                        {t('digitallySignedOn')}: {new Date(viewingYearlyDoc.signed_at).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

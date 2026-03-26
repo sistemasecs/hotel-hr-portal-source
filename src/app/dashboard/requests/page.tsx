@@ -6,7 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSearchParams } from 'next/navigation';
 import { EmployeeRequest } from '@/types';
-import { calculateVacationBalance } from '@/lib/vacationUtils';
+import { calculateVacationBalance, getDurationInDays } from '@/lib/vacationUtils';
+import SignaturePad from '@/components/SignaturePad';
 
 export default function MyRequestsPage() {
   const { user } = useAuth();
@@ -22,8 +23,11 @@ export default function MyRequestsPage() {
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
   const [activeDoc, setActiveDoc] = useState<any>(null);
   const [isSigning, setIsSigning] = useState(false);
-  const [manualDates, setManualDates] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [manualDays, setManualDays] = useState<number>(15);
+  const [signatureData, setSignatureData] = useState<string>('');
+  const [currentHTML, setCurrentHTML] = useState<string>('');
 
   useEffect(() => {
     if (user) {
@@ -49,6 +53,49 @@ export default function MyRequestsPage() {
       return () => clearTimeout(timer);
     }
   }, [highlightId, requests]);
+
+  // Dynamic HTML update for Yearly Summaries
+  useEffect(() => {
+    if (activeDoc && activeDoc.request_id.startsWith('YEARLY:')) {
+      let html = activeDoc.content || '';
+      const days = (startDate && endDate) ? getDurationInDays(startDate, endDate) : 15;
+      setManualDays(days);
+
+      // Period Range replacement
+      if (startDate && endDate) {
+        html = html.replace(/<p><strong>Periodo \/ Period:<\/strong>.*?<\/p>/, 
+                            `<p><strong>Periodo / Period:</strong> ${startDate} - ${endDate}</p>`);
+      }
+      
+      // Accrued/Taken/Remaining replacements - keeping it simple by searching for the labels
+      html = html.replace(/Días Tomados \/ Taken Days: <strong>.*?<\/strong>/, 
+                          `Días Tomados / Taken Days: <strong>${days}</strong>`);
+      
+      // Update remaining if we can find it
+      const accruedMatch = html.match(/Días Acumulados \/ Accrued Days: <strong>(\d+)<\/strong>/);
+      if (accruedMatch) {
+        const accrued = parseInt(accruedMatch[1]);
+        html = html.replace(/Días Restantes \/ Remaining Days: <strong>.*?<\/strong>/, 
+                            `Días Restantes / Remaining Days: <strong>${accrued - days}</strong>`);
+      }
+
+      // Update table if it exists
+      if (startDate && endDate) {
+        const tableRow = `<tr>
+          <td style="padding: 8px; border: 1px solid #e2e8f0;">#MANUAL</td>
+          <td style="padding: 8px; border: 1px solid #e2e8f0;">${startDate} - ${endDate}</td>
+          <td style="padding: 8px; border: 1px solid #e2e8f0;">${days}</td>
+        </tr>`;
+        html = html.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${tableRow}</tbody>`);
+        html = html.replace(/Total Tomado \/ Total Taken:<\/td>\s*<td.*?>.*?<\/td>/, 
+                            `Total Tomado / Total Taken:</td><td style="padding: 8px; border: 1px solid #e2e8f0;">${days}</td>`);
+      }
+
+      setCurrentHTML(html);
+    } else if (activeDoc) {
+      setCurrentHTML(activeDoc.content || '');
+    }
+  }, [activeDoc, startDate, endDate]);
 
   const [yearlyDocs, setYearlyDocs] = useState<any[]>([]);
 
@@ -100,14 +147,24 @@ export default function MyRequestsPage() {
     if (!activeDoc) return;
     setIsSigning(true);
     try {
+      if (!activeDoc.signed_at && !signatureData) {
+        alert('Por favor, firme el documento / Please sign the document');
+        setIsSigning(false);
+        return;
+      }
+
       const res = await fetch('/api/requests/documents', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           requestId: activeDoc.request_id,
+          signatureData: signatureData || undefined,
+          content: activeDoc.request_id.startsWith('YEARLY:') ? currentHTML : undefined,
           data: activeDoc.request_id.startsWith('YEARLY:') ? {
-            manualDates,
-            manualDays
+            manualDates: `${startDate} - ${endDate}`,
+            manualDays,
+            startDate,
+            endDate
           } : undefined
         })
       });
@@ -124,6 +181,14 @@ export default function MyRequestsPage() {
     } finally {
       setIsSigning(false);
     }
+  };
+
+  const openSignModal = (doc: any) => {
+    setActiveDoc(doc);
+    setSignatureData('');
+    setStartDate('');
+    setEndDate('');
+    setIsSignModalOpen(true);
   };
 
   const fetchRequestsToCover = async () => {
@@ -379,10 +444,7 @@ export default function MyRequestsPage() {
                             <div className="mt-2">
                               {documents[request.id].signed_at ? (
                                 <button
-                                  onClick={() => {
-                                    setActiveDoc(documents[request.id]);
-                                    setIsSignModalOpen(true);
-                                  }}
+                                  onClick={() => openSignModal(documents[request.id])}
                                   className="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline flex items-center"
                                 >
                                   <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -390,10 +452,7 @@ export default function MyRequestsPage() {
                                 </button>
                               ) : (
                                 <button
-                                  onClick={() => {
-                                    setActiveDoc(documents[request.id]);
-                                    setIsSignModalOpen(true);
-                                  }}
+                                  onClick={() => openSignModal(documents[request.id])}
                                   className="text-xs font-bold text-primary-600 hover:text-primary-700 underline flex items-center"
                                 >
                                   <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
@@ -443,7 +502,7 @@ export default function MyRequestsPage() {
                 
                 <div className="mt-6 flex space-x-3">
                   <button
-                    onClick={() => { setActiveDoc(doc); setIsSignModalOpen(true); }}
+                    onClick={() => openSignModal(doc)}
                     className={`flex-1 px-4 py-2 text-sm font-bold rounded-lg transition-colors shadow-sm ${
                       !doc.is_signed 
                         ? 'bg-primary-600 text-white hover:bg-primary-700' 
@@ -474,7 +533,7 @@ export default function MyRequestsPage() {
             <div className="flex-1 overflow-y-auto bg-slate-50 p-8 rounded-lg border border-slate-200 shadow-inner mb-6 text-slate-900">
               <div 
                 className="max-w-2xl mx-auto bg-white p-12 shadow-sm min-h-[600px] prose prose-slate"
-                dangerouslySetInnerHTML={{ __html: (activeDoc.content || '').replace(/\n/g, '<br/>') }}
+                dangerouslySetInnerHTML={{ __html: currentHTML.replace(/\n/g, '<br/>') }}
               />
 
               {/* Editable Dates for Yearly Summaries (Unsigned) */}
@@ -484,42 +543,63 @@ export default function MyRequestsPage() {
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     Información Histórica / Historical Info
                   </h3>
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-amber-800 mb-1">
-                        Fechas en que tomó estas vacaciones / Dates when you took this vacation
+                        Fecha Inicio / Start Date
                       </label>
                       <input 
-                        type="text"
-                        value={manualDates}
-                        onChange={(e) => setManualDates(e.target.value)}
-                        placeholder="ej: Julio 2018 / e.g: July 2018"
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
                         className="w-full px-3 py-2 text-sm bg-white border border-amber-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-amber-800 mb-1">
-                        Días tomados (generalmente 15) / Days taken (usually 15)
+                        Fecha Fin / End Date
                       </label>
                       <input 
-                        type="number"
-                        value={manualDays}
-                        onChange={(e) => setManualDays(parseInt(e.target.value) || 0)}
-                        className="w-24 px-3 py-2 text-sm bg-white border border-amber-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-full px-3 py-2 text-sm bg-white border border-amber-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
                       />
                     </div>
-                    <p className="text-[10px] text-amber-700 italic">
-                      * Estos días se restarán de su balance acumulado. / These days will be subtracted from your accumulated balance.
-                    </p>
+                    <div className="sm:col-span-2">
+                       <p className="text-sm font-bold text-amber-900">
+                         Días a descontar: <span className="text-lg">{manualDays}</span>
+                       </p>
+                    </div>
                   </div>
                 </div>
               )}
+
+              {/* Signature Pad (Unsigned) */}
+              {!activeDoc.signed_at && (
+                <div className="max-w-2xl mx-auto mt-8 p-6 bg-slate-50 border border-slate-200 rounded-xl">
+                  <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    Firma Digital / Digital Signature
+                  </h3>
+                  <SignaturePad onSave={setSignatureData} />
+                </div>
+              )}
+
               {activeDoc.signed_at && (
                 <div className="max-w-2xl mx-auto mt-8 pt-8 border-t border-slate-200">
                   <div className="flex flex-col items-center">
-                    <div className="font-cursive text-3xl text-slate-800 mb-2" style={{ fontFamily: 'Dancing Script, cursive' }}>
-                      {user?.name}
-                    </div>
+                    {activeDoc.signature_data ? (
+                      <img 
+                        src={activeDoc.signature_data} 
+                        alt="Signature" 
+                        className="h-24 object-contain mb-2"
+                      />
+                    ) : (
+                      <div className="font-cursive text-3xl text-slate-800 mb-2" style={{ fontFamily: 'Dancing Script, cursive' }}>
+                        {user?.name}
+                      </div>
+                    )}
                     <div className="h-px w-64 bg-slate-900 mb-2"></div>
                     <p className="text-xs text-slate-500 uppercase tracking-widest text-center">
                       {t('digitallySignedOn')}: {new Date(activeDoc.signed_at).toLocaleString()}
