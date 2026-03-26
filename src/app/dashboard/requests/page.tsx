@@ -22,6 +22,8 @@ export default function MyRequestsPage() {
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
   const [activeDoc, setActiveDoc] = useState<any>(null);
   const [isSigning, setIsSigning] = useState(false);
+  const [manualDates, setManualDates] = useState<string>('');
+  const [manualDays, setManualDays] = useState<number>(15);
 
   useEffect(() => {
     if (user) {
@@ -101,7 +103,13 @@ export default function MyRequestsPage() {
       const res = await fetch('/api/requests/documents', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId: activeDoc.request_id })
+        body: JSON.stringify({ 
+          requestId: activeDoc.request_id,
+          data: activeDoc.request_id.startsWith('YEARLY:') ? {
+            manualDates,
+            manualDays
+          } : undefined
+        })
       });
 
       if (res.ok) {
@@ -229,7 +237,7 @@ export default function MyRequestsPage() {
           {user?.hireDate && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
               {(() => {
-                const { accrued, taken, balance } = calculateVacationBalance(user.hireDate, requests);
+                const { accrued, taken, balance } = calculateVacationBalance(user.hireDate, requests, yearlyDocs);
                 return (
                   <>
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -468,6 +476,44 @@ export default function MyRequestsPage() {
                 className="max-w-2xl mx-auto bg-white p-12 shadow-sm min-h-[600px] prose prose-slate"
                 dangerouslySetInnerHTML={{ __html: (activeDoc.content || '').replace(/\n/g, '<br/>') }}
               />
+
+              {/* Editable Dates for Yearly Summaries (Unsigned) */}
+              {activeDoc.request_id.startsWith('YEARLY:') && !activeDoc.signed_at && (
+                <div className="max-w-2xl mx-auto mt-8 bg-amber-50 p-6 rounded-xl border border-amber-200">
+                  <h3 className="text-sm font-bold text-amber-900 mb-4 flex items-center">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    Información Histórica / Historical Info
+                  </h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-amber-800 mb-1">
+                        Fechas en que tomó estas vacaciones / Dates when you took this vacation
+                      </label>
+                      <input 
+                        type="text"
+                        value={manualDates}
+                        onChange={(e) => setManualDates(e.target.value)}
+                        placeholder="ej: Julio 2018 / e.g: July 2018"
+                        className="w-full px-3 py-2 text-sm bg-white border border-amber-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-amber-800 mb-1">
+                        Días tomados (generalmente 15) / Days taken (usually 15)
+                      </label>
+                      <input 
+                        type="number"
+                        value={manualDays}
+                        onChange={(e) => setManualDays(parseInt(e.target.value) || 0)}
+                        className="w-24 px-3 py-2 text-sm bg-white border border-amber-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
+                      />
+                    </div>
+                    <p className="text-[10px] text-amber-700 italic">
+                      * Estos días se restarán de su balance acumulado. / These days will be subtracted from your accumulated balance.
+                    </p>
+                  </div>
+                </div>
+              )}
               {activeDoc.signed_at && (
                 <div className="max-w-2xl mx-auto mt-8 pt-8 border-t border-slate-200">
                   <div className="flex flex-col items-center">

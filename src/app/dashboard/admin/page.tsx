@@ -1070,7 +1070,8 @@ function AdminDashboardContent() {
                     <td className="p-4">
                       {(() => {
                         const userRequests = allVacationRequests.filter(r => r.userId === u.id);
-                        const { accrued, balance } = calculateVacationBalance(u.hireDate, userRequests);
+                        const userYearlyDocs = Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${u.id}:`));
+                        const { accrued, balance } = calculateVacationBalance(u.hireDate, userRequests, userYearlyDocs);
                         return (
                           <div className="flex flex-col">
                             <span className="text-sm font-medium text-slate-900">{balance} {t('days')}</span>
@@ -1633,7 +1634,8 @@ function AdminDashboardContent() {
                     </h3>
                     {(() => {
                       const userRequests = allVacationRequests.filter(r => r.userId === editingUser.id);
-                      const { balance } = calculateVacationBalance(editingUser.hireDate, userRequests);
+                      const userYearlyDocs = Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${editingUser.id}:`));
+                      const { balance } = calculateVacationBalance(editingUser.hireDate, userRequests, userYearlyDocs);
                       return (
                         <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold">
                           {balance} {t('days')} {t('remaining')}
@@ -1658,7 +1660,7 @@ function AdminDashboardContent() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white">
-                          {getVacationHistory(editingUser.hireDate, allVacationRequests.filter(r => r.userId === editingUser.id)).map((year) => (
+                          {getVacationHistory(editingUser.hireDate, allVacationRequests.filter(r => r.userId === editingUser.id), Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${editingUser.id}:`))).map((year) => (
                             <tr key={year.yearNumber} className="hover:bg-slate-50">
                               <td className="px-4 py-2 font-medium">#{year.yearNumber}</td>
                               <td className="px-4 py-2 text-slate-500 text-xs">
@@ -2915,9 +2917,10 @@ function AdminDashboardContent() {
                 <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
                   {filteredUsers.map(u => {
                     const userRequests = allVacationRequests.filter(r => r.userId === u.id);
-                    const { balance } = calculateVacationBalance(u.hireDate, userRequests);
+                    const userYearlyDocs = Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${u.id}:`));
+                    const { balance } = calculateVacationBalance(u.hireDate, userRequests, userYearlyDocs);
                     const daysSince = getDaysSinceLastVacation(userRequests);
-                    const history = getVacationHistory(u.hireDate, userRequests);
+                    const history = getVacationHistory(u.hireDate, userRequests, userYearlyDocs);
 
                     return (
                       <div key={u.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200">

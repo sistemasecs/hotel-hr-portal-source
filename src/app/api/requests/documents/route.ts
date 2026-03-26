@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
     try {
-        const { requestId, signatureData } = await request.json();
+        const { requestId, signatureData, data } = await request.json();
 
         if (!requestId) {
             return NextResponse.json({ error: 'RequestId is required' }, { status: 400 });
@@ -63,11 +63,12 @@ export async function PATCH(request: Request) {
             SET 
                 is_signed = TRUE,
                 signature_data = COALESCE($1, signature_data),
+                data = COALESCE($2, data),
                 signed_at = CURRENT_TIMESTAMP,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE request_id::text = $2
+            WHERE request_id::text = $3
             RETURNING *
-        `, [signatureData || null, requestId]);
+        `, [signatureData || null, data ? JSON.stringify(data) : null, requestId]);
 
         if (result.rows.length === 0) {
             return NextResponse.json({ error: 'Document not found' }, { status: 404 });
