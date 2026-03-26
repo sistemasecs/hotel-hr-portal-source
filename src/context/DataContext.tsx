@@ -23,6 +23,7 @@ interface DataContextType {
     hotelLongitude: number | null;
     hotelGeofenceRadius: number | null;
     clockInWindowMinutes: number | null;
+    workingDays: number[];
   };
   assignTraining: (userId: string, moduleId: string) => void;
   updateTrainingStatus: (userId: string, moduleId: string, status: UserTraining['status']) => void;
@@ -98,11 +99,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hotelLongitude: number | null;
     hotelGeofenceRadius: number | null;
     clockInWindowMinutes: number | null;
+    workingDays: number[];
   }>({
     hotelLatitude: null,
     hotelLongitude: null,
     hotelGeofenceRadius: null,
     clockInWindowMinutes: null,
+    workingDays: [1, 2, 3, 4, 5],
   });
 
   const fetchActivityLogs = async () => {
@@ -131,16 +134,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             hotelLongitude: null,
             hotelGeofenceRadius: null,
             clockInWindowMinutes: null,
+            workingDays: [1, 2, 3, 4, 5],
           };
 
           // Assuming config is an array of { key: string, value: string } or similar
-          // If config is a direct object with properties, this loop needs adjustment
           // For now, assuming the API returns an object with direct properties
           if (config.hotelLatitude !== undefined) newConfig.hotelLatitude = parseFloat(config.hotelLatitude);
           if (config.hotelLongitude !== undefined) newConfig.hotelLongitude = parseFloat(config.hotelLongitude);
           if (config.hotelGeofenceRadius !== undefined) newConfig.hotelGeofenceRadius = parseFloat(config.hotelGeofenceRadius);
           if (config.clockInWindowMinutes !== undefined) newConfig.clockInWindowMinutes = parseInt(config.clockInWindowMinutes);
-
+          if (config.workingDays !== undefined) newConfig.workingDays = config.workingDays;
+ 
           setHotelConfig(newConfig);
         }
 
@@ -726,6 +730,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           hotelLongitude: newConfig.hotelLongitude,
           hotelGeofenceRadius: newConfig.hotelGeofenceRadius,
           clockInWindowMinutes: newConfig.clockInWindowMinutes,
+          workingDays: newConfig.workingDays,
         })
       });
       if (response.ok) {

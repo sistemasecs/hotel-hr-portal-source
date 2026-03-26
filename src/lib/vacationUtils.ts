@@ -4,7 +4,7 @@ import { EmployeeRequest } from '@/types';
  * Calculates the number of days between two dates inclusive.
  * Assumes dates are in YYYY-MM-DD format.
  */
-export const getDurationInDays = (startDate: string, endDate: string): number => {
+export const getDurationInDays = (startDate: string, endDate: string, holidays: any[] = [], workingDays: number[] = [0, 1, 2, 3, 4, 5, 6]): number => {
   const start = new Date(startDate);
   const end = new Date(endDate);
   
@@ -12,8 +12,31 @@ export const getDurationInDays = (startDate: string, endDate: string): number =>
   start.setHours(0, 0, 0, 0);
   end.setHours(0, 0, 0, 0);
   
-  const diffTime = Math.abs(end.getTime() - start.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  let count = 0;
+  const current = new Date(start);
+  
+  while (current <= end) {
+    const dayOfWeek = current.getDay(); // 0=Sunday, 1=Monday...
+    const isWorkingDay = workingDays.includes(dayOfWeek);
+    
+    if (isWorkingDay) {
+      const dateStr = current.toISOString().split('T')[0];
+      const isHoliday = holidays.some(h => {
+        const hStart = new Date(h.start_date);
+        const hEnd = new Date(h.end_date);
+        hStart.setHours(0, 0, 0, 0);
+        hEnd.setHours(0, 0, 0, 0);
+        return current >= hStart && current <= hEnd;
+      });
+      
+      if (!isHoliday) {
+        count++;
+      }
+    }
+    current.setDate(current.getDate() + 1);
+  }
+  
+  return count;
 };
 
 /**
@@ -51,7 +74,7 @@ export interface VacationYearBreakdown {
 /**
  * Groups approved vacation requests by employment year.
  */
-export const getVacationHistory = (hireDate: string, requests: EmployeeRequest[], yearlyDocs: any[] = []): VacationYearBreakdown[] => {
+export const getVacationHistory = (hireDate: string, requests: EmployeeRequest[], yearlyDocs: any[] = [], holidays: any[] = [], workingDays: number[] = [0, 1, 2, 3, 4, 5, 6]): VacationYearBreakdown[] => {
   const hire = new Date(hireDate);
   const now = new Date();
   const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved' && r.isSigned);
@@ -75,14 +98,14 @@ export const getVacationHistory = (hireDate: string, requests: EmployeeRequest[]
       const reqStart = new Date(r.data.startDate);
       return reqStart >= periodStart && reqStart <= periodEnd;
     });
-
+ 
     // Check for a signed yearly summary for this specific year
     const yearlyDoc = yearlyDocs.find(doc => 
       doc.is_signed && 
       doc.request_id && doc.request_id.endsWith(`:${yearNum}`)
     );
-
-    const takenFromRequests = yearRequests.reduce((sum, r) => sum + getDurationInDays(r.data.startDate, r.data.endDate), 0);
+ 
+    const takenFromRequests = yearRequests.reduce((sum, r) => sum + getDurationInDays(r.data.startDate, r.data.endDate, holidays, workingDays), 0);
     const takenFromYearly = (yearlyDoc && yearlyDoc.data && yearlyDoc.data.manualDays) ? (yearlyDoc.data.manualDays || 0) : 0;
     
     const taken = takenFromRequests + takenFromYearly;
@@ -104,20 +127,20 @@ export const getVacationHistory = (hireDate: string, requests: EmployeeRequest[]
   
   return history.reverse(); // Newest years first
 };
-
+ 
 /**
  * Calculates total balance.
  */
-export const calculateVacationBalance = (hireDate: string, requests: EmployeeRequest[], yearlyDocs: any[] = []) => {
+export const calculateVacationBalance = (hireDate: string, requests: EmployeeRequest[], yearlyDocs: any[] = [], holidays: any[] = [], workingDays: number[] = [0, 1, 2, 3, 4, 5, 6]) => {
   const accrued = getAccruedDays(hireDate);
   const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved' && r.isSigned);
-  const takenFromRequests = approvedVacations.reduce((sum, r) => sum + getDurationInDays(r.data.startDate, r.data.endDate), 0);
+  const takenFromRequests = approvedVacations.reduce((sum, r) => sum + getDurationInDays(r.data.startDate, r.data.endDate, holidays, workingDays), 0);
   
   // Also count manually entered days from signed yearly summaries
   const takenFromYearly = yearlyDocs
     .filter(doc => doc.is_signed && doc.data && doc.data.manualDays)
     .reduce((sum, doc) => sum + (doc.data.manualDays || 0), 0);
-
+ 
   const taken = takenFromRequests + takenFromYearly;
   
   return {

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useData } from '@/context/DataContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { RequestType, User, EmployeeRequest } from '@/types';
 import { calculateVacationBalance, getDurationInDays } from '@/lib/vacationUtils';
@@ -13,7 +14,9 @@ export default function NewRequestPage() {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<RequestType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { hotelConfig } = useData();
   const [colleagues, setColleagues] = useState<User[]>([]);
+  const [holidays, setHolidays] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchColleagues = async () => {
@@ -36,6 +39,21 @@ export default function NewRequestPage() {
 
     fetchColleagues();
   }, [user, selectedType]);
+
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      try {
+        const res = await fetch('/api/holidays');
+        if (res.ok) {
+          const data = await res.json();
+          setHolidays(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch holidays:', error);
+      }
+    };
+    fetchHolidays();
+  }, []);
 
   const REQUEST_TYPES: { type: RequestType; label: string; icon: React.ReactNode; description: string }[] = [
     { 
@@ -171,8 +189,8 @@ export default function NewRequestPage() {
         const reqsRes = await fetch(`/api/requests?userId=${user.id}`);
         if (reqsRes.ok) {
           const cloudRequests: EmployeeRequest[] = await reqsRes.json();
-          const { balance } = calculateVacationBalance(user.hireDate, cloudRequests);
-          const requestedDays = getDurationInDays(formData.startDate, formData.endDate);
+          const { balance } = calculateVacationBalance(user.hireDate, cloudRequests, [], holidays, hotelConfig.workingDays);
+          const requestedDays = getDurationInDays(formData.startDate, formData.endDate, holidays, hotelConfig.workingDays);
           
           if (requestedDays > balance) {
             alert(`${t('insufficientBalance')} (${balance} ${t('days')} ${t('available')})`);
@@ -246,6 +264,21 @@ export default function NewRequestPage() {
                 <input type="date" name="endDate" required onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" />
               </div>
             </div>
+            
+            {formData.startDate && formData.endDate && (
+              <div className="mt-4 p-4 bg-primary-50 border border-primary-100 rounded-lg flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-primary-900">{t('vacationDuration')}</p>
+                  <p className="text-xs text-primary-600 mt-1">
+                    {t('excludesHolidaysAndNonWorkingDays')}
+                  </p>
+                </div>
+                <div className="text-2xl font-black text-primary-700">
+                  {getDurationInDays(formData.startDate, formData.endDate, holidays, hotelConfig.workingDays)} {t('days')}
+                </div>
+              </div>
+            )}
+
             <div className="mt-4">
               <label className="block text-sm font-medium text-slate-700 mb-1">Comments / Reason</label>
               <textarea name="reason" rows={3} onChange={handleInputChange} className="w-full border border-slate-300 rounded-md p-2" placeholder="Optional details..."></textarea>

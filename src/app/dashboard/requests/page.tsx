@@ -28,12 +28,14 @@ export default function MyRequestsPage() {
   const [manualDays, setManualDays] = useState<number>(15);
   const [signatureData, setSignatureData] = useState<string>('');
   const [currentHTML, setCurrentHTML] = useState<string>('');
+  const [holidays, setHolidays] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchRequests();
       fetchRequestsToCover();
       fetchYearlyDocuments();
+      fetchHolidays();
     }
   }, [user]);
 
@@ -58,7 +60,7 @@ export default function MyRequestsPage() {
   useEffect(() => {
     if (activeDoc && activeDoc.request_id.startsWith('YEARLY:')) {
       let html = activeDoc.content || '';
-      const days = (startDate && endDate) ? getDurationInDays(startDate, endDate) : 15;
+      const days = (startDate && endDate) ? getDurationInDays(startDate, endDate, holidays) : 15;
       setManualDays(days);
 
       // Period Range replacement
@@ -140,6 +142,17 @@ export default function MyRequestsPage() {
       }
     } catch (error) {
       console.error('Failed to fetch yearly documents:', error);
+    }
+  };
+
+  const fetchHolidays = async () => {
+    try {
+      const res = await fetch('/api/holidays');
+      if (res.ok) {
+        setHolidays(await res.json());
+      }
+    } catch (error) {
+      console.error('Failed to fetch holidays:', error);
     }
   };
 
@@ -302,7 +315,7 @@ export default function MyRequestsPage() {
           {user?.hireDate && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
               {(() => {
-                const { accrued, taken, balance } = calculateVacationBalance(user.hireDate, requests, yearlyDocs);
+                const { accrued, taken, balance } = calculateVacationBalance(user.hireDate, requests, yearlyDocs, holidays);
                 return (
                   <>
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">

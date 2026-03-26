@@ -27,7 +27,7 @@ function AdminDashboardContent() {
   const { primaryColor, setPrimaryColor } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'Directory' | 'Hierarchy' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Attendance' | 'Vacations' | 'Documents' | 'Activity' | 'Settings'>('Directory');
+  const [activeTab, setActiveTab] = useState<'Directory' | 'Hierarchy' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Attendance' | 'Vacations' | 'Documents' | 'Activity' | 'Holidays' | 'Settings'>('Directory');
   const [attendanceSubTab, setAttendanceSubTab] = useState<'Logs' | 'Reports'>('Logs');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
@@ -208,7 +208,7 @@ function AdminDashboardContent() {
   // Read tab from URL on mount and when searchParams change
   useEffect(() => {
     const tab = searchParams.get('tab');
-    const validTabs = ['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Attendance', 'Vacations', 'Documents', 'Activity', 'Settings'];
+    const validTabs = ['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Attendance', 'Vacations', 'Documents', 'Activity', 'Holidays', 'Settings'];
     if (tab && validTabs.includes(tab)) {
       setActiveTab(tab as any);
     }
@@ -248,6 +248,13 @@ function AdminDashboardContent() {
 
   const [allVacationRequests, setAllVacationRequests] = useState<EmployeeRequest[]>([]);
   const [yearlyDocuments, setYearlyDocuments] = useState<Record<string, any>>({});
+
+  // Holiday State
+  const [holidays, setHolidays] = useState<any[]>([]);
+  const [newHolidayName, setNewHolidayName] = useState('');
+  const [newHolidayStart, setNewHolidayStart] = useState('');
+  const [newHolidayEnd, setNewHolidayEnd] = useState('');
+  const [newHolidayRate, setNewHolidayRate] = useState<number>(1.5);
 
   // Document Templates State
   const [documentTemplates, setDocumentTemplates] = useState<any[]>([]);
@@ -316,11 +323,69 @@ function AdminDashboardContent() {
     }
   };
 
+  const fetchHolidays = async () => {
+    try {
+      const res = await fetch('/api/holidays');
+      if (res.ok) {
+        setHolidays(await res.json());
+      }
+    } catch (error) {
+      console.error('Error fetching holidays:', error);
+    }
+  };
+
+  const handleAddHoliday = async () => {
+    if (!newHolidayName || !newHolidayStart || !newHolidayEnd) {
+      alert('Please fill out all holiday fields.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/holidays', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newHolidayName,
+          startDate: newHolidayStart,
+          endDate: newHolidayEnd,
+          rateMultiplier: newHolidayRate
+        })
+      });
+      if (res.ok) {
+        fetchHolidays();
+        setNewHolidayName('');
+        setNewHolidayStart('');
+        setNewHolidayEnd('');
+        setNewHolidayRate(1.5);
+      }
+    } catch (error) {
+      console.error('Error adding holiday:', error);
+    }
+  };
+
+  const handleDeleteHoliday = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this holiday?')) return;
+    try {
+      const res = await fetch(`/api/holidays?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchHolidays();
+      }
+    } catch (error) {
+      console.error('Error deleting holiday:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'Holidays') {
+      fetchHolidays();
+    }
+  }, [activeTab]);
+
   useEffect(() => {
     if (activeTab === 'Vacations') {
       fetchVacationRequests();
       fetchVacationConsents();
       fetchYearlyDocuments();
+      fetchHolidays();
     }
   }, [activeTab]);
 
@@ -1071,7 +1136,7 @@ function AdminDashboardContent() {
                       {(() => {
                         const userRequests = allVacationRequests.filter(r => r.userId === u.id);
                         const userYearlyDocs = Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${u.id}:`));
-                        const { accrued, balance } = calculateVacationBalance(u.hireDate, userRequests, userYearlyDocs);
+                        const { accrued, balance } = calculateVacationBalance(u.hireDate, userRequests, userYearlyDocs, holidays, hotelConfig.workingDays);
                         return (
                           <div className="flex flex-col">
                             <span className="text-sm font-medium text-slate-900">{balance} {t('days')}</span>
@@ -1635,7 +1700,7 @@ function AdminDashboardContent() {
                     {(() => {
                       const userRequests = allVacationRequests.filter(r => r.userId === editingUser.id);
                       const userYearlyDocs = Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${editingUser.id}:`));
-                      const { balance } = calculateVacationBalance(editingUser.hireDate, userRequests, userYearlyDocs);
+                      const { balance } = calculateVacationBalance(editingUser.hireDate, userRequests, userYearlyDocs, holidays, hotelConfig.workingDays);
                       return (
                         <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold">
                           {balance} {t('days')} {t('remaining')}
@@ -1660,7 +1725,7 @@ function AdminDashboardContent() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white">
-                          {getVacationHistory(editingUser.hireDate, allVacationRequests.filter(r => r.userId === editingUser.id), Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${editingUser.id}:`))).map((year) => (
+                          {getVacationHistory(editingUser.hireDate, allVacationRequests.filter(r => r.userId === editingUser.id), Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${editingUser.id}:`)), holidays, hotelConfig.workingDays).map((year) => (
                             <tr key={year.yearNumber} className="hover:bg-slate-50">
                               <td className="px-4 py-2 font-medium">#{year.yearNumber}</td>
                               <td className="px-4 py-2 text-slate-500 text-xs">
@@ -1692,7 +1757,7 @@ function AdminDashboardContent() {
                                   {new Date(r.data.startDate).toLocaleDateString()} - {new Date(r.data.endDate).toLocaleDateString()}
                                 </span>
                                 <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">
-                                  {getDurationInDays(r.data.startDate, r.data.endDate)} {t('days')}
+                                  {getDurationInDays(r.data.startDate, r.data.endDate, holidays, hotelConfig.workingDays)} {t('days')}
                                 </span>
                               </div>
                               {r.data.reason && <p className="text-[11px] text-slate-500 italic truncate italic">"{r.data.reason}"</p>}
@@ -2918,9 +2983,9 @@ function AdminDashboardContent() {
                   {filteredUsers.map(u => {
                     const userRequests = allVacationRequests.filter(r => r.userId === u.id);
                     const userYearlyDocs = Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${u.id}:`));
-                    const { balance } = calculateVacationBalance(u.hireDate, userRequests, userYearlyDocs);
+                    const { balance } = calculateVacationBalance(u.hireDate, userRequests, userYearlyDocs, holidays, hotelConfig.workingDays);
                     const daysSince = getDaysSinceLastVacation(userRequests);
-                    const history = getVacationHistory(u.hireDate, userRequests, userYearlyDocs);
+                    const history = getVacationHistory(u.hireDate, userRequests, userYearlyDocs, holidays, hotelConfig.workingDays);
 
                     return (
                       <div key={u.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
@@ -3318,6 +3383,151 @@ function AdminDashboardContent() {
       )}
 
       {/* Settings Tab */}
+      {/* Holidays Tab */}
+      {activeTab === 'Holidays' && (
+        <div className="space-y-6 animate-in fade-in duration-500">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 mb-6">
+            <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Default Working Days
+            </h2>
+            <p className="text-sm text-slate-500 mb-4">
+              Select the days of the week that count as working days for vacation calculations.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => {
+                const isActive = hotelConfig.workingDays ? hotelConfig.workingDays.includes(index) : [1,2,3,4,5].includes(index);
+                return (
+                  <button
+                    key={day}
+                    onClick={() => {
+                      const currentDays = hotelConfig.workingDays || [1,2,3,4,5];
+                      const newDays = isActive
+                        ? currentDays.filter(d => d !== index)
+                        : [...currentDays, index].sort();
+                      updateHotelConfig({ workingDays: newDays });
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      isActive
+                        ? 'bg-primary-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <h2 className="text-xl font-semibold text-slate-800 mb-6 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {t('addHoliday')}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('holidayName')}</label>
+                <input
+                  type="text"
+                  value={newHolidayName}
+                  onChange={e => setNewHolidayName(e.target.value)}
+                  className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-primary-500 focus:border-primary-500 text-slate-900"
+                  placeholder="e.g. Christmas"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('startDate')}</label>
+                <input
+                  type="date"
+                  value={newHolidayStart}
+                  onChange={e => setNewHolidayStart(e.target.value)}
+                  className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-primary-500 focus:border-primary-500 text-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('endDate')}</label>
+                <input
+                  type="date"
+                  value={newHolidayEnd}
+                  onChange={e => setNewHolidayEnd(e.target.value)}
+                  className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-primary-500 focus:border-primary-500 text-slate-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('rateMultiplier')}</label>
+                <select
+                  value={newHolidayRate}
+                  onChange={e => setNewHolidayRate(parseFloat(e.target.value))}
+                  className="w-full border border-slate-300 rounded-md p-2 text-sm focus:ring-primary-500 focus:border-primary-500 text-slate-900"
+                >
+                  <option value={1.0}>1.0 (Normal)</option>
+                  <option value={1.5}>1.5 (Time and a half)</option>
+                  <option value={2.0}>2.0 (Double time)</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={handleAddHoliday}
+                className="px-6 py-2 bg-primary-600 text-white text-sm font-bold rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
+              >
+                {t('addHoliday')}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                  <th className="p-4 font-semibold">{t('name')}</th>
+                  <th className="p-4 font-semibold">{t('period')}</th>
+                  <th className="p-4 font-semibold">{t('rateMultiplier')}</th>
+                  <th className="p-4 font-semibold text-right">{t('actions')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {holidays.map((holiday) => (
+                  <tr key={holiday.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 text-sm font-medium text-slate-900">{holiday.name}</td>
+                    <td className="p-4 text-sm text-slate-500">
+                      {new Date(holiday.start_date).toLocaleDateString()} - {new Date(holiday.end_date).toLocaleDateString()}
+                    </td>
+                    <td className="p-4">
+                      <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-lg">
+                        {holiday.rate_multiplier}x
+                      </span>
+                    </td>
+                    <td className="p-4 text-right">
+                      <button
+                        onClick={() => handleDeleteHoliday(holiday.id)}
+                        className="p-2 text-slate-400 hover:text-red-600 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {holidays.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="p-12 text-center text-slate-500">
+                      {t('noEventsFound')}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'Settings' && (
         <div className="space-y-8">
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
