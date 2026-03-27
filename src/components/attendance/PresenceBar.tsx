@@ -149,6 +149,9 @@ export default function PresenceBar() {
                 {/* Notifications & Action Buttons */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 lg:gap-4 w-full lg:w-auto relative">
                     
+                    {/* Icon row: Announcements + Notifications always side-by-side */}
+                    <div className="flex items-center justify-end gap-1">
+
                     {/* Announcements Button */}
                     <Link
                         href="/dashboard/broadcasts"
@@ -232,6 +235,8 @@ export default function PresenceBar() {
                             </div>
                         )}
                     </div>
+
+                    </div> {/* end icon row */}
 
                     {statusMessage && (
                         <span className={`text-xs font-medium px-3 py-2 rounded-lg text-center shadow-sm w-full sm:w-auto ${statusMessage.type === 'error' ? 'text-red-700 bg-red-50 border border-red-100' :
