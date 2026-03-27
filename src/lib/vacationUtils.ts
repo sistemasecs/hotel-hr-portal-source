@@ -9,10 +9,6 @@ export const getDurationInDays = (startDate: string, endDate: string, holidays: 
   const start = parseLocalDate(startDate);
   const end = parseLocalDate(endDate);
   
-  // Set to midnight to avoid DST issues
-  start.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
-  
   let count = 0;
   const current = new Date(start);
   
@@ -21,11 +17,14 @@ export const getDurationInDays = (startDate: string, endDate: string, holidays: 
     const isWorkingDay = workingDays.includes(dayOfWeek);
     
     if (isWorkingDay) {
-      const dateStr = current.toISOString().split('T')[0];
       const isHoliday = holidays.some(h => {
         const hStart = parseLocalDate(h.start_date);
         const hEnd = parseLocalDate(h.end_date);
-        return current >= hStart && current <= hEnd;
+        // Compare by date components to avoid any hour-level mismatch
+        const curDay = current.getFullYear() * 10000 + (current.getMonth() + 1) * 100 + current.getDate();
+        const startDay = hStart.getFullYear() * 10000 + (hStart.getMonth() + 1) * 100 + hStart.getDate();
+        const endDay = hEnd.getFullYear() * 10000 + (hEnd.getMonth() + 1) * 100 + hEnd.getDate();
+        return curDay >= startDay && curDay <= endDay;
       });
       
       if (!isHoliday) {

@@ -1,14 +1,22 @@
 /**
- * Parses a date string in "YYYY-MM-DD" or "DD-MM-YYYY" format into a local Date object.
- * Always sets hours to 12:00:00 to avoid timezone boundary shifts during calculations.
+ * Parses a date string into a local Date object set to noon (12:00).
+ * Supports: "YYYY-MM-DD", "DD-MM-YYYY", full ISO timestamps "YYYY-MM-DDTHH:mm:ssZ".
+ * Using noon prevents timezone shifts from bleeding into adjacent calendar days.
  */
 export const parseLocalDate = (dateStr: string | null | undefined): Date => {
   if (!dateStr) return new Date();
-  
-  let year, month, day;
-  
-  if (dateStr.includes('-')) {
-    const parts = dateStr.split('-');
+
+  // Strip time component from ISO timestamps (e.g. "2025-12-25T06:00:00.000Z")
+  let str = typeof dateStr === 'string' && dateStr.includes('T')
+    ? dateStr.split('T')[0]
+    : dateStr;
+
+  let year: number | undefined,
+    month: number | undefined,
+    day: number | undefined;
+
+  if (str.includes('-')) {
+    const parts = str.split('-');
     if (parts[0].length === 4) {
       // YYYY-MM-DD
       [year, month, day] = parts.map(Number);
@@ -16,30 +24,29 @@ export const parseLocalDate = (dateStr: string | null | undefined): Date => {
       // DD-MM-YYYY
       [day, month, year] = parts.map(Number);
     }
-  } else if (dateStr.includes('/')) {
-    const parts = dateStr.split('/');
-    if (parts[2].length === 4) {
+  } else if (str.includes('/')) {
+    const parts = str.split('/');
+    if (parts[2]?.length === 4) {
       // DD/MM/YYYY
       [day, month, year] = parts.map(Number);
-    } else if (parts[0].length === 4) {
+    } else if (parts[0]?.length === 4) {
       // YYYY/MM/DD
       [year, month, day] = parts.map(Number);
     }
   }
 
   if (year !== undefined && month !== undefined && day !== undefined) {
-    // We use noon to ensure that even with a significant timezone shift, 
-    // it remains the same calendar day.
     return new Date(year, month - 1, day, 12, 0, 0, 0);
   }
 
-  const d = new Date(dateStr);
+  // Fallback: standard parse, then extract local components
+  const d = new Date(str);
   if (isNaN(d.getTime())) return new Date();
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
 };
 
 /**
- * Gets the current date in a specific timezone (e.g. "America/Guatemala").
+ * Gets the current date/time in a specific IANA timezone.
  */
 export const nowInTimeZone = (timeZone: string = 'America/Guatemala'): Date => {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -50,13 +57,20 @@ export const nowInTimeZone = (timeZone: string = 'America/Guatemala'): Date => {
     hour: 'numeric',
     minute: 'numeric',
     second: 'numeric',
-    hour12: false
+    hour12: false,
   }).formatToParts(new Date());
 
-  const map: any = {};
-  parts.forEach(p => map[p.type] = p.value);
-  
-  return new Date(parseInt(map.year), parseInt(map.month) - 1, parseInt(map.day), parseInt(map.hour), parseInt(map.minute), parseInt(map.second));
+  const map: Record<string, string> = {};
+  parts.forEach((p) => (map[p.type] = p.value));
+
+  return new Date(
+    parseInt(map.year),
+    parseInt(map.month) - 1,
+    parseInt(map.day),
+    parseInt(map.hour),
+    parseInt(map.minute),
+    parseInt(map.second)
+  );
 };
 
 /**
@@ -66,18 +80,30 @@ export const formatDisplayDate = (date: Date | string | null | undefined): strin
   if (!date) return '';
   const d = typeof date === 'string' ? parseLocalDate(date) : date;
   if (isNaN(d.getTime())) return '';
-  
+
   const day = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year = d.getFullYear();
-  
+
   return `${day}-${month}-${year}`;
 };
 
 /**
- * Formats a Date or ISO string to a local datetime-local input value string
- * (e.g. "2025-12-25T14:00") anchored to a specific timezone.
- * Defaults to America/Guatemala (GMT-6).
+ * Formats a date to "YYYY-MM-DD" for storage/API use.
+ */
+export const toISO = (date: Date | string | null | undefined): string => {
+  if (!date) return '';
+  const d = typeof date === 'string' ? parseLocalDate(date) : date;
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+/**
+ * Formats a Date or ISO string to a datetime-local input value ("YYYY-MM-DDTHH:mm")
+ * anchored to the hotel's local timezone. Defaults to America/Guatemala (GMT-6).
  */
 export const formatToGuatemalaDateTimeLocal = (
   date: Date | string | null | undefined,
@@ -100,14 +126,13 @@ export const formatToGuatemalaDateTimeLocal = (
   const map: Record<string, string> = {};
   parts.forEach((p) => (map[p.type] = p.value));
 
-  // Clamp 24 -> 00 edge case from Intl
   const hour = map.hour === '24' ? '00' : map.hour;
   return `${map.year}-${map.month}-${map.day}T${hour}:${map.minute}`;
 };
 
 /**
- * Parses a datetime-local string (e.g. "2025-12-25T14:00") as if it is
- * in the hotel's local timezone and returns an ISO UTC string.
+ * Parses a datetime-local string ("YYYY-MM-DDTHH:mm") as if it's in the hotel's
+ * local timezone and returns an ISO UTC string.
  * Defaults to America/Guatemala (GMT-6).
  */
 export const parseGuatemalaDateTimeLocal = (
@@ -116,16 +141,10 @@ export const parseGuatemalaDateTimeLocal = (
 ): string => {
   if (!datetimeLocalStr) return new Date().toISOString();
 
-  // Get the UTC offset for the timezone at this moment using Intl
-  const testDate = new Date(datetimeLocalStr.replace('T', ' ') + ':00');
-  if (isNaN(testDate.getTime())) return new Date().toISOString();
-
-  // Build a fake ISO with the local datetime and resolve via Intl
   const [datePart, timePart] = datetimeLocalStr.split('T');
   const [year, month, day] = datePart.split('-').map(Number);
   const [hour, minute] = (timePart || '00:00').split(':').map(Number);
 
-  // Use the timezone offset from Intl to reconstruct proper UTC
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone,
     timeZoneName: 'shortOffset',
@@ -134,15 +153,13 @@ export const parseGuatemalaDateTimeLocal = (
   const offsetMatch = formatted.match(/GMT([+-]\d+)/);
   const offsetHours = offsetMatch ? parseInt(offsetMatch[1]) : -6;
 
-  const utc = new Date(
-    Date.UTC(year, month - 1, day, hour - offsetHours, minute)
-  );
+  const utc = new Date(Date.UTC(year, month - 1, day, hour - offsetHours, minute));
   return utc.toISOString();
 };
 
 /**
- * Ensures a date value is returned as an ISO UTC string, converting from local
- * timezone if it is a plain date string (YYYY-MM-DD) or datetime-local string.
+ * Ensures a date value is returned as an ISO UTC string, appropriately converted
+ * from the hotel's local timezone if needed.
  * Defaults to America/Guatemala (GMT-6).
  */
 export const ensureGuatemalaDate = (
@@ -152,31 +169,17 @@ export const ensureGuatemalaDate = (
   if (!date) return new Date().toISOString();
   if (date instanceof Date) return date.toISOString();
 
-  // If it's already a full ISO string (has timezone info), return as-is
-  if (typeof date === 'string' && (date.endsWith('Z') || date.includes('+'))) {
+  // Already a full UTC ISO string
+  if (date.endsWith('Z') || (date.includes('+') && date.includes('T'))) {
     return date;
   }
 
-  // If it's a datetime-local string
-  if (typeof date === 'string' && date.includes('T')) {
+  // datetime-local string (no timezone info)
+  if (date.includes('T')) {
     return parseGuatemalaDateTimeLocal(date, timeZone);
   }
 
-  // If it's just a date (YYYY-MM-DD), treat as local noon
+  // Plain date (YYYY-MM-DD)
   const d = parseLocalDate(date);
   return d.toISOString();
-};
-
-
-/**
- * Formats a date to "YYYY-MM-DD" for storage/API use.
- */
-export const toISO = (date: Date | string | null | undefined): string => {
-  if (!date) return '';
-  const d = typeof date === 'string' ? parseLocalDate(date) : date;
-  if (isNaN(d.getTime())) return '';
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
 };
