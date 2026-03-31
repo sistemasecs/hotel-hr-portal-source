@@ -30,7 +30,6 @@ export default function LiveClock() {
             <span className="text-sm font-mono font-bold text-slate-700 tracking-wider">
                 {time || '--:--:--'}
             </span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase">GMT-6</span>
         </div>
     );
 }
