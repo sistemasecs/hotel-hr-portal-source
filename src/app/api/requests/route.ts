@@ -29,15 +29,15 @@ export async function GET(request: Request) {
                 u.department as "userDepartment",
                 COALESCE(rd.is_signed, FALSE) as "isSigned"
             FROM employee_requests r
-            JOIN users u ON r.user_id = u.id
-            LEFT JOIN request_documents rd ON r.id = rd.request_id
+            JOIN users u ON r.user_id::text = u.id::text
+            LEFT JOIN request_documents rd ON r.id::text = rd.request_id
             WHERE 1=1
         `;
         const values: any[] = [];
         let paramIndex = 1;
 
         if (userId && isValidUUID(userId)) {
-            query += ` AND r.user_id = $${paramIndex}`;
+            query += ` AND r.user_id::text = $${paramIndex}`;
             values.push(userId);
             paramIndex++;
         }

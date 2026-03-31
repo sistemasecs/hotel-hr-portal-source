@@ -52,6 +52,8 @@ export const translations = {
     upcomingEvents: 'Upcoming Events',
     noUpcomingEvents: 'No upcoming events this week.',
     recentAnnouncements: 'Recent Announcements',
+    notifications: 'Notifications',
+    announcements: 'Announcements',
 
     // Profile Page
     manageProfile: 'Manage your personal information and preferences.',
@@ -532,6 +534,8 @@ export const translations = {
     upcomingEvents: 'Próximos Eventos',
     noUpcomingEvents: 'No hay eventos próximos esta semana.',
     recentAnnouncements: 'Anuncios Recientes',
+    notifications: 'Notificaciones',
+    announcements: 'Anuncios',
 
     // Profile Page
     manageProfile: 'Gestiona tu información personal y preferencias.',
