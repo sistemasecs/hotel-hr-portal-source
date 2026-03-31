@@ -51,7 +51,7 @@ export async function GET(request: Request) {
         } else {
             // Regular staff shouldn't be accessing this endpoint for the global calendar, 
             // but if they do, only show their own
-            query += ` AND r.user_id = $1`;
+            query += ` AND r.user_id = $1::uuid`;
             values.push(userId);
         }
 

@@ -13,7 +13,7 @@ export async function POST(request: Request, context: { params: Promise<{ commen
         // Check if the reaction already exists
         const checkQuery = `
             SELECT id FROM comment_reactions 
-            WHERE comment_id = $1 AND user_id = $2 AND emoji = $3
+            WHERE comment_id = $1::uuid AND user_id = $2::uuid AND emoji = $3
         `;
         const checkResult = await pool.query(checkQuery, [commentId, userId, emoji]);
 

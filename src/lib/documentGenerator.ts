@@ -81,7 +81,7 @@ export async function generateYearlyVacationDocument(userId: string, yearNumber:
                 COALESCE(rd.is_signed, FALSE) as is_signed
             FROM employee_requests r
             LEFT JOIN request_documents rd ON r.id = rd.request_id
-            WHERE r.user_id = $1
+            WHERE r.user_id = $1::uuid
         `, [userId]);
         
         const requests = requestsRes.rows.map(r => ({

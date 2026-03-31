@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const params = [];
 
     if (userId) {
-      query += ' WHERE user_id = $1';
+      query += ' WHERE user_id = $1::uuid';
       params.push(userId);
     }
 

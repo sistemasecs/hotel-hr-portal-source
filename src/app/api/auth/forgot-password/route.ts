@@ -25,7 +25,7 @@ export async function POST(request: Request) {
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
 
         // Upsert into reset tokens (clearing old tokens for this user)
-        await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]);
+        await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1::uuid', [userId]);
         await pool.query(
             'INSERT INTO password_reset_tokens (token, user_id, expires_at) VALUES ($1, $2, $3)',
             [token, userId, expiresAt.toISOString()]

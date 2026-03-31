@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         );
 
         // 4. Delete the token (single use only)
-        await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId]);
+        await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1::uuid', [userId]);
 
         return NextResponse.json({ success: true, message: 'Password has been updated successfully.' });
     } catch (error) {

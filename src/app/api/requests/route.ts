@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 import { logActivity } from '@/lib/activityLogger';
 
+// UUID validation function
+function isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+}
+
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -9,15 +15,15 @@ export async function GET(request: Request) {
         const status = searchParams.get('status');
 
         let query = `
-            SELECT 
-                r.id, 
-                r.user_id as "userId", 
-                r.type, 
-                r.status, 
-                r.data, 
-                r.supervisor_id as "supervisorId", 
-                r.hr_notes as "hrNotes", 
-                r.created_at as "createdAt", 
+            SELECT
+                r.id,
+                r.user_id as "userId",
+                r.type,
+                r.status,
+                r.data,
+                r.supervisor_id as "supervisorId",
+                r.hr_notes as "hrNotes",
+                r.created_at as "createdAt",
                 r.updated_at as "updatedAt",
                 u.name as "userName",
                 u.department as "userDepartment",
@@ -30,7 +36,7 @@ export async function GET(request: Request) {
         const values: any[] = [];
         let paramIndex = 1;
 
-        if (userId) {
+        if (userId && isValidUUID(userId)) {
             query += ` AND r.user_id = $${paramIndex}`;
             values.push(userId);
             paramIndex++;
@@ -43,6 +49,9 @@ export async function GET(request: Request) {
         }
 
         query += ` ORDER BY r.created_at DESC`;
+
+        console.log('Query:', query);
+        console.log('Values:', values);
 
         const result = await pool.query(query, values);
         return NextResponse.json(result.rows);
@@ -61,18 +70,26 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
+        if (!isValidUUID(userId)) {
+            return NextResponse.json({ error: 'Invalid userId format' }, { status: 400 });
+        }
+
+        if (supervisorId && !isValidUUID(supervisorId)) {
+            return NextResponse.json({ error: 'Invalid supervisorId format' }, { status: 400 });
+        }
+
         const query = `
             INSERT INTO employee_requests (user_id, type, data, supervisor_id)
             VALUES ($1, $2, $3, $4)
-            RETURNING 
-                id, 
-                user_id as "userId", 
-                type, 
-                status, 
-                data, 
-                supervisor_id as "supervisorId", 
-                hr_notes as "hrNotes", 
-                created_at as "createdAt", 
+            RETURNING
+                id,
+                user_id as "userId",
+                type,
+                status,
+                data,
+                supervisor_id as "supervisorId",
+                hr_notes as "hrNotes",
+                created_at as "createdAt",
                 updated_at as "updatedAt"
         `;
 

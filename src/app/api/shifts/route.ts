@@ -21,7 +21,7 @@ export async function GET(request: Request) {
         let conditions = [];
 
         if (userId) {
-            conditions.push(`s.user_id = $${values.length + 1}`);
+            conditions.push(`s.user_id = $${values.length + 1}::uuid`);
             values.push(userId);
         }
 

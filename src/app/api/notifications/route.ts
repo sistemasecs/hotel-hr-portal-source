@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
     let query = `
       SELECT * FROM notifications 
-      WHERE user_id = $1 
+      WHERE user_id = $1::uuid 
     `;
     const params: any[] = [userId];
 
@@ -40,7 +40,7 @@ export async function PATCH(request: Request) {
     const { notificationId, userId, markAllAsRead } = body;
 
     if (markAllAsRead && userId) {
-      await pool.query('UPDATE notifications SET is_read = TRUE WHERE user_id = $1', [userId]);
+      await pool.query('UPDATE notifications SET is_read = TRUE WHERE user_id = $1::uuid', [userId]);
       return NextResponse.json({ success: true });
     }
 

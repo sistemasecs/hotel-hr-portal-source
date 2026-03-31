@@ -12,7 +12,7 @@ export async function GET(request: Request) {
         let values: any[] = [];
 
         if (userId) {
-            query += ' WHERE user_id = $1';
+            query += ' WHERE user_id = $1::uuid';
             values.push(userId);
         }
 
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
                 // Try to find the most recent active shift if shiftId was missing
                 await pool.query(
                     `UPDATE shifts SET status = $1, actual_end_time = NOW() 
-                     WHERE user_id = $2 AND status = 'Clocked-in' 
+                     WHERE user_id = $2::uuid AND status = 'Clocked-in' 
                      AND actual_end_time IS NULL`,
                     ['Pending Approval', userId]
                 );
