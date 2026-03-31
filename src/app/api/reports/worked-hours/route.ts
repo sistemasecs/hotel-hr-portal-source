@@ -18,6 +18,9 @@ export async function GET(request: Request) {
                 u.name as user_name,
                 u.department,
                 COALESCE(SUM(EXTRACT(EPOCH FROM (s.end_time - s.start_time)) / 3600), 0) as scheduled_hours,
+                COALESCE(SUM(CASE WHEN s.actual_start_time IS NOT NULL AND s.actual_end_time IS NOT NULL AND s.approval_status = 'approved'
+                    THEN EXTRACT(EPOCH FROM (s.actual_end_time - s.actual_start_time)) / 3600 
+                    ELSE 0 END), 0) as total_hours,
                 COALESCE(SUM(CASE WHEN s.actual_start_time IS NOT NULL AND s.actual_end_time IS NOT NULL 
                     THEN EXTRACT(EPOCH FROM (s.actual_end_time - s.actual_start_time)) / 3600 
                     ELSE 0 END), 0) as actual_hours,

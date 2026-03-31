@@ -68,6 +68,7 @@ interface DataContextType {
   deleteShift: (id: string) => Promise<void>;
   fetchShifts: (filters: { userId?: string, departmentId?: string, startDate?: string, endDate?: string, status?: string }) => Promise<void>;
   approveShift: (id: string) => Promise<void>;
+  adjustShiftTimes: (id: string, actualStartTime: string | null, actualEndTime: string | null) => Promise<any>;
   fetchWorkedHoursReport: (startDate: string, endDate: string, departmentId?: string) => Promise<any[]>;
   addShiftType: (type: Omit<ShiftType, 'id'>) => Promise<void>;
   updateShiftType: (id: string, type: Partial<ShiftType>) => Promise<void>;
@@ -981,10 +982,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const approveShift = async (id: string) => {
     try {
-      const response = await fetch(`/api/shifts/${id}`, {
-        method: 'PUT',
+      const response = await fetch(`/api/shifts/${id}/approve`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Completed' }),
+        body: JSON.stringify({ status: 'approved', approvedBy: 'admin' }),
       });
       if (response.ok) {
         const updatedShift = await response.json();
@@ -992,6 +993,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error approving shift:', error);
+    }
+  };
+
+  const adjustShiftTimes = async (id: string, actualStartTime: string | null, actualEndTime: string | null) => {
+    try {
+      const body: any = {};
+      if (actualStartTime !== null) body.actualStartTime = actualStartTime;
+      if (actualEndTime !== null) body.actualEndTime = actualEndTime;
+
+      const response = await fetch(`/api/shifts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (response.ok) {
+        const updatedShift = await response.json();
+        setShifts(prev => prev.map(s => s.id === id ? updatedShift : s));
+        return updatedShift;
+      }
+    } catch (error) {
+      console.error('Error adjusting shift times:', error);
+      throw error;
     }
   };
 
@@ -1048,6 +1071,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteShift,
         fetchShifts,
         approveShift,
+        adjustShiftTimes,
         fetchWorkedHoursReport,
         addShiftType,
         updateShiftType,

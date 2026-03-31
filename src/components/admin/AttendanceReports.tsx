@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '@/context/DataContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { Clock, Download, AlertCircle, CheckCircle, Search, User as UserIcon } from 'lucide-react';
-import { ensureGuatemalaDate } from '@/lib/dateUtils';
+import { Clock, Download, AlertCircle, CheckCircle, Search, User as UserIcon, RotateCcw, Timer } from 'lucide-react';
+import { ensureGuatemalaDate, roundToNearestQuarterHour, roundToNearestHalfHour, formatToGuatemalaDateTimeLocal, parseGuatemalaDateTimeLocal } from '@/lib/dateUtils';
 
 export default function AttendanceReports() {
-    const { fetchWorkedHoursReport, departments, shifts, fetchShifts, approveShift } = useData();
+    const { fetchWorkedHoursReport, departments, shifts, fetchShifts, approveShift, adjustShiftTimes } = useData();
     const { language } = useLanguage();
 
     const [activeTab, setActiveTab] = useState<'Summary' | 'Approvals'>('Summary');
@@ -22,6 +22,9 @@ export default function AttendanceReports() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isMounted, setIsMounted] = useState(false);
+    const [editingShift, setEditingShift] = useState<string | null>(null);
+    const [editStartTime, setEditStartTime] = useState('');
+    const [editEndTime, setEditEndTime] = useState('');
 
     useEffect(() => {
         setIsMounted(true);
@@ -76,6 +79,80 @@ export default function AttendanceReports() {
         } catch (err) {
             alert("Error approving shift");
         }
+    };
+
+    const handleEditTimes = (shift: any) => {
+        setEditingShift(shift.id);
+        setEditStartTime(shift.actual_start_time ? formatToGuatemalaDateTimeLocal(shift.actual_start_time) : '');
+        setEditEndTime(shift.actual_end_time ? formatToGuatemalaDateTimeLocal(shift.actual_end_time) : '');
+    };
+
+    const handleSaveTimes = async (shiftId: string) => {
+        try {
+            if (!editStartTime || !editEndTime) {
+                alert(language === 'es' ? 'Por favor ingresa ambas horas' : 'Please enter both times');
+                return;
+            }
+            
+            const startTime = parseGuatemalaDateTimeLocal(editStartTime);
+            const endTime = parseGuatemalaDateTimeLocal(editEndTime);
+
+            const response = await fetch(`/api/shifts/${shiftId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    actualStartTime: startTime,
+                    actualEndTime: endTime
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to update shift');
+            }
+            
+            setEditingShift(null);
+            setEditStartTime('');
+            setEditEndTime('');
+            // Refresh the pending shifts
+            handleFetchPending();
+        } catch (err) {
+            console.error('Error updating shift times:', err);
+            alert(language === 'es' ? 'Error al actualizar las horas: ' + (err instanceof Error ? err.message : 'Error desconocido') : 'Error updating shift times: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        }
+    };
+
+    const handleUseScheduledTimes = (shift: any) => {
+        setEditStartTime(shift.start_time ? formatToGuatemalaDateTimeLocal(shift.start_time) : '');
+        setEditEndTime(shift.end_time ? formatToGuatemalaDateTimeLocal(shift.end_time) : '');
+    };
+
+    const handleRoundToQuarterHour = () => {
+        if (editStartTime) {
+            const rounded = roundToNearestQuarterHour(new Date(editStartTime));
+            setEditStartTime(formatToGuatemalaDateTimeLocal(rounded));
+        }
+        if (editEndTime) {
+            const rounded = roundToNearestQuarterHour(new Date(editEndTime));
+            setEditEndTime(formatToGuatemalaDateTimeLocal(rounded));
+        }
+    };
+
+    const handleRoundToHalfHour = () => {
+        if (editStartTime) {
+            const rounded = roundToNearestHalfHour(new Date(editStartTime));
+            setEditStartTime(formatToGuatemalaDateTimeLocal(rounded));
+        }
+        if (editEndTime) {
+            const rounded = roundToNearestHalfHour(new Date(editEndTime));
+            setEditEndTime(formatToGuatemalaDateTimeLocal(rounded));
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setEditingShift(null);
+        setEditStartTime('');
+        setEditEndTime('');
     };
 
     if (!isMounted) return null;
@@ -219,36 +296,126 @@ export default function AttendanceReports() {
 
                             <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-slate-50 rounded-xl">
                                 <div>
-                                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Clock In</p>
-                                    <p className="text-sm font-semibold text-slate-700">
-                                        {shift.actual_start_time ? new Date(shift.actual_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '---'}
+                                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">
+                                        {language === 'es' ? 'Entrada Real' : 'Actual Clock In'}
                                     </p>
+                                    {editingShift === shift.id ? (
+                                        <input
+                                            type="datetime-local"
+                                            value={editStartTime}
+                                            onChange={(e) => setEditStartTime(e.target.value)}
+                                            className="w-full px-2 py-1 text-xs border border-slate-300 rounded"
+                                        />
+                                    ) : (
+                                        <p className="text-sm font-semibold text-slate-700">
+                                            {shift.actual_start_time ? new Date(shift.actual_start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '---'}
+                                        </p>
+                                    )}
+                                    {shift.start_time && (
+                                        <p className="text-[10px] text-slate-500 mt-1">
+                                            {language === 'es' ? 'Programado:' : 'Scheduled:'} {new Date(shift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                    )}
                                 </div>
                                 <div>
-                                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Clock Out</p>
-                                    <p className="text-sm font-semibold text-slate-700">
-                                        {shift.actual_end_time ? new Date(shift.actual_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '---'}
+                                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">
+                                        {language === 'es' ? 'Salida Real' : 'Actual Clock Out'}
                                     </p>
+                                    {editingShift === shift.id ? (
+                                        <input
+                                            type="datetime-local"
+                                            value={editEndTime}
+                                            onChange={(e) => setEditEndTime(e.target.value)}
+                                            className="w-full px-2 py-1 text-xs border border-slate-300 rounded"
+                                        />
+                                    ) : (
+                                        <p className="text-sm font-semibold text-slate-700">
+                                            {shift.actual_end_time ? new Date(shift.actual_end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '---'}
+                                        </p>
+                                    )}
+                                    {shift.end_time && (
+                                        <p className="text-[10px] text-slate-500 mt-1">
+                                            {language === 'es' ? 'Programado:' : 'Scheduled:'} {new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="col-span-2 border-t border-slate-200 pt-2 mt-2">
-                                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Total Duration</p>
+                                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">
+                                        {language === 'es' ? 'Duración Total' : 'Total Duration'}
+                                    </p>
                                     <p className="text-sm font-bold text-primary-700">
-                                        {shift.actual_start_time && shift.actual_end_time ?
-                                            ((new Date(shift.actual_end_time).getTime() - new Date(shift.actual_start_time).getTime()) / (1000 * 3600)).toFixed(2)
-                                            : '0.00'
-                                        } hours
+                                        {(() => {
+                                            let start = editingShift === shift.id && editStartTime ? new Date(editStartTime) : (shift.actual_start_time ? new Date(shift.actual_start_time) : null);
+                                            let end = editingShift === shift.id && editEndTime ? new Date(editEndTime) : (shift.actual_end_time ? new Date(shift.actual_end_time) : null);
+                                            return start && end ? ((end.getTime() - start.getTime()) / (1000 * 3600)).toFixed(2) : '0.00';
+                                        })()} {language === 'es' ? 'horas' : 'hours'}
                                     </p>
                                 </div>
                             </div>
 
                             <div className="flex space-x-2">
-                                <button
-                                    onClick={() => handleApprove(shift.id)}
-                                    className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition-all flex items-center justify-center"
-                                >
-                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                    Approve Hours
-                                </button>
+                                {editingShift === shift.id ? (
+                                    <>
+                                        {/* Time adjustment buttons */}
+                                        <div className="w-full mb-3 flex flex-wrap gap-2">
+                                            <button
+                                                onClick={() => handleUseScheduledTimes(shift)}
+                                                className="flex-1 min-w-0 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center"
+                                                title={language === 'es' ? 'Usar horarios programados' : 'Use scheduled times'}
+                                            >
+                                                <RotateCcw className="w-3 h-3 mr-1" />
+                                                {language === 'es' ? 'Programado' : 'Scheduled'}
+                                            </button>
+                                            <button
+                                                onClick={handleRoundToQuarterHour}
+                                                className="flex-1 min-w-0 py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center"
+                                                title={language === 'es' ? 'Redondear a 15 minutos' : 'Round to 15 minutes'}
+                                            >
+                                                <Timer className="w-3 h-3 mr-1" />
+                                                15min
+                                            </button>
+                                            <button
+                                                onClick={handleRoundToHalfHour}
+                                                className="flex-1 min-w-0 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center"
+                                                title={language === 'es' ? 'Redondear a 30 minutos' : 'Round to 30 minutes'}
+                                            >
+                                                <Timer className="w-3 h-3 mr-1" />
+                                                30min
+                                            </button>
+                                        </div>
+
+                                        {/* Save/Cancel buttons */}
+                                        <button
+                                            onClick={() => handleSaveTimes(shift.id)}
+                                            className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-sm transition-all flex items-center justify-center"
+                                        >
+                                            <CheckCircle className="w-4 h-4 mr-2" />
+                                            {language === 'es' ? 'Guardar' : 'Save Times'}
+                                        </button>
+                                        <button
+                                            onClick={handleCancelEdit}
+                                            className="flex-1 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-xl text-sm font-bold shadow-sm transition-all flex items-center justify-center"
+                                        >
+                                            {language === 'es' ? 'Cancelar' : 'Cancel'}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => handleEditTimes(shift)}
+                                            className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-sm transition-all flex items-center justify-center"
+                                        >
+                                            {language === 'es' ? 'Editar Horas' : 'Edit Times'}
+                                        </button>
+                                        <button
+                                            onClick={() => handleApprove(shift.id)}
+                                            className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition-all flex items-center justify-center"
+                                        >
+                                            <CheckCircle className="w-4 h-4 mr-2" />
+                                            {language === 'es' ? 'Aprobar' : 'Approve Hours'}
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     )) : (

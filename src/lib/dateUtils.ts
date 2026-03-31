@@ -183,3 +183,67 @@ export const ensureGuatemalaDate = (
   const d = parseLocalDate(date);
   return d.toISOString();
 };
+
+/**
+ * Rounds a Date to the nearest specified minute interval (e.g., 15, 30 minutes)
+ */
+export const roundToNearestMinutes = (date: Date, intervalMinutes: number = 15): Date => {
+  const rounded = new Date(date);
+  const minutes = rounded.getMinutes();
+  const remainder = minutes % intervalMinutes;
+  const halfInterval = intervalMinutes / 2;
+
+  if (remainder >= halfInterval) {
+    // Round up
+    rounded.setMinutes(minutes + (intervalMinutes - remainder));
+  } else {
+    // Round down
+    rounded.setMinutes(minutes - remainder);
+  }
+
+  rounded.setSeconds(0, 0); // Reset seconds and milliseconds
+  return rounded;
+};
+
+/**
+ * Rounds a Date to the nearest hour
+ */
+export const roundToNearestHour = (date: Date): Date => {
+  return roundToNearestMinutes(date, 60);
+};
+
+/**
+ * Rounds a Date to the nearest 15 minutes
+ */
+export const roundToNearestQuarterHour = (date: Date): Date => {
+  return roundToNearestMinutes(date, 15);
+};
+
+/**
+ * Rounds a Date to the nearest 30 minutes
+ */
+export const roundToNearestHalfHour = (date: Date): Date => {
+  return roundToNearestMinutes(date, 30);
+};
+
+/**
+ * Calculates the duration between two dates in hours (decimal)
+ */
+export const calculateDurationHours = (start: Date | string | null, end: Date | string | null): number => {
+  if (!start || !end) return 0;
+
+  const startDate = typeof start === 'string' ? new Date(start) : start;
+  const endDate = typeof end === 'string' ? new Date(end) : end;
+
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return 0;
+
+  const diffMs = endDate.getTime() - startDate.getTime();
+  return diffMs / (1000 * 60 * 60); // Convert to hours
+};
+
+/**
+ * Formats duration in hours to a readable string (e.g., "8.50 hours")
+ */
+export const formatDuration = (hours: number): string => {
+  return hours.toFixed(2) + ' hours';
+};

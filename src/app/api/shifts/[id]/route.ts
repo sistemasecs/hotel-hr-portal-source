@@ -27,16 +27,18 @@ export async function PUT(
 ) {
     try {
         const { id } = await params;
-        const { startTime, endTime, type, status } = await request.json();
+        const { startTime, endTime, type, status, actualStartTime, actualEndTime } = await request.json();
 
         const result = await pool.query(
-            `UPDATE shifts 
-             SET start_time = COALESCE($1, start_time), 
-                 end_time = COALESCE($2, end_time), 
-                 type = COALESCE($3, type), 
-                 status = COALESCE($4, status)
-             WHERE id = $5 RETURNING *`,
-            [startTime, endTime, type, status, id]
+            `UPDATE shifts
+             SET start_time = COALESCE($1, start_time),
+                 end_time = COALESCE($2, end_time),
+                 type = COALESCE($3, type),
+                 status = COALESCE($4, status),
+                 actual_start_time = COALESCE($5, actual_start_time),
+                 actual_end_time = COALESCE($6, actual_end_time)
+             WHERE id = $7 RETURNING *`,
+            [startTime, endTime, type, status, actualStartTime, actualEndTime, id]
         );
 
         if (result.rows.length === 0) {
@@ -44,7 +46,7 @@ export async function PUT(
         }
 
         const updatedShift = result.rows[0];
-        await logActivity(null, 'UPDATE', 'SHIFT', id, { type, status });
+        await logActivity(null, 'UPDATE', 'SHIFT', id, { type, status, actualStartTime, actualEndTime });
 
         return NextResponse.json(updatedShift);
     } catch (error) {

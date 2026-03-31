@@ -7,8 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { Shift, User, ShiftType } from '@/types';
 import ShiftTypesManager from '@/components/admin/ShiftTypesManager';
-import { Settings, CheckCircle, XCircle, Clock, Users, CalendarDays, AlertCircle } from 'lucide-react';
-import { formatToGuatemalaDateTimeLocal, parseGuatemalaDateTimeLocal } from '@/lib/dateUtils';
+import { Settings, CheckCircle, XCircle, Clock, Users, CalendarDays, AlertCircle, RotateCcw, Timer } from 'lucide-react';
+import { formatToGuatemalaDateTimeLocal, parseGuatemalaDateTimeLocal, roundToNearestQuarterHour, roundToNearestHalfHour } from '@/lib/dateUtils';
 
 interface WeeklySummaryRow {
   user_id: string;
@@ -39,6 +39,9 @@ export default function SchedulesPage() {
     const [editingShift, setEditingShift] = useState<Shift | null>(null);
     const [approvingShift, setApprovingShift] = useState<Shift | null>(null);
     const [approvalNotes, setApprovalNotes] = useState('');
+    const [editingTimeShift, setEditingTimeShift] = useState<string | null>(null);
+    const [editStartTime, setEditStartTime] = useState('');
+    const [editEndTime, setEditEndTime] = useState('');
     const [weeklySummary, setWeeklySummary] = useState<WeeklySummaryRow[]>([]);
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [shiftForm, setShiftForm] = useState({
@@ -119,6 +122,86 @@ export default function SchedulesPage() {
     useEffect(() => {
         if (activeView === 'summary') fetchWeeklySummary();
     }, [activeView, weekRange, effectiveDeptId]);
+
+    const handleEditTimes = (shift: Shift) => {
+        setEditingTimeShift(shift.id);
+        setEditStartTime(shift.actual_start_time ? formatToGuatemalaDateTimeLocal(shift.actual_start_time) : '');
+        setEditEndTime(shift.actual_end_time ? formatToGuatemalaDateTimeLocal(shift.actual_end_time) : '');
+    };
+
+    const handleSaveTimes = async (shiftId: string) => {
+        try {
+            if (!editStartTime || !editEndTime) {
+                alert(language === 'es' ? 'Por favor ingresa ambas horas' : 'Please enter both times');
+                return;
+            }
+            
+            const startTime = parseGuatemalaDateTimeLocal(editStartTime);
+            const endTime = parseGuatemalaDateTimeLocal(editEndTime);
+
+            const response = await fetch(`/api/shifts/${shiftId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    actualStartTime: startTime,
+                    actualEndTime: endTime
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to update shift');
+            }
+            
+            setEditingTimeShift(null);
+            setEditStartTime('');
+            setEditEndTime('');
+            // Refresh shifts
+            const startDate = `${weekRange.start.toISOString().split('T')[0]}T00:00:00.000-06:00`;
+            const endDate = `${weekRange.end.toISOString().split('T')[0]}T23:59:59.999-06:00`;
+            const filters: any = { startDate, endDate };
+            if (effectiveDeptId) filters.departmentId = effectiveDeptId;
+            fetchShifts(filters);
+        } catch (err) {
+            console.error('Error updating shift times:', err);
+            alert(language === 'es' ? 'Error al actualizar las horas: ' + (err instanceof Error ? err.message : 'Error desconocido') : 'Error updating shift times: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        }
+    };
+
+    const handleUseScheduledTimes = (shift: Shift) => {
+        // Use scheduled start time but keep actual end time
+        setEditStartTime(shift.start_time ? formatToGuatemalaDateTimeLocal(shift.start_time) : '');
+        // Keep the actual end time that the employee clocked out
+        setEditEndTime(shift.actual_end_time ? formatToGuatemalaDateTimeLocal(shift.actual_end_time) : '');
+    };
+
+    const handleRoundToQuarterHour = () => {
+        if (editStartTime) {
+            const rounded = roundToNearestQuarterHour(new Date(editStartTime));
+            setEditStartTime(formatToGuatemalaDateTimeLocal(rounded));
+        }
+        if (editEndTime) {
+            const rounded = roundToNearestQuarterHour(new Date(editEndTime));
+            setEditEndTime(formatToGuatemalaDateTimeLocal(rounded));
+        }
+    };
+
+    const handleRoundToHalfHour = () => {
+        if (editStartTime) {
+            const rounded = roundToNearestHalfHour(new Date(editStartTime));
+            setEditStartTime(formatToGuatemalaDateTimeLocal(rounded));
+        }
+        if (editEndTime) {
+            const rounded = roundToNearestHalfHour(new Date(editEndTime));
+            setEditEndTime(formatToGuatemalaDateTimeLocal(rounded));
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setEditingTimeShift(null);
+        setEditStartTime('');
+        setEditEndTime('');
+    };
 
     const handleApproveShift = async (shift: Shift, status: 'approved' | 'rejected') => {
         if (!user) return;
@@ -707,24 +790,130 @@ export default function SchedulesPage() {
 
                                     {approvingShift?.id === shift.id ? (
                                         <div className="px-5 pb-5 space-y-3">
-                                            <textarea
-                                                className="w-full border border-slate-200 rounded-lg p-3 text-sm resize-none"
-                                                rows={2}
-                                                placeholder={language === 'es' ? 'Notas de aprobación (opcional)...' : 'Approval notes (optional)...'}
-                                                value={approvalNotes}
-                                                onChange={e => setApprovalNotes(e.target.value)}
-                                            />
-                                            <div className="flex space-x-3">
-                                                <button onClick={() => handleApproveShift(shift, 'approved')} className="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
-                                                    <CheckCircle className="w-4 h-4" /> {language === 'es' ? 'Aprobar' : 'Approve'}
-                                                </button>
-                                                <button onClick={() => handleApproveShift(shift, 'rejected')} className="flex-1 bg-rose-100 text-rose-700 py-2.5 rounded-lg text-sm font-bold hover:bg-rose-200 transition-colors flex items-center justify-center gap-2">
-                                                    <XCircle className="w-4 h-4" /> {language === 'es' ? 'Rechazar' : 'Reject'}
-                                                </button>
-                                                <button onClick={() => { setApprovingShift(null); setApprovalNotes(''); }} className="px-4 py-2.5 text-slate-500 hover:text-slate-700 text-sm">
-                                                    {language === 'es' ? 'Cancelar' : 'Cancel'}
-                                                </button>
-                                            </div>
+                                            {/* Time editing section */}
+                                            {editingTimeShift === shift.id ? (
+                                                <div className="space-y-4">
+                                                    <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl">
+                                                        <div>
+                                                            <p className="text-xs font-bold text-slate-500 uppercase mb-2">
+                                                                {language === 'es' ? 'Entrada Real' : 'Actual Clock In'}
+                                                            </p>
+                                                            <input
+                                                                type="datetime-local"
+                                                                value={editStartTime}
+                                                                onChange={(e) => setEditStartTime(e.target.value)}
+                                                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                                            />
+                                                            {shift.start_time && (
+                                                                <p className="text-xs text-slate-500 mt-1">
+                                                                    {language === 'es' ? 'Programado:' : 'Scheduled:'} {new Date(shift.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs font-bold text-slate-500 uppercase mb-2">
+                                                                {language === 'es' ? 'Salida Real' : 'Actual Clock Out'}
+                                                            </p>
+                                                            <input
+                                                                type="datetime-local"
+                                                                value={editEndTime}
+                                                                onChange={(e) => setEditEndTime(e.target.value)}
+                                                                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                                                            />
+                                                            {shift.end_time && (
+                                                                <p className="text-xs text-slate-500 mt-1">
+                                                                    {language === 'es' ? 'Programado:' : 'Scheduled:'} {new Date(shift.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <div className="col-span-2 border-t border-slate-200 pt-3 mt-2">
+                                                            <p className="text-xs font-bold text-slate-500 uppercase mb-1">
+                                                                {language === 'es' ? 'Duración Total' : 'Total Duration'}
+                                                            </p>
+                                                            <p className="text-sm font-bold text-primary-700">
+                                                                {(() => {
+                                                                    let start = editStartTime ? new Date(editStartTime) : (shift.actual_start_time ? new Date(shift.actual_start_time) : null);
+                                                                    let end = editEndTime ? new Date(editEndTime) : (shift.actual_end_time ? new Date(shift.actual_end_time) : null);
+                                                                    return start && end ? ((end.getTime() - start.getTime()) / (1000 * 3600)).toFixed(2) : '0.00';
+                                                                })()} {language === 'es' ? 'horas' : 'hours'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Time adjustment buttons */}
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <button
+                                                            onClick={() => handleUseScheduledTimes(shift)}
+                                                            className="flex-1 min-w-0 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center"
+                                                            title={language === 'es' ? 'Usar hora de entrada programada, mantener salida real' : 'Use scheduled start time, keep actual end time'}
+                                                        >
+                                                            <RotateCcw className="w-3 h-3 mr-1" />
+                                                            {language === 'es' ? 'Programado' : 'Scheduled'}
+                                                        </button>
+                                                        <button
+                                                            onClick={handleRoundToQuarterHour}
+                                                            className="flex-1 min-w-0 py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center"
+                                                            title={language === 'es' ? 'Redondear a 15 minutos' : 'Round to 15 minutes'}
+                                                        >
+                                                            <Timer className="w-3 h-3 mr-1" />
+                                                            15min
+                                                        </button>
+                                                        <button
+                                                            onClick={handleRoundToHalfHour}
+                                                            className="flex-1 min-w-0 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center"
+                                                            title={language === 'es' ? 'Redondear a 30 minutos' : 'Round to 30 minutes'}
+                                                        >
+                                                            <Timer className="w-3 h-3 mr-1" />
+                                                            30min
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Save/Cancel buttons for time editing */}
+                                                    <div className="flex space-x-3">
+                                                        <button
+                                                            onClick={() => handleSaveTimes(shift.id)}
+                                                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                                                        >
+                                                            <CheckCircle className="w-4 h-4" />
+                                                            {language === 'es' ? 'Guardar Horas' : 'Save Times'}
+                                                        </button>
+                                                        <button
+                                                            onClick={handleCancelEdit}
+                                                            className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                                                        >
+                                                            {language === 'es' ? 'Cancelar Edición' : 'Cancel Edit'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <textarea
+                                                        className="w-full border border-slate-200 rounded-lg p-3 text-sm resize-none"
+                                                        rows={2}
+                                                        placeholder={language === 'es' ? 'Notas de aprobación (opcional)...' : 'Approval notes (optional)...'}
+                                                        value={approvalNotes}
+                                                        onChange={e => setApprovalNotes(e.target.value)}
+                                                    />
+                                                    <div className="flex space-x-3">
+                                                        <button
+                                                            onClick={() => handleEditTimes(shift)}
+                                                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                                                        >
+                                                            <Timer className="w-4 h-4" />
+                                                            {language === 'es' ? 'Editar Horas' : 'Edit Times'}
+                                                        </button>
+                                                        <button onClick={() => handleApproveShift(shift, 'approved')} className="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2">
+                                                            <CheckCircle className="w-4 h-4" /> {language === 'es' ? 'Aprobar' : 'Approve'}
+                                                        </button>
+                                                        <button onClick={() => handleApproveShift(shift, 'rejected')} className="flex-1 bg-rose-100 text-rose-700 py-2.5 rounded-lg text-sm font-bold hover:bg-rose-200 transition-colors flex items-center justify-center gap-2">
+                                                            <XCircle className="w-4 h-4" /> {language === 'es' ? 'Rechazar' : 'Reject'}
+                                                        </button>
+                                                        <button onClick={() => { setApprovingShift(null); setApprovalNotes(''); }} className="px-4 py-2.5 text-slate-500 hover:text-slate-700 text-sm">
+                                                            {language === 'es' ? 'Cancelar' : 'Cancel'}
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="px-5 pb-5">
