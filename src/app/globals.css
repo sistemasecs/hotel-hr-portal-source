@@ -56,14 +56,15 @@ textarea::placeholder {
 
 @media print {
   @page {
-    margin: 0.3cm 0.5cm;
-    /* Removes browser header/footer (URL, date, time) */
+    margin: 0.5cm;
     size: A4 landscape;
   }
 
   body {
-    padding: 0.3cm 0.5cm;
-    /* Adds safe area for printing */
+    padding: 0;
+    margin: 0;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .no-print {
@@ -71,14 +72,18 @@ textarea::placeholder {
   }
 
   /* Hide the sidebar when printing */
-  .w-64.bg-slate-900 {
+  .w-64.bg-slate-900, 
+  aside, 
+  nav {
     display: none !important;
   }
 
   /* Remove the left margin from the main content area when printing */
-  main.ml-64 {
+  main, 
+  .ml-64 {
     margin-left: 0 !important;
     padding: 0 !important;
+    width: 100% !important;
   }
 
   /* Limit print to the calendar section only */
@@ -89,71 +94,72 @@ textarea::placeholder {
   .print-only-calendar {
     display: block !important;
     width: 100% !important;
+    max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
   }
 
-  /* Ensure the calendar takes full width */
-  .lg\:col-span-2 {
-    grid-column: span 3 / span 3 !important;
-  }
-
-  /* Enlarge calendar text and cells */
+  /* Calendar Grid for Print */
   .grid.grid-cols-7 {
-    font-size: 14px !important;
+    display: grid !important;
+    grid-template-cols: repeat(7, 1fr) !important;
+    width: 100% !important;
+    border: 1px solid #e2e8f0 !important;
+    background-color: #f8fafc !important;
   }
 
   .grid.grid-cols-7 > div {
-    min-height: 180px !important;
-    padding: 12px !important;
-    font-size: 13px !important;
+    min-height: 120px !important; /* Smaller height to fit A4 Landscape */
+    padding: 8px !important;
+    background-color: #ffffff !important;
+    border: 0.5px solid #e2e8f0 !important;
+    font-size: 11px !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   .grid.grid-cols-7 > div > span {
-    font-size: 14px !important;
-    font-weight: bold !important;
-  }
-
-  .grid.grid-cols-7 > div > div > div {
     font-size: 12px !important;
-    padding: 4px !important;
+    font-weight: bold !important;
+    margin-bottom: 4px !important;
   }
 
-  /* Increase header size */
+  /* Event box in calendar cell */
+  .grid.grid-cols-7 > div > div > div {
+    font-size: 10px !important;
+    padding: 2px 4px !important;
+    margin-bottom: 2px !important;
+    border-radius: 4px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important; /* Allow wrapping in print */
+  }
+
+  /* Month Header */
   .p-4.border-b.border-slate-100.flex.justify-between.items-center {
-    padding: 16px !important;
+    padding: 10px 0 !important;
+    border-bottom: 2px solid #e2e8f0 !important;
   }
 
   .p-4.border-b.border-slate-100.flex.justify-between.items-center h2 {
-    font-size: 20px !important;
-  }
-
-  /* Reduce space around main content */
-  body > div {
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  /* Add print scaling for better fit */
-  .print-only-calendar {
-    transform-origin: top left;
-    transform: scale(0.78);
-    width: 90% !important;
-    padding: 0 !important;
-  }
-
-  .print-only-calendar .grid.grid-cols-7 {
-    transform: scale(1);
+    font-size: 24px !important;
+    text-align: center !important;
     width: 100% !important;
   }
 
-  .print-only-calendar .grid.grid-cols-7 > div {
-    min-height: 150px !important;
+  /* Day Name Headers */
+  .grid.grid-cols-7 > .bg-slate-50 {
+    min-height: auto !important;
+    padding: 4px !important;
+    background-color: #f1f5f9 !important;
+    font-weight: bold !important;
+    text-align: center !important;
   }
 
-  /* Force background colors to print */
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
+  /* Fix for text colors in print */
+  .text-pink-700 { color: #be185d !important; }
+  .text-amber-700 { color: #b45309 !important; }
+  .text-blue-700 { color: #1d4ed8 !important; }
+  .bg-pink-50 { background-color: #fdf2f8 !important; }
+  .bg-amber-50 { background-color: #fffbeb !important; }
+  .bg-blue-50 { background-color: #eff6ff !important; }
 }
