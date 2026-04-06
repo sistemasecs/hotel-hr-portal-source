@@ -9,7 +9,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "El Carmen Hotel - Employee Portal",
+  title: "El Carmen Hotel - Portal",
   description: "Internal clubhouse for hotel staff and HR administration.",
 };
 
