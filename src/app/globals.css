@@ -56,12 +56,13 @@ textarea::placeholder {
 
 @media print {
   @page {
-    margin: 0;
+    margin: 0.3cm 0.5cm;
     /* Removes browser header/footer (URL, date, time) */
+    size: A4 landscape;
   }
 
   body {
-    padding: 1.5cm;
+    padding: 0.3cm 0.5cm;
     /* Adds safe area for printing */
   }
 
@@ -80,9 +81,74 @@ textarea::placeholder {
     padding: 0 !important;
   }
 
+  /* Limit print to the calendar section only */
+  .culture-page > :not(.print-only-calendar) {
+    display: none !important;
+  }
+
+  .print-only-calendar {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   /* Ensure the calendar takes full width */
   .lg\:col-span-2 {
     grid-column: span 3 / span 3 !important;
+  }
+
+  /* Enlarge calendar text and cells */
+  .grid.grid-cols-7 {
+    font-size: 14px !important;
+  }
+
+  .grid.grid-cols-7 > div {
+    min-height: 180px !important;
+    padding: 12px !important;
+    font-size: 13px !important;
+  }
+
+  .grid.grid-cols-7 > div > span {
+    font-size: 14px !important;
+    font-weight: bold !important;
+  }
+
+  .grid.grid-cols-7 > div > div > div {
+    font-size: 12px !important;
+    padding: 4px !important;
+  }
+
+  /* Increase header size */
+  .p-4.border-b.border-slate-100.flex.justify-between.items-center {
+    padding: 16px !important;
+  }
+
+  .p-4.border-b.border-slate-100.flex.justify-between.items-center h2 {
+    font-size: 20px !important;
+  }
+
+  /* Reduce space around main content */
+  body > div {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Add print scaling for better fit */
+  .print-only-calendar {
+    transform-origin: top left;
+    transform: scale(0.78);
+    width: 90% !important;
+    padding: 0 !important;
+  }
+
+  .print-only-calendar .grid.grid-cols-7 {
+    transform: scale(1);
+    width: 100% !important;
+  }
+
+  .print-only-calendar .grid.grid-cols-7 > div {
+    min-height: 150px !important;
   }
 
   /* Force background colors to print */

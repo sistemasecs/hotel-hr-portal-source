@@ -6,6 +6,7 @@ import { useData } from '@/context/DataContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import CommentsSection from '@/components/CommentsSection';
+import { formatTimeWithoutSeconds } from '@/lib/dateUtils';
 
 export default function CultureHubPage() {
   const { allEvents, users, addPeerVote, peerVotes, employeesOfTheMonth } = useData();
@@ -75,8 +76,8 @@ export default function CultureHubPage() {
   const currentEotmUser = currentEotmRecord ? users.find(u => u.id === currentEotmRecord.userId) : null;
 
   return (
-    <div className="space-y-8">
-      <header className="flex justify-between items-end border-b border-slate-200 pb-6 no-print">
+    <div className="space-y-8 culture-page">
+      <header className="flex justify-between items-end border-b border-slate-200 pb-6 culture-page-header no-print">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">{t('cultureHub')}</h1>
           <p className="text-slate-500 mt-2">{t('cultureHubDesc')}</p>
@@ -130,9 +131,106 @@ export default function CultureHubPage() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          {viewType === 'List' ? (
+      {/* Top Row: EDM (Left) and Nominate (Right) */}
+      <div className="grid grid-cols-2 gap-6 mb-8 no-print">
+        {/* EDM Section - Left */}
+        <div>
+          {currentEotmUser ? (
+            <div className="bg-slate-900 text-white p-4 rounded-lg shadow-lg h-full">
+              <h3 className="text-sm font-bold mb-3">{t('eotmTitle')}</h3>
+              <div className="flex items-center space-x-3">
+                {currentEotmUser.avatarUrl ? (
+                  <img 
+                    src={currentEotmUser.avatarUrl} 
+                    alt={currentEotmUser.name} 
+                    className={`w-12 h-12 rounded-full ${currentEotmUser.avatarFit === 'contain' ? 'object-contain bg-slate-100' : 'object-cover'}`}
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-primary-500 flex items-center justify-center text-sm font-bold">
+                    {currentEotmUser.name.charAt(0)}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <p className="font-semibold text-sm">{currentEotmUser.name}</p>
+                  <p className="text-primary-300 text-xs">{currentEotmUser.department}</p>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-slate-300 leading-relaxed">
+                {t('eotmDesc')}
+              </p>
+              
+              <div className="mt-3 pt-3 border-t border-slate-800">
+                <CommentsSection 
+                  referenceId={`EDM-${currentMonthStr}`} 
+                  title="¡Felicita!"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-900 text-white p-4 rounded-lg shadow-lg h-full flex flex-col justify-center">
+              <h3 className="text-sm font-bold mb-2">{t('eotmTitle')}</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {t('eotmNotAnnounced').replace('{month}', new Date().toLocaleString('default', { month: 'long' }))}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Peer Voting Section - Right */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100 h-full">
+          <h3 className="text-sm font-bold text-slate-900 mb-2">{t('nominatePeer')}</h3>
+          <p className="text-xs text-slate-500 mb-3">
+            {t('nominateDesc')}
+          </p>
+          
+          {hasVotedThisMonth ? (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-center">
+              <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-xs font-medium text-emerald-800">{t('alreadyVoted')}</p>
+            </div>
+          ) : (
+            <form onSubmit={handleVote} className="space-y-2">
+              <div>
+                <select
+                  required
+                  value={selectedNominee}
+                  onChange={(e) => setSelectedNominee(e.target.value)}
+                  className="w-full border border-slate-300 rounded-md shadow-sm p-1.5 text-xs focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="" disabled>{t('chooseSomeone')}</option>
+                  {users.filter(u => u.id !== user?.id).map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <textarea
+                  rows={2}
+                  value={voteReason}
+                  onChange={(e) => setVoteReason(e.target.value)}
+                  placeholder={t('reasonPlaceholder')}
+                  className="w-full border border-slate-300 rounded-md shadow-sm p-1.5 text-xs focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!selectedNominee}
+                className="w-full py-1.5 px-3 border border-transparent rounded-md shadow-sm text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {t('submitNomination')}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+
+      {/* Activities Section - Full Width Below */}
+      <div className="space-y-6 print-only-calendar">
+        {viewType === 'List' ? (
             displayEvents.map(event => (
               <div key={event.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-start space-x-6">
                 <div className="flex-shrink-0 w-16 h-16 bg-primary-50 text-primary-600 rounded-xl flex flex-col items-center justify-center border border-primary-100">
@@ -156,7 +254,7 @@ export default function CultureHubPage() {
                   <div className="flex items-center space-x-4 mt-4">
                     {'time' in event && event.time && (
                       <p className="text-sm text-slate-500 font-medium">
-                        🕒 {event.time}
+                        🕒 {formatTimeWithoutSeconds(event.time)}
                       </p>
                     )}
                     {'location' in event && event.location && (
@@ -212,14 +310,17 @@ export default function CultureHubPage() {
                         {dayEvents.map(e => (
                           <div 
                             key={e.id} 
-                            className={`text-xs p-1 rounded truncate ${
+                            className={`text-[10px] p-1.5 rounded leading-tight flex flex-col ${
                               e.type === 'Birthday' ? 'bg-pink-50 text-pink-700 border border-pink-100' :
                               e.type === 'Celebration' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
                               'bg-blue-50 text-blue-700 border border-blue-100'
                             }`}
-                            title={e.title}
+                            title={`${'time' in e && e.time ? formatTimeWithoutSeconds(e.time) + ' - ' : ''}${e.title}`}
                           >
-                            {'time' in e && e.time ? `${e.time} ` : ''}{e.title}
+                            {'time' in e && e.time && (
+                              <span className="font-bold opacity-80 mb-0.5">{formatTimeWithoutSeconds(e.time)}</span>
+                            )}
+                            <span className="line-clamp-2">{e.title}</span>
                           </div>
                         ))}
                       </div>
@@ -236,103 +337,6 @@ export default function CultureHubPage() {
             </div>
           )}
         </div>
-
-        <div className="space-y-6 no-print">
-          {currentEotmUser ? (
-            <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg">
-              <h3 className="text-lg font-bold mb-4">{t('eotmTitle')}</h3>
-              <div className="flex items-center space-x-4">
-                {currentEotmUser.avatarUrl ? (
-                  <img 
-                    src={currentEotmUser.avatarUrl} 
-                    alt={currentEotmUser.name} 
-                    className={`w-16 h-16 rounded-full ${currentEotmUser.avatarFit === 'contain' ? 'object-contain bg-slate-100' : 'object-cover'}`}
-                  />
-                ) : (
-                  <div className="w-16 h-16 rounded-full bg-primary-500 flex items-center justify-center text-xl font-bold">
-                    {currentEotmUser.name.charAt(0)}
-                  </div>
-                )}
-                <div>
-                  <p className="font-bold text-lg">{currentEotmUser.name}</p>
-                  <p className="text-primary-300 text-sm">{currentEotmUser.department}</p>
-                </div>
-              </div>
-              <p className="mt-4 text-sm text-slate-300 leading-relaxed">
-                {t('eotmDesc')}
-              </p>
-              
-              <div className="mt-6 pt-6 border-t border-slate-800">
-                <CommentsSection 
-                  referenceId={`EDM-${currentMonthStr}`} 
-                  title="¡Felicita al Empleado del Mes!"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg">
-              <h3 className="text-lg font-bold mb-4">{t('eotmTitle')}</h3>
-              <p className="text-sm text-slate-300 leading-relaxed">
-                {t('eotmNotAnnounced').replace('{month}', new Date().toLocaleString('default', { month: 'long' }))}
-              </p>
-            </div>
-          )}
-
-          {/* Peer Voting Section */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('nominatePeer')}</h3>
-            <p className="text-sm text-slate-500 mb-4">
-              {t('nominateDesc')}
-            </p>
-            
-            {hasVotedThisMonth ? (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center">
-                <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <p className="text-sm font-medium text-emerald-800">{t('alreadyVoted')}</p>
-                <p className="text-xs text-emerald-600 mt-1">{t('alreadyVotedThanks')}</p>
-              </div>
-            ) : (
-              <form onSubmit={handleVote} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('selectColleague')}</label>
-                  <select
-                    required
-                    value={selectedNominee}
-                    onChange={(e) => setSelectedNominee(e.target.value)}
-                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="" disabled>{t('chooseSomeone')}</option>
-                    {users.filter(u => u.id !== user?.id).map(u => (
-                      <option key={u.id} value={u.id}>{u.name} ({u.department})</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('reasonOptional')}</label>
-                  <textarea
-                    rows={2}
-                    value={voteReason}
-                    onChange={(e) => setVoteReason(e.target.value)}
-                    placeholder={t('reasonPlaceholder')}
-                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={!selectedNominee}
-                  className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {t('submitNomination')}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

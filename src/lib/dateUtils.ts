@@ -247,3 +247,14 @@ export const calculateDurationHours = (start: Date | string | null, end: Date | 
 export const formatDuration = (hours: number): string => {
   return hours.toFixed(2) + ' hours';
 };
+
+/**
+ * Formats a time string to HH:MM format, removing seconds if present.
+ * Accepts formats like "HH:MM:SS" or "HH:MM" and returns "HH:MM"
+ */
+export const formatTimeWithoutSeconds = (time: string | undefined | null): string => {
+  if (!time) return '';
+  
+  // Take only the first 5 characters (HH:MM)
+  return time.substring(0, 5);
+};
