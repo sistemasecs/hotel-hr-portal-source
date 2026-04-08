@@ -6,7 +6,7 @@ import { useData } from '@/context/DataContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User, Event, TrainingModule, EmployeeRequest } from '@/types';
+import { User, Event, TrainingModule, EmployeeRequest, TrainingTier } from '@/types';
 import ModuleForm from '@/components/admin/ModuleForm';
 import AttendanceReports from '@/components/admin/AttendanceReports';
 import { getAccruedDays, getVacationHistory, getDaysSinceLastVacation, calculateVacationBalance, getDurationInDays } from '@/lib/vacationUtils';
@@ -32,6 +32,36 @@ function AdminDashboardContent() {
   const [attendanceSubTab, setAttendanceSubTab] = useState<'Logs' | 'Reports'>('Logs');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
+  const [selectedDeptDetail, setSelectedDeptDetail] = useState<string | null>(null);
+
+  // Learning Center Content Transactional State
+  const [configDraft, setConfigDraft] = useState<any>(null);
+  const [isConfigDirty, setIsConfigDirty] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'Training' && hotelConfig && !configDraft) {
+      setConfigDraft(JSON.parse(JSON.stringify(hotelConfig)));
+    }
+  }, [activeTab, hotelConfig]);
+
+  const updateDraft = (updates: any) => {
+    setConfigDraft((prev: any) => ({ ...prev, ...updates }));
+    setIsConfigDirty(true);
+  };
+
+  const handleSaveConfig = async () => {
+    if (!configDraft) return;
+    await updateHotelConfig(configDraft);
+    setIsConfigDirty(false);
+    alert('Configuration saved successfully!');
+  };
+
+  const handleCancelConfig = () => {
+    if (window.confirm('Discard unsaved changes?')) {
+      setConfigDraft(JSON.parse(JSON.stringify(hotelConfig)));
+      setIsConfigDirty(false);
+    }
+  };
 
   const [selectedHierarchyDepts, setSelectedHierarchyDepts] = useState<string[]>([]);
   const [zoomLevel, setZoomLevel] = useState(1.0);
@@ -586,6 +616,72 @@ function AdminDashboardContent() {
   const handleAddModuleClick = () => {
     setEditingModule(undefined);
     setIsModuleFormOpen(true);
+  };
+
+  const getDepartmentTrainingStats = (deptName: string) => {
+    const deptEmployees = users.filter(u => u.department === deptName && u.isActive !== false);
+    const requiredModules = trainingModules.filter(m => 
+      m.required && 
+      (!m.targetDepartments || m.targetDepartments.length === 0 || m.targetDepartments.includes(deptName))
+    );
+
+    if (deptEmployees.length === 0 || requiredModules.length === 0) {
+      return { percentage: 0, completed: 0, total: 0, employeeCount: deptEmployees.length };
+    }
+
+    const totalRequired = deptEmployees.length * requiredModules.length;
+    let totalCompleted = 0;
+
+    deptEmployees.forEach(emp => {
+      requiredModules.forEach(mod => {
+        const isCompleted = userTrainings.some(ut => 
+          ut.userId === emp.id && 
+          ut.moduleId === mod.id && 
+          ut.status === 'Completed'
+        );
+        if (isCompleted) totalCompleted++;
+      });
+    });
+
+    const percentage = Math.round((totalCompleted / totalRequired) * 100);
+    return { percentage, completed: totalCompleted, total: totalRequired, employeeCount: deptEmployees.length };
+  };
+
+  const CircularProgress = ({ percentage, size = 60, strokeWidth = 5 }: { percentage: number, size?: number, strokeWidth?: number }) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const offset = circumference - (percentage / 100) * circumference;
+
+    return (
+      <div className="relative flex items-center justify-center transition-transform hover:scale-110 duration-300" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="transform -rotate-90">
+          {/* Background Circle */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            fill="transparent"
+            className="text-slate-100"
+          />
+          {/* Progress Circle */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            fill="transparent"
+            strokeDasharray={circumference}
+            style={{ strokeDashoffset: offset, transition: 'stroke-dashoffset 0.5s ease-in-out' }}
+            strokeLinecap="round"
+            className={`${percentage >= 80 ? 'text-emerald-500' : percentage >= 50 ? 'text-amber-500' : 'text-rose-500'}`}
+          />
+        </svg>
+        <span className="absolute text-[10px] font-bold text-slate-700">{percentage}%</span>
+      </div>
+    );
   };
 
   const handleEditModuleClick = (module: TrainingModule) => {
@@ -1674,6 +1770,19 @@ function AdminDashboardContent() {
                   className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
+              <div className="md:col-span-2 text-primary-600 font-semibold text-xs uppercase tracking-widest pt-4 border-t border-slate-100">
+                {t('bigPicture')} Org Chart 2.0
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('askMeAbout')} ({t('commaSeparated')})</label>
+                <input
+                  type="text"
+                  value={getArrayInputValue('askMeAbout')}
+                  onChange={(e) => handleArrayInput('askMeAbout', e.target.value)}
+                  placeholder="e.g., Guest Relations, Excel, Coffee Art"
+                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
 
               {editingUser && (
                 <div className="md:col-span-2 pt-4 border-t border-slate-200">
@@ -2059,86 +2168,50 @@ function AdminDashboardContent() {
 
       {activeTab === 'Training' && (
         <div className="space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="p-6 border-b border-slate-100">
-                <h2 className="text-xl font-semibold text-slate-800">{t('complianceOverview')}</h2>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                      <th className="p-4 font-semibold">{t('employees')}</th>
-                      <th className="p-4 font-semibold">{t('module')}</th>
-                      <th className="p-4 font-semibold">{t('status')}</th>
-                      <th className="p-4 font-semibold">{t('completionDate')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {userTrainings.map((ut, idx) => {
-                      const u = users.find(user => user.id === ut.userId);
-                      const m = trainingModules.find(mod => mod.id === ut.moduleId);
-                      if (!u || !m) return null;
-                      return (
-                        <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-4 text-sm font-medium text-slate-900">{u.name}</td>
-                          <td className="p-4 text-sm text-slate-600">{m.title}</td>
-                          <td className="p-4">
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${ut.status === 'Completed' ? 'bg-emerald-100 text-emerald-800' :
-                              ut.status === 'In Progress' ? 'bg-amber-100 text-amber-800' :
-                                'bg-slate-100 text-slate-800'
-                              }`}>
-                              {ut.status}
-                            </span>
-                          </td>
-                          <td className="p-4 text-sm text-slate-600">
-                            {ut.completionDate ? formatDisplayDate(ut.completionDate) : '-'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 h-fit">
-              <h2 className="text-xl font-semibold text-slate-800 mb-6">{t('assignTraining')}</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('selectEmployee')}</label>
-                  <select
-                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    value={selectedUser || ''}
-                    onChange={(e) => setSelectedUser(e.target.value)}
-                  >
-                    <option value="" disabled>{t('chooseEmployee')}</option>
-                    {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.name} ({u.department})</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('selectModule')}</label>
-                  <select
-                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    value={selectedModule || ''}
-                    onChange={(e) => setSelectedModule(e.target.value)}
-                  >
-                    <option value="" disabled>{t('chooseModule')}</option>
-                    {trainingModules.map(m => (
-                      <option key={m.id} value={m.id}>{m.title}</option>
-                    ))}
-                  </select>
-                </div>
-                <button
-                  onClick={handleAssign}
-                  disabled={!selectedUser || !selectedModule}
-                  className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Assign Module
-                </button>
-              </div>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {departments.map(dept => {
+                const stats = getDepartmentTrainingStats(dept.name);
+                return (
+                  <div key={dept.id} className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="z-10">
+                        <h3 className="font-bold text-slate-800 text-lg leading-tight mb-1">{dept.name}</h3>
+                        <p className="text-xs text-slate-500 font-medium">{stats.employeeCount} {t('employees')}</p>
+                      </div>
+                      <CircularProgress percentage={stats.percentage} />
+                    </div>
+                    
+                    <div className="space-y-3 z-10">
+                      <div className="flex justify-between text-xs font-medium">
+                        <span className="text-slate-500">{t('fulfillmentProgress')}</span>
+                        <span className="text-slate-900">{stats.completed} / {stats.total} {t('tasks')}</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                        <div 
+                          className={`h-full transition-all duration-1000 ease-out rounded-full ${stats.percentage >= 80 ? 'bg-emerald-500' : stats.percentage >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                          style={{ width: `${stats.percentage}%` }}
+                        />
+                      </div>
+                      
+                      <button
+                        onClick={() => setSelectedDeptDetail(dept.name)}
+                        className="w-full mt-2 py-2 px-4 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-bold rounded-lg transition-colors flex items-center justify-center space-x-2 border border-slate-200/50"
+                      >
+                        <span>{t('viewDetails')}</span>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                      </button>
+                    </div>
+                    
+                    {/* Subtle background decoration */}
+                    <div className="absolute -bottom-6 -right-6 text-slate-50/50 group-hover:text-slate-100/50 transition-colors pointer-events-none">
+                      <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99z" />
+                      </svg>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -2176,6 +2249,9 @@ function AdminDashboardContent() {
                           {t('type')}
                         </th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                          {t('moduleTier')}
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                           {t('targetDepts')}
                         </th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
@@ -2187,7 +2263,9 @@ function AdminDashboardContent() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-slate-200">
-                      {trainingModules.map((module) => (
+                      {[...trainingModules]
+                        .sort((a, b) => a.title.localeCompare(b.title))
+                        .map((module) => (
                         <tr key={module.id} className="hover:bg-slate-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex flex-col">
@@ -2201,6 +2279,11 @@ function AdminDashboardContent() {
                                 'bg-purple-100 text-purple-800'
                               }`}>
                               {module.type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800`}>
+                              {module.category || '-'}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -2218,7 +2301,7 @@ function AdminDashboardContent() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${module.required ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
-                              {module.required ? t('requiredTraining') : t('optional')}
+                              {module.required ? t('required').toLowerCase() : t('optional')}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -2250,6 +2333,500 @@ function AdminDashboardContent() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Department Training Details Modal */}
+          {selectedDeptDetail && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <div>
+                    <h3 className="text-2xl font-bold text-slate-800">{selectedDeptDetail}</h3>
+                    <p className="text-sm text-slate-500 font-medium">{t('detailedComplianceReport')}</p>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedDeptDetail(null)}
+                    className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-400 hover:text-slate-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-6">
+                  <div className="overflow-x-auto rounded-xl border border-slate-100 shadow-sm">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                          <th className="p-4 font-bold">{t('employee')}</th>
+                          <th className="p-4 font-bold">{t('module')}</th>
+                          <th className="p-4 font-bold">{t('status')}</th>
+                          <th className="p-4 font-bold">{t('completionDate')}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {(() => {
+                          const deptRecords = userTrainings.filter(ut => {
+                            const u = users.find(user => user.id === ut.userId);
+                            return u && u.department === selectedDeptDetail;
+                          });
+                          
+                          if (deptRecords.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={4} className="p-12 text-center text-slate-400 italic font-medium">
+                                  No training records found for this department.
+                                </td>
+                              </tr>
+                            );
+                          }
+                          
+                          return deptRecords.map((ut, idx) => {
+                            const u = users.find(user => user.id === ut.userId);
+                            const m = trainingModules.find(mod => mod.id === ut.moduleId);
+                            if (!u || !m) return null;
+                            return (
+                              <tr key={idx} className="hover:bg-slate-50 transition-colors group">
+                                <td className="p-4">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 border border-slate-200">
+                                      {u.name.charAt(0)}
+                                    </div>
+                                    <span className="text-sm font-bold text-slate-700">{u.name}</span>
+                                  </div>
+                                </td>
+                                <td className="p-4 text-sm text-slate-600 font-medium">{m.title}</td>
+                                <td className="p-4">
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${ut.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
+                                    ut.status === 'In Progress' ? 'bg-amber-100 text-amber-700' :
+                                      'bg-slate-100 text-slate-600'
+                                    }`}>
+                                      {ut.status === 'In Progress' ? t('statusInProgress') : ut.status}
+                                    </span>
+                                </td>
+                                <td className="p-4 text-sm text-slate-500 font-medium">
+                                  {ut.completionDate ? formatDisplayDate(ut.completionDate) : '-'}
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                
+                <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+                  <button
+                    onClick={() => setSelectedDeptDetail(null)}
+                    className="px-6 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-all shadow-sm"
+                  >
+                    {t('close')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-8 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-800">{t('trainingTiersManager')}</h2>
+                <p className="text-sm text-slate-500 mt-1">Configure dynamic module tiers, evaluations, and their legal agreements.</p>
+              </div>
+              <button
+                onClick={() => {
+                  const currentTiers = (configDraft?.trainingTiers || hotelConfig.trainingTiers || []) as TrainingTier[];
+                  const nextId = Math.max(0, ...currentTiers.map((t: TrainingTier) => t.id)) + 1;
+                  const newTier = {
+                    id: nextId,
+                    name: `New Tier ${nextId}`,
+                    description: 'Description of this evaluation milestone...',
+                    agreementTemplate: ''
+                  };
+                  updateDraft({ trainingTiers: [...currentTiers, newTier] });
+                }}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-bold hover:bg-primary-700 transition-all shadow-md shadow-primary-100"
+              >
+                {t('addTier')}
+              </button>
+            </div>
+            <div className="p-6 space-y-8 bg-white">
+              {((configDraft?.trainingTiers || hotelConfig.trainingTiers || []) as TrainingTier[]).map((tier: TrainingTier, idx: number) => (
+                <div key={tier.id} className="p-6 bg-slate-50 rounded-2xl border border-slate-200 space-y-6 relative group/tier hover:border-primary-200 hover:bg-white transition-all shadow-sm">
+                   <button 
+                    onClick={() => {
+                      const currentTiers = (configDraft?.trainingTiers || hotelConfig.trainingTiers || []) as TrainingTier[];
+                      const newList = currentTiers.filter((_: TrainingTier, i: number) => i !== idx);
+                      updateDraft({ trainingTiers: newList });
+                    }}
+                    className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/tier:opacity-100"
+                    title="Remove Tier"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{t('tierNameTitle')}</label>
+                        <input
+                          type="text"
+                          value={tier.name}
+                          onChange={(e) => {
+                            const currentTiers = [...(configDraft?.trainingTiers || hotelConfig.trainingTiers || [])];
+                            currentTiers[idx] = { ...tier, name: e.target.value };
+                            updateDraft({ trainingTiers: currentTiers });
+                          }}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-primary-500 outline-none"
+                          placeholder="e.g., 6-Month Review"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{t('tierDescriptionGoal')}</label>
+                        <textarea
+                          value={tier.description}
+                          onChange={(e) => {
+                            const currentTiers = [...(configDraft?.trainingTiers || hotelConfig.trainingTiers || [])];
+                            currentTiers[idx] = { ...tier, description: e.target.value };
+                            updateDraft({ trainingTiers: currentTiers });
+                          }}
+                          rows={2}
+                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-600 focus:ring-2 focus:ring-primary-500 outline-none resize-none"
+                          placeholder="What is this evaluation about?"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{t('agreementTemplate')}</label>
+                      <textarea
+                        value={tier.agreementTemplate}
+                        onChange={(e) => {
+                          const currentTiers = [...(configDraft?.trainingTiers || hotelConfig.trainingTiers || [])];
+                          currentTiers[idx] = { ...tier, agreementTemplate: e.target.value };
+                          updateDraft({ trainingTiers: currentTiers });
+                        }}
+                        rows={5}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 italic border-l-4 border-l-primary-500 focus:ring-2 focus:ring-primary-500 outline-none font-serif"
+                        placeholder="Legal text the employee must sign before unlocking contents..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {(configDraft?.trainingTiers || hotelConfig.trainingTiers || []).length === 0 && (
+                <div className="text-center py-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+                  <p className="text-slate-500 font-medium">No training tiers configured. Add one to start organizing content.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-8 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden relative">
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+              <h2 className="text-xl font-semibold text-slate-800">{t('trainingContent')}</h2>
+              <p className="text-sm text-slate-500 mt-1">{t('trainingContentDesc')}</p>
+            </div>
+            
+            <div className="p-6 space-y-12 pb-32">
+              {configDraft && (
+                <>
+                  {/* Value Chain Editor */}
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">{t('valueChain')}</h3>
+                        <p className="text-xs text-slate-500">Define the visual steps of your guest journey.</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const newList = [...(configDraft.valueChain || [])];
+                          newList.push({ id: newList.length + 1, name: 'New Step', icon: '✨', color: 'bg-primary-500' });
+                          updateDraft({ valueChain: newList });
+                        }}
+                        className="px-3 py-1.5 bg-primary-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-100 transition-all border border-primary-100"
+                      >
+                        {t('addStep')}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-inner">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">{t('valueChainGoalAdmin')}</label>
+                        <textarea
+                          value={configDraft.valueChainGoal || ''}
+                          onChange={(e) => updateDraft({ valueChainGoal: e.target.value })}
+                          rows={2}
+                          className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none font-medium text-slate-700 shadow-sm"
+                          placeholder="e.g., Ensure every guest feels at home..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">{t('staffValueAdmin')}</label>
+                        <textarea
+                          value={configDraft.valueChainValue || ''}
+                          onChange={(e) => updateDraft({ valueChainValue: e.target.value })}
+                          rows={2}
+                          className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none font-medium text-slate-700 shadow-sm"
+                          placeholder="e.g., No matter your department, you are a critical link..."
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {(configDraft.valueChain || []).map((step: any, idx: number) => (
+                        <div key={idx} className="p-5 bg-white rounded-2xl border border-slate-200 space-y-4 relative group shadow-sm hover:border-primary-200 transition-all">
+                          <button 
+                            onClick={() => {
+                              const newList = (configDraft.valueChain || []).filter((_: any, i: number) => i !== idx);
+                              updateDraft({ valueChain: newList });
+                            }}
+                            className="absolute top-3 right-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                          
+                          <div className="flex flex-col space-y-3">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase">{t('stepDetails')}</label>
+                            <div className="flex items-center space-x-3">
+                              <div className="relative group/icon">
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-inner cursor-pointer hover:scale-105 transition-transform ${step.color || 'bg-slate-100 text-slate-600'}`}>
+                                  {step.icon}
+                                </div>
+                                {/* Mini Icon Picker Popover */}
+                                <div className="absolute top-full left-0 mt-2 p-2 bg-white rounded-lg shadow-xl border border-slate-100 hidden group-hover/icon:grid grid-cols-4 gap-1 z-50 w-36">
+                                  {['🏨', '📞', '✨', '⭐', '🤝', '🔑', '🍳', '🧹', '🍸', '🚗', '🏊', '💼'].map(emoji => (
+                                    <button 
+                                      key={emoji} 
+                                      onClick={() => {
+                                        const newList = [...(configDraft.valueChain || [])];
+                                        newList[idx] = { ...step, icon: emoji };
+                                        updateDraft({ valueChain: newList });
+                                      }}
+                                      className="p-1 hover:bg-slate-100 rounded transition-colors text-lg"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              <input
+                                type="text"
+                                value={step.name}
+                                onChange={(e) => {
+                                  const newList = [...(configDraft.valueChain || [])];
+                                  newList[idx] = { ...step, name: e.target.value };
+                                  updateDraft({ valueChain: newList });
+                                }}
+                                className="flex-grow border-b border-slate-200 focus:border-primary-500 outline-none py-1 text-sm font-bold bg-transparent"
+                                placeholder="Step Name"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase">{t('visualStyle')}</label>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { name: 'Primary', class: 'bg-primary-500' },
+                                { name: 'Blue', class: 'bg-blue-500' },
+                                { name: 'Emerald', class: 'bg-emerald-500' },
+                                { name: 'Amber', class: 'bg-amber-500' },
+                                { name: 'Rose', class: 'bg-rose-500' },
+                                { name: 'Indigo', class: 'bg-indigo-500' },
+                                { name: 'Slate', class: 'bg-slate-500' },
+                              ].map(color => (
+                                <button
+                                  key={color.class}
+                                  onClick={() => {
+                                    const newList = [...(configDraft.valueChain || [])];
+                                    newList[idx] = { ...step, color: color.class };
+                                    updateDraft({ valueChain: newList });
+                                  }}
+                                  className={`w-6 h-6 rounded-full border-2 transition-all ${color.class} ${step.color === color.class ? 'border-slate-800 scale-110 shadow-md' : 'border-transparent hover:scale-105'}`}
+                                  title={color.name}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Protocols Editor */}
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">{t('commProtocols')}</h3>
+                        <p className="text-xs text-slate-500">{t('commRulesDesc')}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const newList = [...(configDraft.commProtocols || [])];
+                          newList.push({ channel: 'Channel Name', useCase: 'When to use it...', icon: '💬' });
+                          updateDraft({ commProtocols: newList });
+                        }}
+                        className="px-3 py-1.5 bg-primary-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-100 transition-all border border-primary-100"
+                      >
+                        {t('addProtocol')}
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {(configDraft.commProtocols || []).map((p: any, idx: number) => (
+                        <div key={idx} className="flex gap-4 p-4 bg-white rounded-2xl border border-slate-200 relative group items-center shadow-sm hover:border-primary-100 transition-all">
+                          <div className="relative group/icon">
+                            <div className="w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center text-xl shadow-inner cursor-pointer hover:bg-slate-100 transition-colors">
+                              {p.icon}
+                            </div>
+                            {/* Mini Icon Picker */}
+                            <div className="absolute top-full left-0 mt-2 p-2 bg-white rounded-lg shadow-xl border border-slate-100 hidden group-hover/icon:grid grid-cols-4 gap-1 z-50 w-36">
+                              {['💬', '📧', '👥', '📲', '📢', '🗓️', '📞', '📄'].map(emoji => (
+                                <button 
+                                  key={emoji} 
+                                  onClick={() => {
+                                    const newList = [...(configDraft.commProtocols || [])];
+                                    newList[idx] = { ...p, icon: emoji };
+                                    updateDraft({ commProtocols: newList });
+                                  }}
+                                  className="p-1 hover:bg-slate-100 rounded transition-colors text-lg"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase">Channel</label>
+                              <input
+                                type="text"
+                                value={p.channel}
+                                onChange={(e) => {
+                                  const newList = [...(configDraft.commProtocols || [])];
+                                  newList[idx] = { ...p, channel: e.target.value };
+                                  updateDraft({ commProtocols: newList });
+                                }}
+                                className="w-full border-b border-slate-100 focus:border-primary-500 outline-none text-sm font-bold bg-transparent"
+                                placeholder="Channel Name"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase">{t('whenToUse')}</label>
+                              <input
+                                type="text"
+                                value={p.useCase}
+                                onChange={(e) => {
+                                  const newList = [...(configDraft.commProtocols || [])];
+                                  newList[idx] = { ...p, useCase: e.target.value };
+                                  updateDraft({ commProtocols: newList });
+                                }}
+                                className="w-full border-b border-slate-100 focus:border-primary-500 outline-none text-sm bg-transparent"
+                                placeholder="When to use this..."
+                              />
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const newList = (configDraft.commProtocols || []).filter((_: any, i: number) => i !== idx);
+                              updateDraft({ commProtocols: newList });
+                            }}
+                            className="text-slate-300 hover:text-red-500 p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m4-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Glossary Editor */}
+                  <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">{t('glossary')}</h3>
+                        <p className="text-xs text-slate-500">{t('addTermsAcronyms')}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const newList = [...(configDraft.glossary || [])];
+                          newList.push({ term: 'New Term', definition: t('definitionPlaceholder') });
+                          updateDraft({ glossary: newList });
+                        }}
+                        className="px-3 py-1.5 bg-primary-50 text-primary-600 rounded-lg text-xs font-bold hover:bg-primary-100 transition-all border border-primary-100"
+                      >
+                        {t('addTerm')}
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(configDraft.glossary || []).map((item: any, idx: number) => (
+                        <div key={idx} className="p-4 bg-white rounded-2xl border border-slate-200 relative group shadow-sm hover:border-primary-100 transition-all">
+                          <button 
+                            onClick={() => {
+                              const newList = (configDraft.glossary || []).filter((_: any, i: number) => i !== idx);
+                              updateDraft({ glossary: newList });
+                            }}
+                            className="absolute top-3 right-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                          <div className="space-y-3">
+                            <input
+                              type="text"
+                              value={item.term}
+                              onChange={(e) => {
+                                const newList = [...(configDraft.glossary || [])];
+                                newList[idx] = { ...item, term: e.target.value };
+                                updateDraft({ glossary: newList });
+                              }}
+                              className="w-full border-b border-slate-100 focus:border-primary-500 outline-none p-1 text-sm font-bold bg-transparent"
+                              placeholder={t('termAcronym')}
+                            />
+                            <textarea
+                              value={item.definition}
+                              onChange={(e) => {
+                                const newList = [...(configDraft.glossary || [])];
+                                newList[idx] = { ...item, definition: e.target.value };
+                                updateDraft({ glossary: newList });
+                              }}
+                              rows={3}
+                              className="w-full border border-slate-100 rounded-lg p-2 text-xs focus:ring-1 focus:ring-primary-100 outline-none transition-all bg-slate-50"
+                              placeholder="Definition"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                </>
+              )}
+            </div>
+
+            {/* Sticky Action Footer */}
+            <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 ${isConfigDirty ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0 pointer-events-none'}`}>
+              <div className="bg-white/90 backdrop-blur-md border border-slate-200 px-6 py-3 rounded-2xl shadow-2xl flex items-center space-x-6 min-w-[300px] justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest leading-tight">Cambios Pendientes</span>
+                  <span className="text-xs text-slate-500 font-medium whitespace-nowrap">Configuración del portal</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={handleCancelConfig}
+                    className="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
+                  >
+                    {t('cancel')}
+                  </button>
+                  <button
+                    onClick={handleSaveConfig}
+                    className="px-6 py-2 bg-primary-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-primary-200 hover:bg-primary-700 transition-all"
+                  >
+                    {t('saveChanges')}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -3637,6 +4214,7 @@ function AdminDashboardContent() {
                 </div>
               </div>
           </div>
+
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
               <div className="p-6 border-b border-slate-100">

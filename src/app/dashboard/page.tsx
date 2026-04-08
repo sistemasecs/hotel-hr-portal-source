@@ -5,13 +5,15 @@ import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
 import { useLanguage } from '@/context/LanguageContext';
 import Link from 'next/link';
+import TierAgreementModal from '@/components/learning/TierAgreementModal';
 
 export default function DashboardPage() {
   const { user: authUser } = useAuth();
-  const { events, userTrainings, trainingModules, employeesOfTheMonth, users } = useData();
+  const { events, userTrainings, trainingModules, employeesOfTheMonth, users, tierCompletions } = useData();
   const { t } = useLanguage();
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+  const [agreementModal, setAgreementModal] = useState<{ isOpen: boolean; tierId: number; tierName: string } | null>(null);
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -71,6 +73,49 @@ export default function DashboardPage() {
   const currentMonthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const currentEotmRecord = employeesOfTheMonth.find(e => e.month === currentMonthStr);
   const currentEotmUser = currentEotmRecord ? users.find(u => u.id === currentEotmRecord.userId) : null;
+
+  // Tier logic for retroactive prompt
+  const tiers = [
+    { id: 1, category: 'Inducción Corporativa', title: t('moduleTier1') },
+    { id: 2, category: 'Inducción Técnica', title: t('moduleTier2') },
+    { id: 3, category: 'Evaluación de Competencias', title: t('moduleTier3') },
+  ];
+
+  // Logic to check if current tier needs signature
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const checkPendingSignature = () => {
+      for (const tier of tiers) {
+        const tierModules = trainingModules.filter(m => 
+          m.category === tier.category && m.targetDepartments.includes(currentUser.department)
+        );
+        
+        const myTierTrainings = userTrainings.filter(ut => ut.userId === currentUser.id);
+        const completedCount = myTierTrainings.filter(ut => {
+          const mod = trainingModules.find(m => m.id === ut.moduleId);
+          return mod?.category === tier.category && ut.status === 'Completed';
+        }).length;
+
+        const isFullyCompleted = tierModules.length > 0 && completedCount >= tierModules.length;
+        const isSigned = tierCompletions.some(tc => tc.tierId === tier.id);
+
+        if (isFullyCompleted && !isSigned) {
+          return tier;
+        }
+      }
+      return null;
+    };
+
+    const pendingTier = checkPendingSignature();
+    if (pendingTier && !agreementModal?.isOpen) {
+      setAgreementModal({
+        isOpen: true,
+        tierId: pendingTier.id,
+        tierName: pendingTier.title
+      });
+    }
+  }, [userTrainings, tierCompletions, trainingModules, currentUser]);
 
   const adminLinks = [
     { 
@@ -317,6 +362,17 @@ export default function DashboardPage() {
             ))}
           </div>
         </section>
+      )}
+
+      {agreementModal && (
+        <TierAgreementModal
+          isOpen={agreementModal.isOpen}
+          userId={currentUser.id}
+          tierId={agreementModal.tierId}
+          tierName={agreementModal.tierName}
+          onClose={() => setAgreementModal(null)}
+          onSuccess={() => {}}
+        />
       )}
     </div>
   );

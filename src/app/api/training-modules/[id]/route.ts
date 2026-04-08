@@ -20,10 +20,12 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
          required = COALESCE($6, required), 
          content_url = COALESCE($7, content_url), 
          passing_score = COALESCE($8, passing_score),
-         is_onboarding_requirement = COALESCE($9, is_onboarding_requirement)
-       WHERE id = $10 RETURNING *`,
+         is_onboarding_requirement = COALESCE($9, is_onboarding_requirement),
+         category = COALESCE($10, category)
+       WHERE id = $11 RETURNING *`,
         [module.title, module.description, module.type, module.duration,
-        module.targetDepartments, module.required, module.contentUrl, module.passingScore, module.isOnboardingRequirement, id]
+        module.targetDepartments, module.required, module.contentUrl, module.passingScore, 
+        module.isOnboardingRequirement, module.category, id]
     );
 
         if (result.rowCount === 0) {
@@ -47,6 +49,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
             contentUrl: result.rows[0].content_url,
             passingScore: result.rows[0].passing_score,
             isOnboardingRequirement: result.rows[0].is_onboarding_requirement,
+            category: result.rows[0].category,
         };
 
         await logActivity(null, 'UPDATE', 'TRAINING_MODULE', updatedModule.id, { title: updatedModule.title });

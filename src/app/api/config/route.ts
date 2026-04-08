@@ -3,7 +3,7 @@ import pool from '@/lib/db';
 
 export async function GET() {
     try {
-        const result = await pool.query("SELECT key, value FROM hotel_config WHERE key IN ('hotel_logo', 'event_types', 'hotel_latitude', 'hotel_longitude', 'hotel_geofence_radius', 'clock_in_window_minutes', 'working_days', 'hotel_timezone')");
+        const result = await pool.query("SELECT key, value FROM hotel_config WHERE key IN ('hotel_logo', 'event_types', 'hotel_latitude', 'hotel_longitude', 'hotel_geofence_radius', 'clock_in_window_minutes', 'working_days', 'hotel_timezone', 'tier_agreement_1', 'tier_agreement_2', 'tier_agreement_3', 'value_chain', 'comm_protocols', 'glossary', 'value_chain_goal', 'value_chain_value', 'training_tiers')");
 
         const config: Record<string, any> = {
             hotelLogo: null,
@@ -13,7 +13,16 @@ export async function GET() {
             hotelGeofenceRadius: null,
             clockInWindowMinutes: null,
             workingDays: [1, 2, 3, 4, 5], // Default Mon-Fri
-            hotelTimezone: 'America/Guatemala'
+            hotelTimezone: 'America/Guatemala',
+            tierAgreement1: null,
+            tierAgreement2: null,
+            tierAgreement3: null,
+            valueChain: null,
+            commProtocols: null,
+            glossary: null,
+            valueChainGoal: null,
+            valueChainValue: null,
+            trainingTiers: null
         };
 
         result.rows.forEach(row => {
@@ -37,6 +46,23 @@ export async function GET() {
                 }
             }
             if (row.key === 'hotel_timezone') config.hotelTimezone = row.value;
+            if (row.key === 'tier_agreement_1') config.tierAgreement1 = row.value;
+            if (row.key === 'tier_agreement_2') config.tierAgreement2 = row.value;
+            if (row.key === 'tier_agreement_3') config.tierAgreement3 = row.value;
+            if (row.key === 'value_chain') {
+                try { config.valueChain = JSON.parse(row.value); } catch (e) { config.valueChain = row.value; }
+            }
+            if (row.key === 'comm_protocols') {
+                try { config.commProtocols = JSON.parse(row.value); } catch (e) { config.commProtocols = row.value; }
+            }
+            if (row.key === 'glossary') {
+                try { config.glossary = JSON.parse(row.value); } catch (e) { config.glossary = row.value; }
+            }
+            if (row.key === 'value_chain_goal') config.valueChainGoal = row.value;
+            if (row.key === 'value_chain_value') config.valueChainValue = row.value;
+            if (row.key === 'training_tiers') {
+                try { config.trainingTiers = JSON.parse(row.value); } catch (e) { config.trainingTiers = row.value; }
+            }
         });
 
         return NextResponse.json(config);
@@ -49,7 +75,13 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { hotelLogo, eventTypes, hotelLatitude, hotelLongitude, hotelGeofenceRadius, clockInWindowMinutes, workingDays, hotelTimezone } = body;
+        const { 
+            hotelLogo, eventTypes, hotelLatitude, hotelLongitude, 
+            hotelGeofenceRadius, clockInWindowMinutes, workingDays, 
+            hotelTimezone, tierAgreement1, tierAgreement2, tierAgreement3,
+            valueChain, commProtocols, glossary,
+            valueChainGoal, valueChainValue, trainingTiers
+        } = body;
 
         if (hotelLogo !== undefined) {
             if (hotelLogo === null) {
@@ -112,6 +144,60 @@ export async function POST(request: Request) {
                 "INSERT INTO hotel_config (key, value) VALUES ('hotel_timezone', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
                 [hotelTimezone]
             );
+        }
+
+        if (tierAgreement1 !== undefined) {
+            await pool.query(
+                "INSERT INTO hotel_config (key, value) VALUES ('tier_agreement_1', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                [tierAgreement1]
+            );
+        }
+
+        if (tierAgreement2 !== undefined) {
+            await pool.query(
+                "INSERT INTO hotel_config (key, value) VALUES ('tier_agreement_2', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                [tierAgreement2]
+            );
+        }
+
+        if (tierAgreement3 !== undefined) {
+            await pool.query(
+                "INSERT INTO hotel_config (key, value) VALUES ('tier_agreement_3', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                [tierAgreement3]
+            );
+        }
+
+        if (valueChain !== undefined) {
+            await pool.query(
+                "INSERT INTO hotel_config (key, value) VALUES ('value_chain', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                [typeof valueChain === 'string' ? valueChain : JSON.stringify(valueChain)]
+            );
+        }
+
+        if (commProtocols !== undefined) {
+            await pool.query(
+                "INSERT INTO hotel_config (key, value) VALUES ('comm_protocols', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                [typeof commProtocols === 'string' ? commProtocols : JSON.stringify(commProtocols)]
+            );
+        }
+
+        if (glossary !== undefined) {
+            await pool.query(
+                "INSERT INTO hotel_config (key, value) VALUES ('glossary', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                [typeof glossary === 'string' ? glossary : JSON.stringify(glossary)]
+            );
+        }
+
+        if (valueChainGoal !== undefined) {
+            await pool.query("INSERT INTO hotel_config (key, value) VALUES ('value_chain_goal', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [valueChainGoal]);
+        }
+
+        if (valueChainValue !== undefined) {
+            await pool.query("INSERT INTO hotel_config (key, value) VALUES ('value_chain_value', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [valueChainValue]);
+        }
+
+        if (trainingTiers !== undefined) {
+            await pool.query("INSERT INTO hotel_config (key, value) VALUES ('training_tiers', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [JSON.stringify(trainingTiers)]);
         }
         
         return NextResponse.json({ success: true, hotelLogo, eventTypes, hotelLatitude, hotelLongitude, hotelGeofenceRadius, clockInWindowMinutes, workingDays });

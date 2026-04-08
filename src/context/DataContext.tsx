@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { User, Event, EventType, TrainingModule, UserTraining, CelebrationPhoto, PeerVote, SupervisorScore, EmployeeOfTheMonth, Department, ActivityLog, Shift, AttendanceLog, ShiftType, Notification } from '../types';
+import { User, Event, EventType, TrainingModule, UserTraining, CelebrationPhoto, PeerVote, SupervisorScore, EmployeeOfTheMonth, Department, ActivityLog, Shift, AttendanceLog, ShiftType, Notification, TierCompletion, TrainingTier } from '../types';
 import { mockEvents, mockTrainingModules, mockUserTrainings, mockCelebrationPhotos } from '../data/mockData';
 
 interface DataContextType {
@@ -16,7 +16,9 @@ interface DataContextType {
   shiftTypes: ShiftType[];
   activeShift: Shift | null;
   notifications: Notification[];
+  tierCompletions: TierCompletion[];
   fetchNotifications: (userId: string) => Promise<void>;
+  fetchTierCompletions: (userId: string) => Promise<void>;
   markNotificationAsRead: (notificationId: string, userId?: string, markAllAsRead?: boolean) => Promise<void>;
   hotelConfig: {
     hotelLatitude: number | null;
@@ -25,6 +27,15 @@ interface DataContextType {
     clockInWindowMinutes: number | null;
     workingDays: number[];
     hotelTimezone: string;
+    tierAgreement1: string | null;
+    tierAgreement2: string | null;
+    tierAgreement3: string | null;
+    valueChain: any[] | null;
+    commProtocols: any[] | null;
+    glossary: any[] | null;
+    valueChainGoal: string | null;
+    valueChainValue: string | null;
+    trainingTiers: TrainingTier[] | null;
   };
   assignTraining: (userId: string, moduleId: string) => void;
   updateTrainingStatus: (userId: string, moduleId: string, status: UserTraining['status']) => void;
@@ -96,6 +107,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([]);
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [tierCompletions, setTierCompletions] = useState<TierCompletion[]>([]);
   const [hotelConfig, setHotelConfig] = useState<{
     hotelLatitude: number | null;
     hotelLongitude: number | null;
@@ -103,6 +115,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clockInWindowMinutes: number | null;
     workingDays: number[];
     hotelTimezone: string;
+    tierAgreement1: string | null;
+    tierAgreement2: string | null;
+    tierAgreement3: string | null;
+    valueChain: any[] | null;
+    commProtocols: any[] | null;
+    glossary: any[] | null;
+    valueChainGoal: string | null;
+    valueChainValue: string | null;
+    trainingTiers: TrainingTier[] | null;
   }>({
     hotelLatitude: null,
     hotelLongitude: null,
@@ -110,7 +131,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clockInWindowMinutes: null,
     workingDays: [1, 2, 3, 4, 5],
     hotelTimezone: 'America/Guatemala',
+    tierAgreement1: null,
+    tierAgreement2: null,
+    tierAgreement3: null,
+    valueChain: null,
+    commProtocols: null,
+    glossary: null,
+    valueChainGoal: null,
+    valueChainValue: null,
+    trainingTiers: null,
   });
+
+  const fetchTierCompletions = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/training-modules/tier-completion?userId=${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTierCompletions(data);
+      }
+    } catch (error) {
+      console.error('Error fetching tier completions:', error);
+    }
+  };
 
   const fetchActivityLogs = async () => {
     try {
@@ -140,6 +182,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             clockInWindowMinutes: null,
             workingDays: [1, 2, 3, 4, 5],
             hotelTimezone: 'America/Guatemala',
+            tierAgreement1: null,
+            tierAgreement2: null,
+            tierAgreement3: null,
+            valueChain: null,
+            commProtocols: null,
+            glossary: null,
+            valueChainGoal: null,
+            valueChainValue: null,
+            trainingTiers: null,
           };
 
           // Assuming config is an array of { key: string, value: string } or similar
@@ -150,8 +201,47 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (config.clockInWindowMinutes !== undefined) newConfig.clockInWindowMinutes = parseInt(config.clockInWindowMinutes);
           if (config.workingDays !== undefined) newConfig.workingDays = config.workingDays;
           if (config.hotelTimezone !== undefined) newConfig.hotelTimezone = config.hotelTimezone;
+          if (config.tierAgreement1 !== undefined) newConfig.tierAgreement1 = config.tierAgreement1;
+          if (config.tierAgreement2 !== undefined) newConfig.tierAgreement2 = config.tierAgreement2;
+          if (config.tierAgreement3 !== undefined) newConfig.tierAgreement3 = config.tierAgreement3;
+          if (config.valueChain !== undefined) newConfig.valueChain = config.valueChain;
+          if (config.commProtocols !== undefined) newConfig.commProtocols = config.commProtocols;
+          if (config.glossary !== undefined) newConfig.glossary = config.glossary;
+          if (config.valueChainGoal !== undefined) newConfig.valueChainGoal = config.valueChainGoal;
+          if (config.valueChainValue !== undefined) newConfig.valueChainValue = config.valueChainValue;
+          if (config.trainingTiers !== undefined) newConfig.trainingTiers = config.trainingTiers;
+
+          // Backwards compatibility / Default initialization for training tiers
+          if (!newConfig.trainingTiers || (Array.isArray(newConfig.trainingTiers) && newConfig.trainingTiers.length === 0)) {
+            newConfig.trainingTiers = [
+              { 
+                id: 1, 
+                name: 'Module I: Corporate Induction', 
+                description: 'Overview of hotel history, values, and organizational culture.',
+                agreementTemplate: newConfig.tierAgreement1 || '' 
+              },
+              { 
+                id: 2, 
+                name: 'Module II: Technical Induction', 
+                description: 'Job functions, departmental procedures, equipment handling, and specific safety protocols.',
+                agreementTemplate: newConfig.tierAgreement2 || '' 
+              },
+              { 
+                id: 3, 
+                name: 'Module III: Competency Evaluation', 
+                description: 'Theoretical and practical tests to verify retention and authorize the start of work.',
+                agreementTemplate: newConfig.tierAgreement3 || '' 
+              }
+            ];
+          }
  
           setHotelConfig(newConfig);
+
+          // If a user is already logged in (checked via auth), fetch their tier completions
+          const loggedInUser = JSON.parse(localStorage.getItem('hotel_hr_user') || 'null');
+          if (loggedInUser && loggedInUser.id) {
+            fetchTierCompletions(loggedInUser.id);
+          }
         }
 
         // Fetch User Notifications if user is logged in (simplified, normally triggered by auth)
@@ -738,6 +828,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           clockInWindowMinutes: newConfig.clockInWindowMinutes,
           workingDays: newConfig.workingDays,
           hotelTimezone: newConfig.hotelTimezone,
+          tierAgreement1: newConfig.tierAgreement1,
+          tierAgreement2: newConfig.tierAgreement2,
+          tierAgreement3: newConfig.tierAgreement3,
+          valueChain: newConfig.valueChain,
+          commProtocols: newConfig.commProtocols,
+          glossary: newConfig.glossary,
+          valueChainGoal: newConfig.valueChainGoal,
+          valueChainValue: newConfig.valueChainValue,
+          trainingTiers: newConfig.trainingTiers,
         })
       });
       if (response.ok) {
@@ -1083,6 +1182,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         notifications,
         fetchNotifications,
         markNotificationAsRead,
+        tierCompletions,
+        fetchTierCompletions,
       }}
     >
       {children}

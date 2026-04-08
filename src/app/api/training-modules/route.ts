@@ -34,6 +34,7 @@ export async function GET() {
                 mimeType: module.mime_type,
                 passingScore: module.passing_score,
                 isOnboardingRequirement: module.is_onboarding_requirement,
+                category: module.category,
                 questions: moduleQuestions.length > 0 ? moduleQuestions : undefined,
             };
         });
@@ -60,23 +61,25 @@ export async function POST(request: Request) {
         if (id) {
             moduleResult = await client.query(
                 `INSERT INTO training_modules 
-         (id, title, description, type, duration, target_departments, required, content_url, passing_score, is_onboarding_requirement, content_type, file_name, file_size, mime_type) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+         (id, title, description, type, duration, target_departments, required, content_url, passing_score, is_onboarding_requirement, content_type, file_name, file_size, mime_type, category) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
                 [
                     id, module.title, module.description, module.type, module.duration, module.targetDepartments || [],
                     module.required || false, module.contentUrl, module.passingScore, module.isOnboardingRequirement || false,
-                    module.contentType || 'Url', module.fileName || null, module.fileSize || null, module.mimeType || null
+                    module.contentType || 'Url', module.fileName || null, module.fileSize || null, module.mimeType || null,
+                    module.category || null
                 ]
             );
         } else {
             moduleResult = await client.query(
                 `INSERT INTO training_modules 
-         (title, description, type, duration, target_departments, required, content_url, passing_score, is_onboarding_requirement, content_type, file_name, file_size, mime_type) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+         (title, description, type, duration, target_departments, required, content_url, passing_score, is_onboarding_requirement, content_type, file_name, file_size, mime_type, category) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
                 [
                     module.title, module.description, module.type, module.duration, module.targetDepartments || [],
                     module.required || false, module.contentUrl, module.passingScore, module.isOnboardingRequirement || false,
-                    module.contentType || 'Url', module.fileName || null, module.fileSize || null, module.mimeType || null
+                    module.contentType || 'Url', module.fileName || null, module.fileSize || null, module.mimeType || null,
+                    module.category || null
                 ]
             );
         }
@@ -126,6 +129,7 @@ export async function POST(request: Request) {
             mimeType: moduleResult.rows[0].mime_type,
             passingScore: moduleResult.rows[0].passing_score,
             isOnboardingRequirement: moduleResult.rows[0].is_onboarding_requirement,
+            category: moduleResult.rows[0].category,
             questions: questionsResult.length > 0 ? questionsResult : undefined
         };
 

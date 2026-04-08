@@ -453,6 +453,42 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-100 pb-2">{t('milestones')} & {t('badges')}</h3>
+              
+              <div className="space-y-4">
+                <label className="block text-sm font-medium text-slate-700">{t('badges')}</label>
+                <div className="flex flex-wrap gap-3">
+                  {currentUser.badges && currentUser.badges.length > 0 ? (
+                    currentUser.badges.map((badge, i) => (
+                      <div key={i} className="flex items-center bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 px-3 py-2 rounded-xl shadow-sm animate-in zoom-in duration-300">
+                        <span className="text-xl mr-2">🏅</span>
+                        <span className="text-xs font-bold text-amber-900">{badge}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-400 italic">No badges earned yet. Complete training modules to earn them!</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-4">
+                <label className="block text-sm font-medium text-slate-700">{t('askMeAbout')}</label>
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.askMeAbout && currentUser.askMeAbout.length > 0 ? (
+                    currentUser.askMeAbout.map((tag, i) => (
+                      <span key={i} className="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-xs font-bold border border-primary-100 flex items-center">
+                        <span className="w-1.5 h-1.5 bg-primary-400 rounded-full mr-2"></span>
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-400 italic">No expertise tags set by HR yet.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
               <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-100 pb-2">{language === 'es' ? 'Estado Civil y Dependientes' : 'Marital Status & Dependents'}</h3>
               
               <div>

@@ -12,7 +12,7 @@ interface ModuleFormProps {
 }
 
 export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFormProps) {
-  const { departments } = useData();
+  const { departments, hotelConfig } = useData();
   const { t } = useLanguage();
   const [title, setTitle] = useState(initialData?.title || '');
   const [description, setDescription] = useState(initialData?.description || '');
@@ -30,6 +30,7 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
   const [uploadProgress, setUploadProgress] = useState(0);
   const [questions, setQuestions] = useState<QuizQuestion[]>(initialData?.questions || []);
   const [passingScore, setPassingScore] = useState<number>(initialData?.passingScore || 0);
+  const [category, setCategory] = useState<string>(initialData?.category || '');
 
   const handleDepartmentToggle = (dept: string) => {
     setTargetDepartments(prev => 
@@ -101,6 +102,7 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
       mimeType: type !== 'Quiz' && contentType === 'File' ? mimeType : undefined,
       questions: type === 'Quiz' ? questions : undefined,
       passingScore: type === 'Quiz' ? passingScore : undefined,
+      category: category || undefined,
     });
   };
 
@@ -128,6 +130,20 @@ export default function ModuleForm({ initialData, onSubmit, onCancel }: ModuleFo
             <option value="Video">{t('video')}</option>
             <option value="Document">{t('document')}</option>
             <option value="Quiz">{t('quiz')}</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-slate-700">{t('moduleTier') || 'Module Tier'}</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">{t('selectTier') || 'Select Tier...'}</option>
+            {(hotelConfig.trainingTiers || []).map((tier: any) => (
+              <option key={tier.id} value={tier.name}>{tier.name}</option>
+            ))}
           </select>
         </div>
 

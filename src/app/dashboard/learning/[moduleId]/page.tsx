@@ -6,10 +6,11 @@ import { useData } from '@/context/DataContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useRouter, useParams } from 'next/navigation';
 import SecureDocumentViewer from '@/components/learning/SecureDocumentViewer';
+import FeedbackLoop from '@/components/learning/FeedbackLoop';
 
 export default function ModulePlayerPage() {
   const { user } = useAuth();
-  const { trainingModules, userTrainings, updateTrainingStatus } = useData();
+  const { trainingModules, userTrainings, updateTrainingStatus, updateUser } = useData();
   const { t } = useLanguage();
   const router = useRouter();
   const params = useParams();
@@ -32,9 +33,25 @@ export default function ModulePlayerPage() {
 
   if (!user || !module) return null;
 
+  const awardBadge = () => {
+    if (!user.badges?.includes(module.title)) {
+      const newBadges = [...(user.badges || []), module.title];
+      updateUser(user.id, { badges: newBadges });
+    }
+  };
+
   const handleComplete = () => {
     updateTrainingStatus(user.id, moduleId, 'Completed');
-    router.push('/dashboard/learning');
+    awardBadge();
+    // No direct router.push here if we want feedback loop to show
+  };
+
+  const handleFeedback = (wasClear: boolean) => {
+    console.log(`Feedback for module ${moduleId}: ${wasClear ? 'Clear' : 'Not Clear'}`);
+    // Optional: Log feedback to database via API
+    setTimeout(() => {
+      router.push('/dashboard/learning');
+    }, 2000);
   };
 
   const handleQuizSubmit = () => {
@@ -55,6 +72,7 @@ export default function ModulePlayerPage() {
 
     if (passed) {
       updateTrainingStatus(user.id, moduleId, 'Completed');
+      awardBadge();
     }
   };
 
@@ -189,7 +207,7 @@ export default function ModulePlayerPage() {
                 </div>
               )}
               
-              {userTraining?.status !== 'Completed' && (
+              {userTraining?.status !== 'Completed' ? (
                 <div className="flex justify-end pt-4">
                   <button
                     onClick={handleComplete}
@@ -197,6 +215,10 @@ export default function ModulePlayerPage() {
                   >
                     Mark as Completed
                   </button>
+                </div>
+              ) : (
+                <div className="pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <FeedbackLoop onFeedback={handleFeedback} />
                 </div>
               )}
             </div>
@@ -252,7 +274,7 @@ export default function ModulePlayerPage() {
                 </div>
               )}
 
-              {userTraining?.status !== 'Completed' && (
+              {userTraining?.status !== 'Completed' ? (
                 <div className="flex justify-end pt-4 border-t border-slate-100">
                   <button
                     onClick={handleQuizSubmit}
@@ -261,6 +283,10 @@ export default function ModulePlayerPage() {
                   >
                     Submit Quiz
                   </button>
+                </div>
+              ) : (
+                <div className="pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <FeedbackLoop onFeedback={handleFeedback} />
                 </div>
               )}
             </div>

@@ -38,6 +38,8 @@ export interface User {
   foodHandlingCardUrl?: string | null;
   criminalRecordUrl?: string | null;
   policeRecordUrl?: string | null;
+  askMeAbout?: string[];
+  badges?: string[];
 }
 
 export interface Event {
@@ -83,6 +85,7 @@ export interface TrainingModule {
   questions?: QuizQuestion[]; // For Quiz
   passingScore?: number; // For Quiz
   isOnboardingRequirement?: boolean;
+  category?: string;
 }
 
 export interface UserTraining {
@@ -90,6 +93,20 @@ export interface UserTraining {
   moduleId: string;
   status: 'Not Started' | 'In Progress' | 'Completed';
   completionDate?: string;
+}
+
+export interface TierCompletion {
+  userId: string;
+  tierId: number;
+  completedAt: string;
+  signatureData: string;
+}
+
+export interface TrainingTier {
+  id: number;
+  name: string;
+  description: string;
+  agreementTemplate: string;
 }
 
 export interface CelebrationPhoto {
@@ -177,7 +194,7 @@ export interface ActivityLog {
   id: string;
   userId: string | null;
   userName: string | null;
-  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'SIGN';
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'SIGN' | 'COMPLETE';
   entityType: string;
   entityId: string | null;
   details: any;
