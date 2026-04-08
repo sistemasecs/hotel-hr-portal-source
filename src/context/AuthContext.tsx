@@ -10,6 +10,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  can: (featureKey: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,6 +74,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('hotel_hr_user');
   };
 
+  // can() checks the shared permissions cache populated by DataContext
+  const can = (featureKey: string): boolean => {
+    if (!user) return false;
+    if (user.role === 'HR Admin') return true;
+    const cached = (window as any).__rolePermissions as Record<string, Record<string, boolean>> | undefined;
+    return cached?.[user.role]?.[featureKey] ?? false;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -81,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'HR Admin',
+        can,
       }}
     >
       {children}

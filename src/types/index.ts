@@ -1,4 +1,4 @@
-export type Role = 'Staff' | 'Supervisor' | 'Manager' | 'HR Admin';
+export type Role = 'Staff' | 'Supervisor' | 'Manager' | 'HR Admin' | 'Weekly Staff';
 
 export interface Department {
   id: string;
@@ -20,6 +20,8 @@ export interface User {
   avatarFit?: 'cover' | 'contain';
   birthday: string; // YYYY-MM-DD
   hireDate: string; // YYYY-MM-DD
+  employmentType?: 'Contract' | 'Weekly';
+  contractSigningDate?: string | null;
   likes?: string[];
   dislikes?: string[];
   tShirtSize?: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';

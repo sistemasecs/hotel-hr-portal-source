@@ -85,6 +85,9 @@ interface DataContextType {
   updateShiftType: (id: string, type: Partial<ShiftType>) => Promise<void>;
   deleteShiftType: (id: string) => Promise<void>;
   fetchShiftTypes: (departmentId?: string) => Promise<void>;
+  rolePermissions: Record<string, Record<string, boolean>>;
+  hasPermission: (role: string, featureKey: string) => boolean;
+  updateRolePermission: (role: string, featureKey: string, isAllowed: boolean) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -108,6 +111,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [tierCompletions, setTierCompletions] = useState<TierCompletion[]>([]);
+  const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, boolean>>>({});
+
+  // Sync to window so AuthContext.can() can read it without circular imports
+  useEffect(() => {
+    (window as any).__rolePermissions = rolePermissions;
+  }, [rolePermissions]);
   const [hotelConfig, setHotelConfig] = useState<{
     hotelLatitude: number | null;
     hotelLongitude: number | null;
@@ -166,10 +175,41 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const hasPermission = (role: string, featureKey: string): boolean => {
+    // HR Admin always has full access regardless of DB settings
+    if (role === 'HR Admin') return true;
+    return rolePermissions[role]?.[featureKey] ?? false;
+  };
+
+  const updateRolePermission = async (role: string, featureKey: string, isAllowed: boolean) => {
+    try {
+      const res = await fetch('/api/role-permissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role, featureKey, isAllowed }),
+      });
+      if (res.ok) {
+        setRolePermissions(prev => ({
+          ...prev,
+          [role]: { ...(prev[role] || {}), [featureKey]: isAllowed },
+        }));
+      }
+    } catch (error) {
+      console.error('Error updating role permission:', error);
+    }
+  };
+
   // Fetch data from database APIs on mount
   useEffect(() => {
     const fetchAllData = async () => {
       try {
+        // Fetch Role Permissions
+        const permsRes = await fetch('/api/role-permissions');
+        if (permsRes.ok) {
+          const permsData = await permsRes.json();
+          setRolePermissions(permsData);
+        }
+
         // Fetch Hotel Logo Configuration
         const configRes = await fetch('/api/config');
         if (configRes.ok) {
@@ -1184,6 +1224,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         markNotificationAsRead,
         tierCompletions,
         fetchTierCompletions,
+        rolePermissions,
+        hasPermission,
+        updateRolePermission,
       }}
     >
       {children}

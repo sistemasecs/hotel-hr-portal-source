@@ -21,14 +21,47 @@ const MapPicker = dynamic(() => import('@/components/admin/MapPicker'), {
   loading: () => <div className="w-full h-[300px] bg-slate-100 animate-pulse rounded-lg flex items-center justify-center text-slate-400">Loading Map...</div>
 });
 
+const FEATURE_GROUPS = [
+  {
+    title: 'Navegación / Portal',
+    features: [
+      { key: 'nav_dashboard', label: 'Dashboard' },
+      { key: 'nav_culture', label: 'Culture Hub' },
+      { key: 'nav_learning', label: 'Learning Center' },
+      { key: 'nav_schedules', label: 'Mis Horarios' },
+      { key: 'nav_requests', label: 'Mis Solicitudes' },
+      { key: 'nav_celebrations', label: 'Celebraciones' },
+    ]
+  },
+  {
+    title: 'Acceso Administración HR',
+    features: [
+      { key: 'admin_panel', label: 'Acceso al Panel Admin' },
+      { key: 'admin_directory', label: 'Directorio de Personal' },
+      { key: 'admin_hierarchy', label: 'Organigrama / Jerarquía' },
+      { key: 'admin_training', label: 'Cumplimiento de Capacitación' },
+      { key: 'admin_departments', label: 'Gestión de Departamentos' },
+      { key: 'admin_events', label: 'Gestión de Eventos' },
+      { key: 'admin_recognition', label: 'Reconocimiento / EOTM' },
+      { key: 'admin_attendance', label: 'Asistencia / Reportes' },
+      { key: 'admin_vacations', label: 'Gestión de Vacaciones' },
+      { key: 'admin_holidays', label: 'Calendario de Feriados' },
+      { key: 'admin_activity', label: 'Registros de Actividad' },
+      { key: 'admin_documents', label: 'Plantillas de Documentos' },
+      { key: 'admin_roles', label: 'Roles y Permisos' },
+      { key: 'admin_settings', label: 'Ajustes del Sistema' },
+    ]
+  }
+];
+
 function AdminDashboardContent() {
   const { user, isAdmin } = useAuth();
-  const { users, trainingModules, userTrainings, assignTraining, departments, addDepartment, updateDepartment, deleteDepartment, eventTypes, addEventType, updateEventType, deleteEventType, updateUser, addUser, events, addEvent, updateEvent, deleteEvent, deleteTrainingModule, updateTrainingModule, addTrainingModule, peerVotes, supervisorScores, setSupervisorScore, employeesOfTheMonth, setEmployeeOfTheMonth, hotelLogo, setHotelLogo, updateHotelConfig, activityLogs, fetchActivityLogs, shifts, attendanceLogs, hotelConfig, fetchAttendanceLogs, addShift } = useData();
+  const { users, trainingModules, userTrainings, assignTraining, departments, addDepartment, updateDepartment, deleteDepartment, eventTypes, addEventType, updateEventType, deleteEventType, updateUser, addUser, events, addEvent, updateEvent, deleteEvent, deleteTrainingModule, updateTrainingModule, addTrainingModule, peerVotes, supervisorScores, setSupervisorScore, employeesOfTheMonth, setEmployeeOfTheMonth, hotelLogo, setHotelLogo, updateHotelConfig, activityLogs, fetchActivityLogs, shifts, attendanceLogs, hotelConfig, fetchAttendanceLogs, addShift, rolePermissions, updateRolePermission } = useData();
   const { t, language } = useLanguage();
   const { primaryColor, setPrimaryColor } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'Directory' | 'Hierarchy' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Attendance' | 'Vacations' | 'Documents' | 'Activity' | 'Holidays' | 'Settings'>('Directory');
+  const [activeTab, setActiveTab] = useState<'Directory' | 'Hierarchy' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Attendance' | 'Vacations' | 'Documents' | 'Activity' | 'Holidays' | 'Settings' | 'Roles'>('Directory');
   const [attendanceSubTab, setAttendanceSubTab] = useState<'Logs' | 'Reports'>('Logs');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
@@ -239,7 +272,7 @@ function AdminDashboardContent() {
   // Read tab from URL on mount and when searchParams change
   useEffect(() => {
     const tab = searchParams.get('tab');
-    const validTabs = ['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Attendance', 'Vacations', 'Documents', 'Activity', 'Holidays', 'Settings'];
+    const validTabs = ['Directory', 'Hierarchy', 'Training', 'Departments', 'Events', 'Modules', 'Recognition', 'Attendance', 'Vacations', 'Documents', 'Activity', 'Holidays', 'Settings', 'Roles'];
     if (tab && validTabs.includes(tab)) {
       setActiveTab(tab as any);
     }
@@ -260,6 +293,7 @@ function AdminDashboardContent() {
   const [editUserForm, setEditUserForm] = useState<Partial<User> & { password?: string }>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [showActiveOnly, setShowActiveOnly] = useState(true);
+  const [employmentTypeFilter, setEmploymentTypeFilter] = useState<'All' | 'Contract' | 'Weekly'>('All');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // CSV Upload State
@@ -469,6 +503,8 @@ function AdminDashboardContent() {
       department: departments[0]?.name || '',
       birthday: '',
       hireDate: new Date().toISOString().split('T')[0],
+      employmentType: 'Contract',
+      contractSigningDate: null,
     });
     setIsUserModalOpen(true);
   };
@@ -481,7 +517,7 @@ function AdminDashboardContent() {
       setEditUserForm({});
       alert(t('employeeUpdated'));
     } else {
-      if (editUserForm.name && editUserForm.email && editUserForm.role && editUserForm.department && editUserForm.birthday && editUserForm.hireDate) {
+      if (editUserForm.name && editUserForm.email && editUserForm.role && editUserForm.department && editUserForm.birthday && editUserForm.hireDate && editUserForm.employmentType) {
         addUser(editUserForm as Omit<User, 'id'>);
       } else {
         alert('Please fill in all required fields.');
@@ -1111,8 +1147,9 @@ function AdminDashboardContent() {
         u.role.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesStatus = showActiveOnly ? (u.isActive !== false) : true;
+      const matchesEmploymentType = employmentTypeFilter === 'All' ? true : u.employmentType === employmentTypeFilter;
       
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus && matchesEmploymentType;
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -1148,6 +1185,26 @@ function AdminDashboardContent() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
+              </div>
+              <div className="flex bg-slate-100 p-1 rounded-lg">
+                <button
+                  onClick={() => setEmploymentTypeFilter('All')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${employmentTypeFilter === 'All' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  {t('all')}
+                </button>
+                <button
+                  onClick={() => setEmploymentTypeFilter('Contract')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${employmentTypeFilter === 'Contract' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  {t('contractStaff')}
+                </button>
+                <button
+                  onClick={() => setEmploymentTypeFilter('Weekly')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${employmentTypeFilter === 'Weekly' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  {t('weeklyStaff')}
+                </button>
               </div>
               <div className="flex bg-slate-100 p-1 rounded-lg">
                 <button
@@ -1593,7 +1650,41 @@ function AdminDashboardContent() {
                   <option value="Supervisor">Supervisor</option>
                   <option value="Manager">Manager</option>
                   <option value="HR Admin">HR Admin</option>
+                  <option value="Weekly Staff">Weekly Staff</option>
                 </select>
+              </div>
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4 mt-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('employmentType')} *</label>
+                  <select
+                    required
+                    value={editUserForm.employmentType || 'Contract'}
+                    onChange={(e) => {
+                      const type = e.target.value as 'Contract' | 'Weekly';
+                      setEditUserForm({ 
+                        ...editUserForm, 
+                        employmentType: type,
+                        role: type === 'Weekly' ? 'Weekly Staff' : (editUserForm.role === 'Weekly Staff' ? 'Staff' : editUserForm.role),
+                        contractSigningDate: type === 'Weekly' ? null : editUserForm.contractSigningDate
+                      });
+                    }}
+                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="Contract">{t('contractStaff')}</option>
+                    <option value="Weekly">{t('weeklyStaff')}</option>
+                  </select>
+                </div>
+                {editUserForm.employmentType === 'Contract' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('contractSigningDate')}</label>
+                    <input
+                      type="date"
+                      value={editUserForm.contractSigningDate || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, contractSigningDate: e.target.value })}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Department *</label>
@@ -4289,6 +4380,101 @@ function AdminDashboardContent() {
                     <svg className="w-4 h-4 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     Staff checking in outside this radius will be marked as "Out of Range" in reports. Settings are saved automatically.
                   </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'Roles' && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+              <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                <h2 className="text-xl font-semibold text-slate-800 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  Matriz de Permisos por Rol
+                </h2>
+                <p className="text-sm text-slate-500 mt-1">Define qué páginas y funcionalidades puede ver cada tipo de empleado.</p>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100">
+                      <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider sticky left-0 bg-slate-50 z-10 w-64 border-r border-slate-100">Funcionalidad</th>
+                      {['HR Admin', 'Manager', 'Supervisor', 'Staff', 'Weekly Staff'].map(role => (
+                        <th key={role} className="p-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[120px]">
+                          <div className="flex flex-col items-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] mb-1 ${
+                              role === 'HR Admin' ? 'bg-purple-100 text-purple-700' :
+                              role === 'Manager' ? 'bg-blue-100 text-blue-700' :
+                              role === 'Supervisor' ? 'bg-green-100 text-green-700' :
+                              role === 'Weekly Staff' ? 'bg-amber-100 text-amber-700' :
+                              'bg-slate-100 text-slate-700'
+                            }`}>
+                              {role}
+                            </span>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {FEATURE_GROUPS.map((group, groupIdx) => (
+                      <React.Fragment key={group.title}>
+                        <tr className="bg-slate-50/30">
+                          <td colSpan={6} className="p-3 pl-4 text-xs font-bold text-primary-700 uppercase tracking-widest border-b border-slate-100">
+                            {group.title}
+                          </td>
+                        </tr>
+                        {group.features.map(feature => (
+                          <tr key={feature.key} className="hover:bg-slate-50/50 transition-colors border-b border-slate-100">
+                            <td className="p-4 text-sm font-medium text-slate-700 sticky left-0 bg-white z-10 border-r border-slate-100">
+                              {feature.label}
+                              <div className="text-[10px] text-slate-400 font-normal mt-0.5">{feature.key}</div>
+                            </td>
+                            {['HR Admin', 'Manager', 'Supervisor', 'Staff', 'Weekly Staff'].map(role => {
+                              const isAllowed = role === 'HR Admin' || (rolePermissions[role]?.[feature.key]);
+                              const isHRAdmin = role === 'HR Admin';
+                              
+                              return (
+                                <td key={role} className="p-4 text-center">
+                                  <label className={`relative inline-flex items-center ${isHRAdmin ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                                    <input 
+                                      type="checkbox" 
+                                      className="sr-only peer"
+                                      checked={isAllowed}
+                                      disabled={isHRAdmin}
+                                      onChange={(e) => updateRolePermission(role, feature.key, e.target.checked)}
+                                    />
+                                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                                  </label>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="p-6 bg-amber-50 border-t border-slate-100">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-amber-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <h4 className="text-sm font-bold text-amber-800">Notas de Seguridad</h4>
+                    <ul className="text-xs text-amber-700 mt-1 space-y-1 list-disc list-inside">
+                      <li>El rol <strong>HR Admin</strong> siempre tiene acceso total y no puede ser modificado para evitar bloqueos accidentales.</li>
+                      <li>Los cambios se reflejan instantáneamente para todos los usuarios conectados.</li>
+                      <li>Si desactiva "Acceso al Panel Admin" para un rol, ese rol no podrá ver ninguna de las pestañas de administración.</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
