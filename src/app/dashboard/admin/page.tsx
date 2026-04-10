@@ -4023,11 +4023,14 @@ function AdminDashboardContent() {
                   {vacationViewMode === 'list' ? (
                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
                       {allVacationRequests
-                        .filter(r => r.status === 'Approved')
+                        .filter(r => r.status === 'Approved' || r.status === 'Pending')
                         .sort((a, b) => new Date(a.data.startDate).getTime() - new Date(b.data.startDate).getTime())
                         .slice(0, 10)
                         .map(r => (
-                          <div key={r.id} className="p-3 flex items-center space-x-3">
+                          <div
+                            key={r.id}
+                            className={`p-3 flex items-center space-x-3 ${r.status === 'Pending' ? 'bg-amber-50' : ''}`}
+                          >
                             <div className="flex-shrink-0 w-10 h-10 bg-primary-50 rounded-lg flex flex-col items-center justify-center border border-primary-100">
                               <span className="text-[10px] font-bold text-primary-600 uppercase">
                                 {new Date(r.data.startDate).toLocaleString('default', { month: 'short' })}
@@ -4044,13 +4047,13 @@ function AdminDashboardContent() {
                             </div>
                           </div>
                         ))}
-                      {allVacationRequests.filter(r => r.status === 'Approved').length === 0 && (
+                      {allVacationRequests.filter(r => r.status === 'Approved' || r.status === 'Pending').length === 0 && (
                         <div className="p-8 text-center text-slate-500 text-sm">No vacations scheduled</div>
                       )}
                     </div>
                   ) : (
                     <div className="bg-white rounded-xl border border-slate-200 p-3">
-                      <VacationCalendar vacations={allVacationRequests.filter(r => r.status === 'Approved')} />
+                      <VacationCalendar vacations={allVacationRequests.filter(r => r.status === 'Approved' || r.status === 'Pending')} />
                     </div>
                   )}
                 </div>
