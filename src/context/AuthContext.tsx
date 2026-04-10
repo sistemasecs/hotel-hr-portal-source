@@ -26,14 +26,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const parsed = JSON.parse(storedUser);
         setUser(parsed);
         
-        // If hireDate is missing (stale data), we should re-fetch 
-        // to ensure vacation balance works.
-        if (parsed && !parsed.hireDate && parsed.id) {
+        // Always re-fetch latest user profile so critical fields used by vacation
+        // calculations (hireDate, employmentType, contractSigningDate, isActive, etc.)
+        // are not stale in localStorage.
+        if (parsed?.id) {
           fetch(`/api/users/${parsed.id}`)
             .then(res => res.json())
             .then(data => {
-              if (data && data.hireDate) {
-                const updated = { ...parsed, hireDate: data.hireDate };
+              if (data && data.id) {
+                const updated = { ...parsed, ...data };
                 setUser(updated);
                 localStorage.setItem('hotel_hr_user', JSON.stringify(updated));
               }

@@ -129,22 +129,74 @@ export const getVacationHistory = (hireDate: string, requests: EmployeeRequest[]
 /**
  * Calculates total balance.
  */
-export const calculateVacationBalance = (hireDate: string, requests: EmployeeRequest[], yearlyDocs: any[] = [], holidays: any[] = [], workingDays: number[] = [0, 1, 2, 3, 4, 5, 6]) => {
-  const accrued = getAccruedDays(hireDate);
-  const approvedVacations = requests.filter(r => r.type === 'Vacation' && r.status === 'Approved' && r.isSigned);
-  const takenFromRequests = approvedVacations.reduce((sum, r) => sum + getDurationInDays(r.data.startDate, r.data.endDate, holidays, workingDays), 0);
-  
-  // Also count manually entered days from signed yearly summaries
+export const calculateVacationBalance = (
+  hireDate: string,
+  requests: EmployeeRequest[],
+  yearlyDocs: any[] = [],
+  holidays: any[] = [],
+  workingDays: number[] = [0, 1, 2, 3, 4, 5, 6],
+  employmentType?: 'Contract' | 'Weekly',
+  contractSigningDate?: string | null
+) => {
+  const hasHireDate = Boolean(hireDate);
+  const isWeekly = employmentType === 'Weekly';
+  const isContract = employmentType === 'Contract';
+  const hasSignedContract = Boolean(contractSigningDate);
+
+  let eligibleAccrualStart: string | null = null;
+
+  if (hasHireDate && !isWeekly) {
+    if (!isContract) {
+      eligibleAccrualStart = hireDate;
+    } else if (hasSignedContract) {
+      const hire = parseLocalDate(hireDate);
+      const contract = parseLocalDate(contractSigningDate as string);
+      eligibleAccrualStart = hire > contract ? hireDate : (contractSigningDate as string);
+    }
+  }
+
+  const accrued = eligibleAccrualStart ? getAccruedDays(eligibleAccrualStart) : 0;
+  const baselineDate = eligibleAccrualStart ? parseLocalDate(eligibleAccrualStart) : null;
+
+  // Policy A: only Approved + Signed vacations count as taken
+  const approvedVacations = requests.filter(r => {
+    if (!(r.type === 'Vacation' && r.status === 'Approved' && r.isSigned)) return false;
+    if (!baselineDate) return true;
+    const reqStart = parseLocalDate(r.data.startDate);
+    return reqStart >= baselineDate;
+  });
+
+  const takenFromRequests = approvedVacations.reduce(
+    (sum, r) => sum + getDurationInDays(r.data.startDate, r.data.endDate, holidays, workingDays),
+    0
+  );
+
+  // Reset-safe yearly handling:
+  // signed YEARLY docs are authoritative snapshots for historical taken days.
+  // Use manualDays (Option A) when present, otherwise 0 for that signed year.
   const takenFromYearly = yearlyDocs
-    .filter(doc => doc.is_signed && doc.data && doc.data.manualDays)
-    .reduce((sum, doc) => sum + (doc.data.manualDays || 0), 0);
- 
+    .filter(doc => {
+      const signed = doc?.is_signed === true || doc?.isSigned === true;
+      if (!signed) return false;
+      if (!doc?.request_id || typeof doc.request_id !== 'string') return false;
+      return doc.request_id.startsWith('YEARLY:');
+    })
+    .reduce((sum, doc) => {
+      const manual = doc?.data?.manualDays;
+      if (typeof manual === 'number') return sum + manual;
+      if (typeof manual === 'string') {
+        const parsed = Number(manual);
+        return sum + (Number.isFinite(parsed) ? parsed : 0);
+      }
+      return sum;
+    }, 0);
+
   const taken = takenFromRequests + takenFromYearly;
-  
+
   return {
     accrued,
     taken,
-    balance: accrued - taken
+    balance: Math.max(0, accrued - taken)
   };
 };
 

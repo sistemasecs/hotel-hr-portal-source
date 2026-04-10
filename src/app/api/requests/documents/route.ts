@@ -14,6 +14,7 @@ export async function GET(request: Request) {
                 rd.request_id as "request_id", 
                 rd.template_id as "template_id", 
                 rd.content, 
+                rd.data,
                 rd.is_signed as "is_signed", 
                 rd.signature_data as "signature_data", 
                 rd.signed_at as "signed_at",

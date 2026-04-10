@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { formatDisplayDate } from '@/lib/dateUtils';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useData } from '@/context/DataContext';
 import { useSearchParams } from 'next/navigation';
 import { EmployeeRequest } from '@/types';
 import { calculateVacationBalance, getDurationInDays } from '@/lib/vacationUtils';
@@ -13,6 +14,7 @@ import SignaturePad from '@/components/SignaturePad';
 export default function MyRequestsPage() {
   const { user } = useAuth();
   const { t, language } = useLanguage();
+  const { hotelConfig } = useData();
   const searchParams = useSearchParams();
   const highlightId = searchParams.get('highlight');
   const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export default function MyRequestsPage() {
   useEffect(() => {
     if (activeDoc && activeDoc.request_id.startsWith('YEARLY:')) {
       let html = activeDoc.content || '';
-      const days = (startDate && endDate) ? getDurationInDays(startDate, endDate, holidays) : 15;
+      const days = (startDate && endDate) ? getDurationInDays(startDate, endDate, holidays, hotelConfig.workingDays) : 15;
       setManualDays(days);
 
       // Period Range replacement
@@ -316,7 +318,15 @@ export default function MyRequestsPage() {
           {user?.hireDate && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
               {(() => {
-                const { accrued, taken, balance } = calculateVacationBalance(user.hireDate, requests, yearlyDocs, holidays);
+                const { accrued, taken, balance } = calculateVacationBalance(
+                  user.hireDate,
+                  requests,
+                  yearlyDocs,
+                  holidays,
+                  hotelConfig.workingDays,
+                  user.employmentType,
+                  user.contractSigningDate
+                );
                 return (
                   <>
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
