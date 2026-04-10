@@ -5,16 +5,12 @@ import Link from 'next/link';
 import { formatDisplayDate } from '@/lib/dateUtils';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { useData } from '@/context/DataContext';
 import { useSearchParams } from 'next/navigation';
 import { EmployeeRequest } from '@/types';
-import { calculateVacationBalance, getDurationInDays } from '@/lib/vacationUtils';
-import SignaturePad from '@/components/SignaturePad';
 
 export default function MyRequestsPage() {
   const { user } = useAuth();
-  const { t, language } = useLanguage();
-  const { hotelConfig } = useData();
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const highlightId = searchParams.get('highlight');
   const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(null);
@@ -23,22 +19,11 @@ export default function MyRequestsPage() {
   const [requestsToCover, setRequestsToCover] = useState<EmployeeRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [documents, setDocuments] = useState<Record<string, any>>({});
-  const [isSignModalOpen, setIsSignModalOpen] = useState(false);
-  const [activeDoc, setActiveDoc] = useState<any>(null);
-  const [isSigning, setIsSigning] = useState(false);
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [manualDays, setManualDays] = useState<number>(15);
-  const [signatureData, setSignatureData] = useState<string>('');
-  const [currentHTML, setCurrentHTML] = useState<string>('');
-  const [holidays, setHolidays] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchRequests();
       fetchRequestsToCover();
-      fetchYearlyDocuments();
-      fetchHolidays();
     }
   }, [user]);
 
@@ -58,51 +43,6 @@ export default function MyRequestsPage() {
       return () => clearTimeout(timer);
     }
   }, [highlightId, requests]);
-
-  // Dynamic HTML update for Yearly Summaries
-  useEffect(() => {
-    if (activeDoc && activeDoc.request_id.startsWith('YEARLY:')) {
-      let html = activeDoc.content || '';
-      const days = (startDate && endDate) ? getDurationInDays(startDate, endDate, holidays, hotelConfig.workingDays) : 15;
-      setManualDays(days);
-
-      // Period Range replacement
-      if (startDate && endDate) {
-        html = html.replace(/<p><strong>Periodo \/ Period:<\/strong>.*?<\/p>/, 
-                            `<p><strong>Periodo / Period:</strong> ${startDate} - ${endDate}</p>`);
-      }
-      
-      // Accrued/Taken/Remaining replacements - keeping it simple by searching for the labels
-      html = html.replace(/Días Tomados \/ Taken Days: <strong>.*?<\/strong>/, 
-                          `Días Tomados / Taken Days: <strong>${days}</strong>`);
-      
-      // Update remaining if we can find it
-      const accruedMatch = html.match(/Días Acumulados \/ Accrued Days: <strong>(\d+)<\/strong>/);
-      if (accruedMatch) {
-        const accrued = parseInt(accruedMatch[1]);
-        html = html.replace(/Días Restantes \/ Remaining Days: <strong>.*?<\/strong>/, 
-                            `Días Restantes / Remaining Days: <strong>${accrued - days}</strong>`);
-      }
-
-      // Update table if it exists
-      if (startDate && endDate) {
-        const tableRow = `<tr>
-          <td style="padding: 8px; border: 1px solid #e2e8f0;">#MANUAL</td>
-          <td style="padding: 8px; border: 1px solid #e2e8f0;">${startDate} - ${endDate}</td>
-          <td style="padding: 8px; border: 1px solid #e2e8f0;">${days}</td>
-        </tr>`;
-        html = html.replace(/<tbody>[\s\S]*?<\/tbody>/, `<tbody>${tableRow}</tbody>`);
-        html = html.replace(/Total Tomado \/ Total Taken:<\/td>\s*<td.*?>.*?<\/td>/, 
-                            `Total Tomado / Total Taken:</td><td style="padding: 8px; border: 1px solid #e2e8f0;">${days}</td>`);
-      }
-
-      setCurrentHTML(html);
-    } else if (activeDoc) {
-      setCurrentHTML(activeDoc.content || '');
-    }
-  }, [activeDoc, startDate, endDate]);
-
-  const [yearlyDocs, setYearlyDocs] = useState<any[]>([]);
 
   const fetchRequests = async () => {
     try {
@@ -135,76 +75,6 @@ export default function MyRequestsPage() {
     } catch (error) {
       console.error('Failed to fetch documents:', error);
     }
-  };
-
-  const fetchYearlyDocuments = async () => {
-    try {
-      const res = await fetch(`/api/requests/documents?type=YEARLY&userId=${user?.id}`);
-      if (res.ok) {
-        setYearlyDocs(await res.json());
-      }
-    } catch (error) {
-      console.error('Failed to fetch yearly documents:', error);
-    }
-  };
-
-  const fetchHolidays = async () => {
-    try {
-      const res = await fetch('/api/holidays');
-      if (res.ok) {
-        setHolidays(await res.json());
-      }
-    } catch (error) {
-      console.error('Failed to fetch holidays:', error);
-    }
-  };
-
-  const handleSignDocument = async () => {
-    if (!activeDoc) return;
-    setIsSigning(true);
-    try {
-      if (!activeDoc.signed_at && !signatureData) {
-        alert('Por favor, firme el documento / Please sign the document');
-        setIsSigning(false);
-        return;
-      }
-
-      const res = await fetch('/api/requests/documents', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          requestId: activeDoc.request_id,
-          signatureData: signatureData || undefined,
-          content: activeDoc.request_id.startsWith('YEARLY:') ? currentHTML : undefined,
-          data: activeDoc.request_id.startsWith('YEARLY:') ? {
-            manualDates: `${startDate} - ${endDate}`,
-            manualDays,
-            startDate,
-            endDate
-          } : undefined
-        })
-      });
-
-      if (res.ok) {
-        setIsSignModalOpen(false);
-        fetchRequests(); // Refresh to update document state
-        fetchYearlyDocuments(); // Also refresh yearly docs
-      } else {
-        alert('Failed to sign document');
-      }
-    } catch (error) {
-      console.error('Error signing document:', error);
-    } finally {
-      setIsSigning(false);
-    }
-  };
-
-  const openSignModal = (doc: any) => {
-    setActiveDoc(doc);
-    setSignatureData('');
-    setStartDate('');
-    setEndDate('');
-    setIsSignModalOpen(true);
   };
 
   const fetchRequestsToCover = async () => {
@@ -284,6 +154,17 @@ export default function MyRequestsPage() {
           <p className="text-slate-600 mt-2">{t('trackRequests')}</p>
         </div>
         <div className="flex space-x-4">
+          {((user?.employmentType || '').toLowerCase() === 'contract') && (
+            <Link
+              href="/dashboard/requests/vacations"
+              className="px-4 py-2 bg-emerald-100 text-emerald-700 font-medium rounded-lg hover:bg-emerald-200 transition-colors shadow-sm flex items-center space-x-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>{t('vacation')}</span>
+            </Link>
+          )}
           {(user?.role === 'HR Admin' || user?.role === 'Supervisor' || user?.role === 'Manager') && (
             <Link
               href="/dashboard/requests/approvals"
@@ -314,39 +195,6 @@ export default function MyRequestsPage() {
         </div>
       ) : (
         <>
-          {/* Vacation Balance Summary */}
-          {user?.hireDate && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-              {(() => {
-                const { accrued, taken, balance } = calculateVacationBalance(
-                  user.hireDate,
-                  requests,
-                  yearlyDocs,
-                  holidays,
-                  hotelConfig.workingDays,
-                  user.employmentType,
-                  user.contractSigningDate
-                );
-                return (
-                  <>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                      <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('accrued')}</p>
-                      <p className="text-2xl font-bold text-slate-900 mt-1">{accrued} {t('days')}</p>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                      <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('taken')}</p>
-                      <p className="text-2xl font-bold text-slate-900 mt-1">{taken} {t('days')}</p>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-primary-100 bg-primary-50/30">
-                      <p className="text-sm font-medium text-primary-600 uppercase tracking-wider">{t('remaining')}</p>
-                      <p className="text-2xl font-bold text-primary-700 mt-1">{balance} {t('days')}</p>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          )}
-
           {requestsToCover.length > 0 && (
             <div className="mb-12">
               <h2 className="text-2xl font-bold text-slate-900 mb-4">{t('requestsToCover')}</h2>
@@ -402,7 +250,7 @@ export default function MyRequestsPage() {
               </Link>
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
@@ -467,21 +315,15 @@ export default function MyRequestsPage() {
                           {documents[request.id] && (
                             <div className="mt-2">
                               {documents[request.id].signed_at ? (
-                                <button
-                                  onClick={() => openSignModal(documents[request.id])}
-                                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline flex items-center"
-                                >
+                                <span className="text-xs font-bold text-emerald-600 flex items-center">
                                   <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                  {t('viewSignedDocument')}
-                                </button>
+                                  {t('signed')}
+                                </span>
                               ) : (
-                                <button
-                                  onClick={() => openSignModal(documents[request.id])}
-                                  className="text-xs font-bold text-primary-600 hover:text-primary-700 underline flex items-center"
-                                >
-                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                                  {t('signDocument')}
-                                </button>
+                                <span className="text-xs font-bold text-amber-600 flex items-center">
+                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z" /></svg>
+                                  {t('needsSigning')}
+                                </span>
                               )}
                             </div>
                           )}
@@ -494,178 +336,6 @@ export default function MyRequestsPage() {
             </div>
           )}
         </>
-      )}
-
-      {/* Yearly Vacation Summaries Section */}
-      {!isLoading && yearlyDocs.length > 0 && (
-        <div className="mt-12 mb-12 px-4 md:px-0">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">{t('vacation')} - {t('employmentYear')}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {yearlyDocs.map((doc) => (
-              <div key={doc.id} className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
-                <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-primary-50 rounded-lg">
-                        <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-slate-900">{t('employmentYear')} {doc.request_id.split(':').pop()}</h3>
-                        <p className="text-xs text-slate-500">{formatDisplayDate(doc.created_at)}</p>
-                      </div>
-                    </div>
-                    {doc.is_signed ? (
-                      <span className="px-2 py-1 bg-green-100 text-green-800 text-[10px] font-bold rounded-full uppercase tracking-wider">{t('signed')}</span>
-                    ) : (
-                      <span className="px-2 py-1 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full uppercase tracking-wider">{t('needsSigning')}</span>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="mt-6 flex space-x-3">
-                  <button
-                    onClick={() => openSignModal(doc)}
-                    className={`flex-1 px-4 py-2 text-sm font-bold rounded-lg transition-colors shadow-sm ${
-                      !doc.is_signed 
-                        ? 'bg-primary-600 text-white hover:bg-primary-700' 
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {!doc.is_signed ? t('signDocument') : t('viewSignedDocument')}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {/* Signature Modal */}
-      {isSignModalOpen && activeDoc && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-4xl max-h-[90vh] flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-slate-900">
-                {activeDoc.signed_at ? t('viewSignedDocument') : t('signDocument')}
-              </h2>
-              <button onClick={() => setIsSignModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto bg-slate-50 p-8 rounded-lg border border-slate-200 shadow-inner mb-6 text-slate-900">
-              <div 
-                className="max-w-2xl mx-auto bg-white p-12 shadow-sm min-h-[600px] prose prose-slate"
-                dangerouslySetInnerHTML={{ __html: currentHTML.replace(/\n/g, '<br/>') }}
-              />
-
-              {/* Editable Dates for Yearly Summaries (Unsigned) */}
-              {activeDoc.request_id.startsWith('YEARLY:') && !activeDoc.signed_at && (
-                <div className="max-w-2xl mx-auto mt-8 bg-amber-50 p-6 rounded-xl border border-amber-200">
-                  <h3 className="text-sm font-bold text-amber-900 mb-4 flex items-center">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                    Información Histórica / Historical Info
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-amber-800 mb-1">
-                        Fecha Inicio / Start Date
-                      </label>
-                      <input 
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full px-3 py-2 text-sm bg-white border border-amber-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-amber-800 mb-1">
-                        Fecha Fin / End Date
-                      </label>
-                      <input 
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full px-3 py-2 text-sm bg-white border border-amber-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                       <p className="text-sm font-bold text-amber-900">
-                         Días a descontar: <span className="text-lg">{manualDays}</span>
-                       </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Signature Pad (Unsigned) */}
-              {!activeDoc.signed_at && (
-                <div className="max-w-2xl mx-auto mt-8 p-6 bg-slate-50 border border-slate-200 rounded-xl">
-                  <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                    Firma Digital / Digital Signature
-                  </h3>
-                  <SignaturePad onSave={setSignatureData} />
-                </div>
-              )}
-
-              {activeDoc.signed_at && (
-                <div className="max-w-2xl mx-auto mt-8 pt-8 border-t border-slate-200">
-                  <div className="flex flex-col items-center">
-                    {activeDoc.signature_data ? (
-                      <img 
-                        src={activeDoc.signature_data} 
-                        alt="Signature" 
-                        className="h-24 object-contain mb-2"
-                      />
-                    ) : (
-                      <div className="font-cursive text-3xl text-slate-800 mb-2" style={{ fontFamily: 'Dancing Script, cursive' }}>
-                        {user?.name}
-                      </div>
-                    )}
-                    <div className="h-px w-64 bg-slate-900 mb-2"></div>
-                    <p className="text-xs text-slate-500 uppercase tracking-widest text-center">
-                      {t('digitallySignedOn')}: {new Date(activeDoc.signed_at).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setIsSignModalOpen(false)}
-                className="px-6 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-              >
-                {activeDoc.signed_at ? t('close') : t('cancel')}
-              </button>
-              
-              {activeDoc.signed_at ? (
-                <button
-                  onClick={() => window.print()}
-                  className="px-6 py-2 text-sm font-medium text-white bg-slate-800 rounded-lg hover:bg-slate-900 transition-colors flex items-center space-x-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 00-2 2h2m2 4h10a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                  <span>{t('downloadPdfPrint')}</span>
-                </button>
-              ) : (
-                <button
-                  onClick={handleSignDocument}
-                  disabled={isSigning}
-                  className="px-8 py-2 text-sm font-bold text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-all shadow-lg flex items-center space-x-2"
-                >
-                  {isSigning ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                  )}
-                  <span>{isSigning ? t('signing') : t('declareConformity')}</span>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );
