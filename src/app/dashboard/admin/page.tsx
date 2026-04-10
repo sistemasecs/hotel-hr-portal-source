@@ -54,6 +54,26 @@ const FEATURE_GROUPS = [
   }
 ];
 
+const ALL_DIRECTORY_COLUMNS = [
+  { id: 'name', label: 'Nombre', fixed: true },
+  { id: 'email', label: 'Email' },
+  { id: 'role', label: 'Rol' },
+  { id: 'department', label: 'Departamento' },
+  { id: 'area', label: 'Área' },
+  { id: 'hireDate', label: 'Fecha Contratación' },
+  { id: 'employmentType', label: 'Tipo de Empleado' },
+  { id: 'birthday', label: 'Cumpleaños' },
+  { id: 'tShirtSize', label: 'Talla de Camisa' },
+  { id: 'emergency', label: 'Contacto Emergencia' },
+  { id: 'vacations', label: 'Vacaciones' },
+  { id: 'maritalStatus', label: 'Estado Civil' },
+  { id: 'spouseName', label: 'Nombre de Cónyuge' },
+  { id: 'childrenCount', label: 'Hijos' },
+  { id: 'taxId', label: 'NIT / RTN' },
+  { id: 'status', label: 'Estado' },
+  { id: 'actions', label: 'Acciones', fixed: true },
+];
+
 function AdminDashboardContent() {
   const { user, isAdmin } = useAuth();
   const { users, trainingModules, userTrainings, assignTraining, departments, addDepartment, updateDepartment, deleteDepartment, eventTypes, addEventType, updateEventType, deleteEventType, updateUser, addUser, events, addEvent, updateEvent, deleteEvent, deleteTrainingModule, updateTrainingModule, addTrainingModule, peerVotes, supervisorScores, setSupervisorScore, employeesOfTheMonth, setEmployeeOfTheMonth, hotelLogo, setHotelLogo, updateHotelConfig, activityLogs, fetchActivityLogs, shifts, attendanceLogs, hotelConfig, fetchAttendanceLogs, addShift, rolePermissions, updateRolePermission } = useData();
@@ -294,6 +314,20 @@ function AdminDashboardContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showActiveOnly, setShowActiveOnly] = useState(true);
   const [employmentTypeFilter, setEmploymentTypeFilter] = useState<'All' | 'Contract' | 'Weekly'>('All');
+  const [departmentFilter, setDepartmentFilter] = useState('All');
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['name', 'area', 'hireDate', 'emergency', 'vacations', 'status', 'actions']);
+  const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
+
+  const toggleColumn = (columnId: string) => {
+    setVisibleColumns(prev => {
+      const isFixed = ALL_DIRECTORY_COLUMNS.find(c => c.id === columnId)?.fixed;
+      if (isFixed) return prev; // Don't toggle fixed columns
+      
+      return prev.includes(columnId) 
+        ? prev.filter(id => id !== columnId) 
+        : [...prev, columnId];
+    });
+  };
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // CSV Upload State
@@ -1148,8 +1182,9 @@ function AdminDashboardContent() {
       
       const matchesStatus = showActiveOnly ? (u.isActive !== false) : true;
       const matchesEmploymentType = employmentTypeFilter === 'All' ? true : u.employmentType === employmentTypeFilter;
+      const matchesDepartment = departmentFilter === 'All' ? true : u.department === departmentFilter;
       
-      return matchesSearch && matchesStatus && matchesEmploymentType;
+      return matchesSearch && matchesStatus && matchesEmploymentType && matchesDepartment;
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -1186,6 +1221,18 @@ function AdminDashboardContent() {
                   </svg>
                 </div>
               </div>
+              
+              <select
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+                className="w-full sm:w-48 pl-3 pr-8 py-2 border border-slate-300 rounded-md shadow-sm text-sm focus:ring-primary-500 focus:border-primary-500 bg-white px-2"
+              >
+                <option value="All">{language === 'es' ? 'Todos los Departamentos' : 'All Departments'}</option>
+                {sortedDepartments.map(dept => (
+                  <option key={dept.id} value={dept.name}>{dept.name}</option>
+                ))}
+              </select>
+
               <div className="flex bg-slate-100 p-1 rounded-lg">
                 <button
                   onClick={() => setEmploymentTypeFilter('All')}
@@ -1230,6 +1277,45 @@ function AdminDashboardContent() {
                   </svg>
                   {t('uploadBatch')}
                 </button>
+                
+                <div className="relative">
+                  <button
+                    onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)}
+                    className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors flex items-center whitespace-nowrap"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    {language === 'es' ? 'Ver' : 'View'}
+                  </button>
+                  
+                  {isColumnSelectorOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setIsColumnSelectorOpen(false)}></div>
+                      <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-20 overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-3 border-b border-slate-100 bg-slate-50">
+                          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Columnas Visibles</h3>
+                        </div>
+                        <div className="max-h-80 overflow-y-auto p-2">
+                          {ALL_DIRECTORY_COLUMNS.map(col => (
+                            <label key={col.id} className={`flex items-center p-2 rounded-md hover:bg-slate-50 transition-colors ${col.fixed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                              <input
+                                type="checkbox"
+                                checked={visibleColumns.includes(col.id)}
+                                onChange={() => toggleColumn(col.id)}
+                                disabled={col.fixed}
+                                className="h-4 w-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500"
+                              />
+                              <span className="ml-3 text-sm text-slate-700">{col.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 <button
                   onClick={handleAddUserClick}
                   className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors whitespace-nowrap"
@@ -1243,81 +1329,108 @@ function AdminDashboardContent() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                  <th className="p-4 font-semibold">{t('name')}</th>
-                  <th className="p-4 font-semibold">{t('areas')}</th>
-                  <th className="p-4 font-semibold">{t('hireDate')}</th>
-                  <th className="p-4 font-semibold">{language === 'es' ? 'Emergencia' : 'Emergency'}</th>
-                  <th className="p-4 font-semibold">{t('vacations')}</th>
-                  <th className="p-4 font-semibold">{t('status')}</th>
-                  <th className="p-4 font-semibold text-right">{t('actions')}</th>
+                  {ALL_DIRECTORY_COLUMNS.filter(col => visibleColumns.includes(col.id)).map(col => (
+                    <th key={col.id} className={`p-4 font-semibold ${col.id === 'actions' ? 'text-right' : ''}`}>
+                      {col.label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredUsers.map(u => (
                   <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center space-x-3">
-                        {u.avatarUrl ? (
-                          <img
-                            src={u.avatarUrl}
-                            alt={u.name}
-                            className={`w-8 h-8 rounded-full ${u.avatarFit === 'contain' ? 'object-contain bg-slate-100' : 'object-cover'}`}
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-xs font-bold">
-                            {u.name.charAt(0)}
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-sm font-medium text-slate-900">{u.name}</p>
-                          <p className="text-xs text-slate-500">{u.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 text-sm text-slate-600">{u.area || '-'}</td>
-                    <td className="p-4 text-sm text-slate-600 font-medium">{formatDisplayDate(u.hireDate)}</td>
-                    <td className="p-4">
-                      {u.emergencyContactName ? (
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-slate-900">{u.emergencyContactName}</span>
-                          <span className="text-xs text-slate-500">{u.emergencyContactPhone}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-400 italic">-</span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      {(() => {
-                        const userRequests = allVacationRequests.filter(r => r.userId === u.id);
-                        const userYearlyDocs = Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${u.id}:`));
-                        const { accrued, balance } = calculateVacationBalance(u.hireDate, userRequests, userYearlyDocs, holidays, hotelConfig.workingDays);
-                        return (
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium text-slate-900">{balance} {t('days')}</span>
-                            <span className="text-[10px] text-slate-500 uppercase tracking-wider">{t('accrued')}: {accrued}</span>
-                          </div>
-                        );
-                      })()}
-                    </td>
-                    <td className="p-4">
-                      {u.isActive !== false ? (
-                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                          {t('active')}
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                          {t('inactive')}
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4 text-right">
-                      <button
-                        onClick={() => handleEditUserClick(u)}
-                        className="text-primary-600 hover:text-primary-900 text-sm font-medium"
-                      >
-                        {t('edit')}
-                      </button>
-                    </td>
+                    {ALL_DIRECTORY_COLUMNS.filter(col => visibleColumns.includes(col.id)).map(col => (
+                      <td key={col.id} className={`p-4 ${col.id === 'actions' ? 'text-right' : ''}`}>
+                        {(() => {
+                          switch (col.id) {
+                            case 'name':
+                              return (
+                                <div className="flex items-center space-x-3">
+                                  {u.avatarUrl ? (
+                                    <img
+                                      src={u.avatarUrl}
+                                      alt={u.name}
+                                      className={`w-8 h-8 rounded-full ${u.avatarFit === 'contain' ? 'object-contain bg-slate-100' : 'object-cover'}`}
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-xs font-bold">
+                                      {u.name.charAt(0)}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-900">{u.name}</p>
+                                    <p className="text-xs text-slate-500">{u.email}</p>
+                                  </div>
+                                </div>
+                              );
+                            case 'email':
+                              return <span className="text-sm text-slate-600">{u.email}</span>;
+                            case 'role':
+                              return <span className="text-sm text-slate-600 font-medium">{u.role}</span>;
+                            case 'department':
+                              return <span className="text-sm text-slate-600">{u.department}</span>;
+                            case 'area':
+                              return <span className="text-sm text-slate-600">{u.area || '-'}</span>;
+                            case 'hireDate':
+                              return <span className="text-sm text-slate-600 font-medium">{formatDisplayDate(u.hireDate)}</span>;
+                            case 'employmentType':
+                              return <span className="text-sm text-slate-600">{u.employmentType || 'Contract'}</span>;
+                            case 'birthday':
+                              return <span className="text-sm text-slate-600">{u.birthday ? formatDisplayDate(u.birthday) : '-'}</span>;
+                            case 'tShirtSize':
+                              return <span className="text-sm text-slate-600">{u.tShirtSize || '-'}</span>;
+                            case 'emergency':
+                              return u.emergencyContactName ? (
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-slate-900">{u.emergencyContactName}</span>
+                                  <span className="text-xs text-slate-500">{u.emergencyContactPhone}</span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-400 italic">-</span>
+                              );
+                            case 'vacations':
+                              const userRequests = allVacationRequests.filter(r => r.userId === u.id);
+                              const userYearlyDocs = Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${u.id}:`));
+                              const { accrued, balance } = calculateVacationBalance(u.hireDate, userRequests, userYearlyDocs, holidays, hotelConfig.workingDays);
+                              return (
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-slate-900">{balance} {t('days')}</span>
+                                  <span className="text-[10px] text-slate-500 uppercase tracking-wider">{t('accrued')}: {accrued}</span>
+                                </div>
+                              );
+                            case 'status':
+                              return u.isActive !== false ? (
+                                <span className="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                                  {t('active')}
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                  {t('inactive')}
+                                </span>
+                              );
+                            case 'maritalStatus':
+                              return <span className="text-sm text-slate-600">{u.maritalStatus || '-'}</span>;
+                            case 'spouseName':
+                              return <span className="text-sm text-slate-600">{u.spouseName || '-'}</span>;
+                            case 'childrenCount':
+                              return <span className="text-sm text-slate-600 font-medium">{u.childrenCount || 0}</span>;
+                            case 'taxId':
+                              return <span className="text-sm text-slate-600 font-mono">{u.taxId || '-'}</span>;
+                            case 'actions':
+                              return (
+                                <button
+                                  onClick={() => handleEditUserClick(u)}
+                                  className="text-primary-600 hover:text-primary-900 text-sm font-medium"
+                                >
+                                  {t('edit')}
+                                </button>
+                              );
+                            default:
+                              return null;
+                          }
+                        })()}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
