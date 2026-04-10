@@ -317,6 +317,9 @@ function AdminDashboardContent() {
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['name', 'area', 'hireDate', 'emergency', 'vacations', 'status', 'actions']);
   const [isColumnSelectorOpen, setIsColumnSelectorOpen] = useState(false);
+  const [pendingDeleteUser, setPendingDeleteUser] = useState<User | null>(null);
+  const [deleteMode, setDeleteMode] = useState<'inactive' | 'hard'>('inactive');
+  const [inactivePayload, setInactivePayload] = useState({ date: new Date().toISOString().split('T')[0], reason: 'Fired' });
 
   const toggleColumn = (columnId: string) => {
     setVisibleColumns(prev => {
@@ -528,6 +531,33 @@ function AdminDashboardContent() {
     setEditingUser(u);
     setEditUserForm(u);
     setIsUserModalOpen(true);
+  };
+
+  const handleDeleteUserClick = (u: User) => {
+    setPendingDeleteUser(u);
+    setDeleteMode('inactive');
+    setInactivePayload({ date: new Date().toISOString().split('T')[0], reason: 'Fired' });
+  };
+
+  const handleConfirmDeleteAction = async () => {
+    if (!pendingDeleteUser) return;
+
+    if (deleteMode === 'inactive') {
+      await updateUser(pendingDeleteUser.id, {
+        isActive: false,
+        inactiveDate: inactivePayload.date,
+        inactiveReason: inactivePayload.reason,
+      });
+      alert(language === 'es' ? 'Usuario actualizado a inactivo.' : 'User set as inactive.');
+      setPendingDeleteUser(null);
+      return;
+    }
+
+    // Front-end wiring only for now (no backend cascade yet)
+    alert(language === 'es'
+      ? 'Eliminación permanente pendiente de backend (cascada).'
+      : 'Permanent delete is pending backend cascade implementation.');
+    setPendingDeleteUser(null);
   };
 
   const handleAddUserClick = () => {
@@ -793,7 +823,7 @@ function AdminDashboardContent() {
   };
 
   const calculateLeaderboard = () => {
-    return users.map(u => {
+    return users.filter(u => u.isActive !== false).map(u => {
       // 1. Trainings Completed (10 pts each)
       const completedTrainings = userTrainings.filter(ut => ut.userId === u.id && ut.status === 'Completed').length;
       const trainingPoints = completedTrainings * 10;
@@ -1244,13 +1274,13 @@ function AdminDashboardContent() {
                   onClick={() => setEmploymentTypeFilter('Contract')}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${employmentTypeFilter === 'Contract' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  {t('contractStaff')}
+                  {language === 'es' ? 'Contrato' : 'Contract'}
                 </button>
                 <button
                   onClick={() => setEmploymentTypeFilter('Weekly')}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${employmentTypeFilter === 'Weekly' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  {t('weeklyStaff')}
+                  {language === 'es' ? 'Semanal' : 'Weekly'}
                 </button>
               </div>
               <div className="flex bg-slate-100 p-1 rounded-lg">
@@ -1418,12 +1448,26 @@ function AdminDashboardContent() {
                               return <span className="text-sm text-slate-600 font-mono">{u.taxId || '-'}</span>;
                             case 'actions':
                               return (
-                                <button
-                                  onClick={() => handleEditUserClick(u)}
-                                  className="text-primary-600 hover:text-primary-900 text-sm font-medium"
-                                >
-                                  {t('edit')}
-                                </button>
+                                <div className="flex items-center justify-end space-x-2">
+                                  <button
+                                    onClick={() => handleEditUserClick(u)}
+                                    className="text-primary-600 hover:text-primary-900 p-1"
+                                    title={t('edit')}
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteUserClick(u)}
+                                    className="text-red-600 hover:text-red-900 p-1"
+                                    title={t('delete')}
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
                               );
                             default:
                               return null;
@@ -1435,6 +1479,84 @@ function AdminDashboardContent() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {pendingDeleteUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">
+              {language === 'es' ? 'Acción de Usuario' : 'User Action'}
+            </h3>
+            <p className="text-sm text-slate-600 mb-4">
+              {language === 'es'
+                ? `¿Qué deseas hacer con ${pendingDeleteUser.name}?`
+                : `What do you want to do with ${pendingDeleteUser.name}?`}
+            </p>
+
+            <div className="space-y-3">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  checked={deleteMode === 'inactive'}
+                  onChange={() => setDeleteMode('inactive')}
+                />
+                <span className="text-sm">{language === 'es' ? 'Marcar como Inactivo/Despedido' : 'Set Inactive/Fired'}</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  checked={deleteMode === 'hard'}
+                  onChange={() => setDeleteMode('hard')}
+                />
+                <span className="text-sm">{language === 'es' ? 'Eliminar Permanentemente' : 'Delete Permanently'}</span>
+              </label>
+            </div>
+
+            {deleteMode === 'inactive' && (
+              <div className="mt-4 grid grid-cols-1 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">{language === 'es' ? 'Fecha' : 'Date'}</label>
+                  <input
+                    type="date"
+                    value={inactivePayload.date}
+                    onChange={(e) => setInactivePayload(prev => ({ ...prev, date: e.target.value }))}
+                    className="w-full border border-slate-300 rounded-md p-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">{language === 'es' ? 'Motivo' : 'Reason'}</label>
+                  <select
+                    value={inactivePayload.reason}
+                    onChange={(e) => setInactivePayload(prev => ({ ...prev, reason: e.target.value }))}
+                    className="w-full border border-slate-300 rounded-md p-2 text-sm"
+                  >
+                    <option value="Fired">{t('reasonFired')}</option>
+                    <option value="Quit">{t('reasonQuit')}</option>
+                    <option value="Role change">{t('reasonRoleChange')}</option>
+                    <option value="Other">{t('reasonOther')}</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setPendingDeleteUser(null)}
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+              >
+                {t('cancel')}
+              </button>
+              <button
+                onClick={handleConfirmDeleteAction}
+                className={`px-4 py-2 text-sm font-medium text-white rounded-md ${deleteMode === 'hard' ? 'bg-red-600 hover:bg-red-700' : 'bg-primary-600 hover:bg-primary-700'}`}
+              >
+                {deleteMode === 'hard'
+                  ? (language === 'es' ? 'Confirmar Eliminación' : 'Confirm Delete')
+                  : (language === 'es' ? 'Guardar Estado' : 'Save Status')}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -367,7 +367,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const allEvents = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    const birthdayEvents: Event[] = users.map(user => {
+    const birthdayEvents: Event[] = users.filter(user => user.isActive !== false).map(user => {
       const [y, m, d] = user.birthday.split('-');
       const currentYearBday = new Date(currentYear, parseInt(m) - 1, parseInt(d));
       const formattedName = user.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
