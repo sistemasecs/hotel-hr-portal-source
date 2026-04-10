@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { User, Event, TrainingModule, EmployeeRequest, TrainingTier } from '@/types';
 import ModuleForm from '@/components/admin/ModuleForm';
 import AttendanceReports from '@/components/admin/AttendanceReports';
+import VacationCalendar from '@/components/requests/VacationCalendar';
 import { getAccruedDays, getVacationHistory, getDaysSinceLastVacation, calculateVacationBalance, getDurationInDays } from '@/lib/vacationUtils';
 import { formatDisplayDate, parseLocalDate } from '@/lib/dateUtils';
 import Papa from 'papaparse';
@@ -83,6 +84,7 @@ function AdminDashboardContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<'Directory' | 'Hierarchy' | 'Training' | 'Departments' | 'Events' | 'Modules' | 'Recognition' | 'Attendance' | 'Vacations' | 'Documents' | 'Activity' | 'Holidays' | 'Settings' | 'Roles'>('Directory');
   const [attendanceSubTab, setAttendanceSubTab] = useState<'Logs' | 'Reports'>('Logs');
+  const [vacationViewMode, setVacationViewMode] = useState<'list' | 'calendar'>('list');
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [selectedDeptDetail, setSelectedDeptDetail] = useState<string | null>(null);
@@ -385,13 +387,14 @@ function AdminDashboardContent() {
       fetchTemplates();
     }
   }, [activeTab]);
-  const [vacationConsents, setVacationConsents] = useState<any[]>([]);
+  const [vacationConsents, setVacationConsents] = useState<any[]>([]); // metadata only
 
   const fetchVacationRequests = async () => {
     try {
-      const res = await fetch('/api/requests/vacations');
+      const res = await fetch('/api/requests');
       if (res.ok) {
-        setAllVacationRequests(await res.json());
+        const allRequests = await res.json();
+        setAllVacationRequests(allRequests.filter((r: EmployeeRequest) => r.type === 'Vacation'));
       }
     } catch (error) {
       console.error('Error fetching vacation requests:', error);
@@ -483,11 +486,13 @@ function AdminDashboardContent() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (activeTab === 'Vacations') {
+    if (activeTab === 'Vacations' || activeTab === 'Directory') {
       fetchVacationRequests();
-      fetchVacationConsents();
       fetchYearlyDocuments();
       fetchHolidays();
+    }
+    if (activeTab === 'Vacations') {
+      fetchVacationConsents(); // metadata only, not used for balance/signing source
     }
   }, [activeTab]);
 
@@ -1421,7 +1426,15 @@ function AdminDashboardContent() {
                             case 'vacations':
                               const userRequests = allVacationRequests.filter(r => r.userId === u.id);
                               const userYearlyDocs = Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${u.id}:`));
-                              const { accrued, balance } = calculateVacationBalance(u.hireDate, userRequests, userYearlyDocs, holidays, hotelConfig.workingDays);
+                              const { accrued, balance } = calculateVacationBalance(
+                                u.hireDate,
+                                userRequests,
+                                userYearlyDocs,
+                                holidays,
+                                hotelConfig.workingDays,
+                                u.employmentType,
+                                u.contractSigningDate
+                              );
                               return (
                                 <div className="flex flex-col">
                                   <span className="text-sm font-medium text-slate-900">{balance} {t('days')}</span>
@@ -2136,7 +2149,15 @@ function AdminDashboardContent() {
                     {(() => {
                       const userRequests = allVacationRequests.filter(r => r.userId === editingUser.id);
                       const userYearlyDocs = Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${editingUser.id}:`));
-                      const { balance } = calculateVacationBalance(editingUser.hireDate, userRequests, userYearlyDocs, holidays, hotelConfig.workingDays);
+                      const { balance } = calculateVacationBalance(
+                        editingUser.hireDate,
+                        userRequests,
+                        userYearlyDocs,
+                        holidays,
+                        hotelConfig.workingDays,
+                        editingUser.employmentType,
+                        editingUser.contractSigningDate
+                      );
                       return (
                         <span className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm font-bold">
                           {balance} {t('days')} {t('remaining')}
@@ -3887,7 +3908,15 @@ function AdminDashboardContent() {
                   {filteredUsers.map(u => {
                     const userRequests = allVacationRequests.filter(r => r.userId === u.id);
                     const userYearlyDocs = Object.values(yearlyDocuments).filter((d: any) => d.request_id.startsWith(`YEARLY:${u.id}:`));
-                    const { balance } = calculateVacationBalance(u.hireDate, userRequests, userYearlyDocs, holidays, hotelConfig.workingDays);
+                    const { balance } = calculateVacationBalance(
+                      u.hireDate,
+                      userRequests,
+                      userYearlyDocs,
+                      holidays,
+                      hotelConfig.workingDays,
+                      u.employmentType,
+                      u.contractSigningDate
+                    );
                     const daysSince = getDaysSinceLastVacation(userRequests);
                     const history = getVacationHistory(u.hireDate, userRequests, userYearlyDocs, holidays, hotelConfig.workingDays);
 
@@ -3920,7 +3949,9 @@ function AdminDashboardContent() {
                           <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">{t('consentForms')}</p>
                           <div className="space-y-2">
                             {history.map(year => {
-                              const isSigned = vacationConsents.some(c => c.user_id === u.id && c.year_number === year.yearNumber);
+                              const yearDocKey = `YEARLY:${u.id}:${year.yearNumber}`;
+                              const yearDoc = yearlyDocuments[yearDocKey];
+                              const isSigned = Boolean(yearDoc?.is_signed);
                               return (
                                 <div key={year.yearNumber} className="flex items-center justify-between bg-white p-2 rounded border border-slate-100">
                                   <div className="text-xs">
@@ -3928,7 +3959,7 @@ function AdminDashboardContent() {
                                     <span className="text-slate-400 ml-2">({year.periodStart} - {year.periodEnd})</span>
                                   </div>
                                   <div className="flex items-center space-x-2">
-                                    {(yearlyDocuments[`YEARLY:${u.id}:${year.yearNumber}`]) && (
+                                    {yearDoc && (
                                       <button
                                         onClick={() => handleViewYearlyDocument(u.id, year.yearNumber)}
                                         className="text-[10px] font-bold text-slate-500 hover:text-slate-700 transition-colors underline uppercase"
@@ -3943,13 +3974,14 @@ function AdminDashboardContent() {
                                         </svg>
                                         {t('consentSigned').toUpperCase()}
                                       </span>
+                                    ) : yearDoc ? (
+                                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                        {t('needsSigning')}
+                                      </span>
                                     ) : (
-                                      <button
-                                        onClick={() => handleSignConsent(u.id, year.yearNumber)}
-                                        className="text-[10px] font-bold text-primary-600 hover:text-primary-800 transition-colors underline uppercase"
-                                      >
-                                        {t('signConsent')}
-                                      </button>
+                                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                        {t('notSpecified')}
+                                      </span>
                                     )}
                                   </div>
                                 </div>
@@ -3964,43 +3996,63 @@ function AdminDashboardContent() {
               </div>
 
               {/* Vacation Calendar */}
-              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 h-fit">
-                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4 flex items-center">
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  {t('vacations')} Calendar
-                </h3>
-                <div className="space-y-4">
-                  {/* Reuse the calendar logic from Culture Hub or similar if needed, 
-                      for now showing a list of upcoming approved vacations as a simple placeholder calendar view */}
-                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
-                    {allVacationRequests
-                      .filter(r => r.status === 'Approved')
-                      .sort((a, b) => new Date(a.data.startDate).getTime() - new Date(b.data.startDate).getTime())
-                      .slice(0, 10)
-                      .map(r => (
-                        <div key={r.id} className="p-3 flex items-center space-x-3">
-                          <div className="flex-shrink-0 w-10 h-10 bg-primary-50 rounded-lg flex flex-col items-center justify-center border border-primary-100">
-                            <span className="text-[10px] font-bold text-primary-600 uppercase">
-                              {new Date(r.data.startDate).toLocaleString('default', { month: 'short' })}
-                            </span>
-                            <span className="text-lg font-black text-primary-700 leading-none">
-                              {new Date(r.data.startDate).getDate()}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-slate-900">{r.userName || 'Employee'}</p>
-                            <p className="text-[10px] text-slate-500">
-                              {r.data.startDate} → {r.data.endDate}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    {allVacationRequests.filter(r => r.status === 'Approved' && r.isSigned).length === 0 && (
-                      <div className="p-8 text-center text-slate-500 text-sm">No vacations scheduled</div>
-                    )}
+<div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 h-fit">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {t('vacations')} Calendar
+                  </h3>
+                  <div className="flex bg-white p-1 rounded-lg border border-slate-200">
+                    <button
+                      onClick={() => setVacationViewMode('list')}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${vacationViewMode === 'list' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      List
+                    </button>
+                    <button
+                      onClick={() => setVacationViewMode('calendar')}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${vacationViewMode === 'calendar' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                      Calendar
+                    </button>
                   </div>
+                </div>
+                <div className="space-y-4">
+                  {vacationViewMode === 'list' ? (
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
+                      {allVacationRequests
+                        .filter(r => r.status === 'Approved')
+                        .sort((a, b) => new Date(a.data.startDate).getTime() - new Date(b.data.startDate).getTime())
+                        .slice(0, 10)
+                        .map(r => (
+                          <div key={r.id} className="p-3 flex items-center space-x-3">
+                            <div className="flex-shrink-0 w-10 h-10 bg-primary-50 rounded-lg flex flex-col items-center justify-center border border-primary-100">
+                              <span className="text-[10px] font-bold text-primary-600 uppercase">
+                                {new Date(r.data.startDate).toLocaleString('default', { month: 'short' })}
+                              </span>
+                              <span className="text-lg font-black text-primary-700 leading-none">
+                                {new Date(r.data.startDate).getDate()}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-900">{r.userName || 'Employee'}</p>
+                              <p className="text-[10px] text-slate-500">
+                                {r.data.startDate} → {r.data.endDate}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      {allVacationRequests.filter(r => r.status === 'Approved').length === 0 && (
+                        <div className="p-8 text-center text-slate-500 text-sm">No vacations scheduled</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-xl border border-slate-200 p-3">
+                      <VacationCalendar vacations={allVacationRequests.filter(r => r.status === 'Approved')} />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

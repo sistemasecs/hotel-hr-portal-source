@@ -189,7 +189,17 @@ export default function NewRequestPage() {
         const reqsRes = await fetch(`/api/requests?userId=${user.id}`);
         if (reqsRes.ok) {
           const cloudRequests: EmployeeRequest[] = await reqsRes.json();
-          const { balance } = calculateVacationBalance(user.hireDate, cloudRequests, [], holidays, hotelConfig.workingDays);
+          const yearlyRes = await fetch(`/api/requests/documents?type=YEARLY&userId=${user.id}`);
+          const yearlyDocs = yearlyRes.ok ? await yearlyRes.json() : [];
+          const { balance } = calculateVacationBalance(
+            user.hireDate,
+            cloudRequests,
+            yearlyDocs,
+            holidays,
+            hotelConfig.workingDays,
+            user.employmentType,
+            user.contractSigningDate
+          );
           const requestedDays = getDurationInDays(formData.startDate, formData.endDate, holidays, hotelConfig.workingDays);
           
           if (requestedDays > balance) {
