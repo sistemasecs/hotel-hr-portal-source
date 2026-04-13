@@ -2071,479 +2071,546 @@ function AdminDashboardContent() {
       {/* Edit/Add User Modal */}
       {isUserModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">{editingUser ? t('editEmployee') : t('addEmployee')}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={editUserForm.name || ''}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, name: e.target.value })}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={editUserForm.email || ''}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              {!editingUser && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
-                  <input
-                    type="password"
-                    required
-                    value={editUserForm.password || ''}
-                    onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })}
-                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                  />
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Role *</label>
-                <select
-                  required
-                  value={editUserForm.role || ''}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value as any })}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="Staff">Staff</option>
-                  <option value="Supervisor">Supervisor</option>
-                  <option value="Manager">Manager</option>
-                  <option value="HR Admin">HR Admin</option>
-                  <option value="Weekly Staff">Weekly Staff</option>
-                </select>
-              </div>
-              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-100 pt-4 mt-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('employmentType')} *</label>
-                  <select
-                    required
-                    value={editUserForm.employmentType || 'Contract'}
-                    onChange={(e) => {
-                      const type = e.target.value as 'Contract' | 'Weekly';
-                      setEditUserForm({ 
-                        ...editUserForm, 
-                        employmentType: type,
-                        role: type === 'Weekly' ? 'Weekly Staff' : (editUserForm.role === 'Weekly Staff' ? 'Staff' : editUserForm.role),
-                        contractSigningDate: type === 'Weekly' ? null : editUserForm.contractSigningDate
-                      });
-                    }}
-                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="Contract">{t('contractStaff')}</option>
-                    <option value="Weekly">{t('weeklyStaff')}</option>
-                  </select>
-                </div>
-                {editUserForm.employmentType === 'Contract' && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('contractSigningDate')}</label>
-                    <input
-                      type="date"
-                      value={editUserForm.contractSigningDate || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, contractSigningDate: e.target.value })}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
+          <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">{editingUser ? t('editEmployee') : t('addEmployee')}</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Column */}
+              <div className="space-y-8">
+                {/* Space 0: Empresa / Administración */}
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 space-y-6">
+                  <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+                    <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <h3 className="text-lg font-bold text-slate-800">{language === 'es' ? 'Empresa' : 'Company'}</h3>
                   </div>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Department *</label>
-                <select
-                  required
-                  value={editUserForm.department || ''}
-                  onChange={(e) => {
-                    setEditUserForm({ ...editUserForm, department: e.target.value, area: '' });
-                  }}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="" disabled>Select Department</option>
-                  {sortedDepartments.map(dept => (
-                    <option key={dept.id} value={dept.name}>{dept.name}</option>
-                  ))}
-                </select>
-              </div>
-              {editUserForm.department && departments.find(d => d.name === editUserForm.department)?.areas && departments.find(d => d.name === editUserForm.department)!.areas!.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Area</label>
-                  <select
-                    value={editUserForm.area || ''}
-                    onChange={(e) => setEditUserForm({ ...editUserForm, area: e.target.value })}
-                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">Select Area (Optional)</option>
-                    {[...(departments.find(d => d.name === editUserForm.department)?.areas || [])].sort((a, b) => a.localeCompare(b)).map(area => (
-                      <option key={area} value={area}>{area}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Birthday *</label>
-                <input
-                  type="date"
-                  required
-                  value={editUserForm.birthday || ''}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, birthday: e.target.value })}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Hire Date *</label>
-                <input
-                  type="date"
-                  required
-                  value={editUserForm.hireDate || ''}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, hireDate: e.target.value })}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t('manager')} (Supervisor)</label>
-                <select
-                  value={editUserForm.supervisorId || ''}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, supervisorId: e.target.value })}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="">{t('chooseEmployee')}</option>
-                  {users
-                    .filter(sup => sup.id !== editingUser?.id && (sup.role === 'Supervisor' || sup.role === 'Manager' || sup.role === 'HR Admin'))
-                    .map(sup => (
-                      <option key={sup.id} value={sup.id}>{sup.name} ({sup.role})</option>
-                    ))
-                  }
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Contacto de Emergencia' : 'Emergency Contact Name'}</label>
-                <input
-                  type="text"
-                  value={editUserForm.emergencyContactName || ''}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, emergencyContactName: e.target.value })}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Tel. Emergencia' : 'Emergency Phone'}</label>
-                <input
-                  type="text"
-                  value={editUserForm.emergencyContactPhone || ''}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, emergencyContactPhone: e.target.value })}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'NIT' : 'Tax ID'}</label>
-                <input
-                  type="text"
-                  value={editUserForm.taxId || ''}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, taxId: e.target.value })}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
+                  
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Role *</label>
+                      <select
+                        required
+                        value={editUserForm.role || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value as any })}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="Staff">Staff</option>
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Manager">Manager</option>
+                        <option value="HR Admin">HR Admin</option>
+                        <option value="Weekly Staff">Weekly Staff</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('employmentType')} *</label>
+                      <select
+                        required
+                        value={editUserForm.employmentType || 'Contract'}
+                        onChange={(e) => {
+                          const type = e.target.value as 'Contract' | 'Weekly';
+                          setEditUserForm({ 
+                            ...editUserForm, 
+                            employmentType: type,
+                            role: type === 'Weekly' ? 'Weekly Staff' : (editUserForm.role === 'Weekly Staff' ? 'Staff' : editUserForm.role),
+                            contractSigningDate: type === 'Weekly' ? null : editUserForm.contractSigningDate
+                          });
+                        }}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="Contract">{t('contractStaff')}</option>
+                        <option value="Weekly">{t('weeklyStaff')}</option>
+                      </select>
+                    </div>
 
-              <div className="md:col-span-2 pt-4 border-t border-slate-100">
-                <h3 className="text-sm font-bold text-slate-800 mb-3">
-                  {language === 'es' ? 'Contrato y Planilla' : 'Contract & Payroll'}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Hotel Contrato' : 'Hotel Contract'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).hotelContract || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, hotelContract: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Salario Base' : 'Base Salary'}</label>
-                    <input
-                      type="number"
-                      value={(editUserForm as any).baseSalary ?? ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, baseSalary: e.target.value === '' ? null : Number(e.target.value) } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Bonificación Incentivo' : 'Incentive Bonus'}</label>
-                    <input
-                      type="number"
-                      value={(editUserForm as any).incentiveBonus ?? ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, incentiveBonus: e.target.value === '' ? null : Number(e.target.value) } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
+                    {editUserForm.employmentType === 'Contract' && (
+                      <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('contractSigningDate')}</label>
+                        <input
+                          type="date"
+                          value={editUserForm.contractSigningDate || ''}
+                          onChange={(e) => setEditUserForm({ ...editUserForm, contractSigningDate: e.target.value })}
+                          className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Department *</label>
+                      <select
+                        required
+                        value={editUserForm.department || ''}
+                        onChange={(e) => {
+                          setEditUserForm({ ...editUserForm, department: e.target.value, area: '' });
+                        }}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="" disabled>Select Department</option>
+                        {sortedDepartments.map(dept => (
+                          <option key={dept.id} value={dept.name}>{dept.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {editUserForm.department && departments.find(d => d.name === editUserForm.department)?.areas && departments.find(d => d.name === editUserForm.department)!.areas!.length > 0 && (
+                      <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Area</label>
+                        <select
+                          value={editUserForm.area || ''}
+                          onChange={(e) => setEditUserForm({ ...editUserForm, area: e.target.value })}
+                          className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                        >
+                          <option value="">Select Area (Optional)</option>
+                          {[...(departments.find(d => d.name === editUserForm.department)?.areas || [])].sort((a, b) => a.localeCompare(b)).map(area => (
+                            <option key={area} value={area}>{area}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Hire Date *</label>
+                      <input
+                        type="date"
+                        required
+                        value={editUserForm.hireDate || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, hireDate: e.target.value })}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('manager')} (Supervisor)</label>
+                      <select
+                        value={editUserForm.supervisorId || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, supervisorId: e.target.value })}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="">{t('chooseEmployee')}</option>
+                        {users
+                          .filter(sup => sup.id !== editingUser?.id && (sup.role === 'Supervisor' || sup.role === 'Manager' || sup.role === 'HR Admin'))
+                          .map(sup => (
+                            <option key={sup.id} value={sup.id}>{sup.name} ({sup.role})</option>
+                          ))
+                        }
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="md:col-span-2 pt-4 border-t border-slate-100">
-                <h3 className="text-sm font-bold text-slate-800 mb-3">
-                  {language === 'es' ? 'Identidad y Legal' : 'Identity & Legal'}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">DPI</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).dpi || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, dpi: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
+                {/* Space 1: Información Personal */}
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 space-y-6">
+                  <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+                    <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <h3 className="text-lg font-bold text-slate-800">{t('personalInformation')}</h3>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Afiliación IGSS' : 'Social Security Number'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).socialSecurityNumber || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, socialSecurityNumber: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Afiliación ITRA' : 'Spouse DPI / ITRA'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).spouseDpi || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, spouseDpi: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'No. Carné' : 'Card Number'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).cardNumber || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, cardNumber: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Código IGSS' : 'Social Security Code'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).socialSecurityCode || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, socialSecurityCode: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Código de Ocupación' : 'Occupation Code'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).occupation || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, occupation: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'A. Penales 6 Meses' : 'Criminal Record (6 months)'}</label>
-                    <input
-                      type="number"
-                      value={(editUserForm as any).criminalRecord ?? ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, criminalRecord: e.target.value === '' ? null : Number(e.target.value) } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'A. Policial 6 Meses' : 'Police Record (6 months)'}</label>
-                    <input
-                      type="number"
-                      value={(editUserForm as any).policeRecord ?? ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, policeRecord: e.target.value === '' ? null : Number(e.target.value) } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editUserForm.name || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, name: e.target.value })}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Email *</label>
+                      <input
+                        type="email"
+                        required
+                        value={editUserForm.email || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    {!editingUser && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Password *</label>
+                        <input
+                          type="password"
+                          required
+                          value={editUserForm.password || ''}
+                          onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })}
+                          className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Birthday *</label>
+                      <input
+                        type="date"
+                        required
+                        value={editUserForm.birthday || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, birthday: e.target.value })}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Celular' : 'Phone'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).phone || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Dirección' : 'Address'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).address || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, address: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Nacionalidad' : 'Nationality'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).nationality || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, nationality: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Lugar de Nacimiento' : 'Place of Birth'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).placeOfBirth || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, placeOfBirth: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Madre' : 'Mother Name'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).motherName || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, motherName: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Padre' : 'Father Name'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).fatherName || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, fatherName: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="md:col-span-2 pt-4 border-t border-slate-100">
-                <h3 className="text-sm font-bold text-slate-800 mb-3">
-                  {language === 'es' ? 'Personal y Familiar' : 'Personal & Family'}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Nacionalidad' : 'Nationality'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).nationality || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, nationality: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
+                {/* Space 5: Contrato y Pago */}
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 space-y-6">
+                  <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+                    <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 className="text-lg font-bold text-slate-800">{language === 'es' ? 'Contrato y Planilla' : 'Contract & Payroll'}</h3>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Lugar de Nacimiento' : 'Place of Birth'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).placeOfBirth || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, placeOfBirth: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Madre' : 'Mother Name'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).motherName || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, motherName: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Padre' : 'Father Name'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).fatherName || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, fatherName: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Fecha de Renovación' : 'Renewal Date'}</label>
-                    <input
-                      type="date"
-                      value={(editUserForm as any).renewalDate || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, renewalDate: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Hotel Contrato' : 'Hotel Contract'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).hotelContract || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, hotelContract: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Salario Base' : 'Base Salary'}</label>
+                      <input
+                        type="number"
+                        value={(editUserForm as any).baseSalary ?? ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, baseSalary: e.target.value === '' ? null : Number(e.target.value) } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Bonificación Incentivo' : 'Incentive Bonus'}</label>
+                      <input
+                        type="number"
+                        value={(editUserForm as any).incentiveBonus ?? ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, incentiveBonus: e.target.value === '' ? null : Number(e.target.value) } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Fecha de Renovación' : 'Renewal Date'}</label>
+                      <input
+                        type="date"
+                        value={(editUserForm as any).renewalDate || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, renewalDate: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Tipo de Cuenta' : 'Account Type'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).accountType || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, accountType: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="md:col-span-2 pt-4 border-t border-slate-100">
-                <h3 className="text-sm font-bold text-slate-800 mb-3">
-                  {language === 'es' ? 'Contacto y Dirección' : 'Contact & Address'}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Celular' : 'Phone'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).phone || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
+              {/* Right Column */}
+              <div className="space-y-8">
+                {/* Space 3: Identidad y Documentos */}
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 space-y-6">
+                  <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+                    <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 className="text-lg font-bold text-slate-800">{language === 'es' ? 'Identidad y Legal' : 'Identity & Legal'}</h3>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Dirección' : 'Address'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).address || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, address: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Tipo de Cuenta' : 'Account Type'}</label>
-                    <input
-                      type="text"
-                      value={(editUserForm as any).accountType || ''}
-                      onChange={(e) => setEditUserForm({ ...editUserForm, accountType: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">DPI</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).dpi || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, dpi: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'NIT' : 'Tax ID'}</label>
+                      <input
+                        type="text"
+                        value={editUserForm.taxId || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, taxId: e.target.value })}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Afiliación IGSS' : 'Social Security Number'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).socialSecurityNumber || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, socialSecurityNumber: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Código IGSS' : 'Social Security Code'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).socialSecurityCode || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, socialSecurityCode: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Afiliación ITRA' : 'Spouse DPI / ITRA'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).spouseDpi || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, spouseDpi: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'No. Carné' : 'Card Number'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).cardNumber || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, cardNumber: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Código de Ocupación' : 'Occupation Code'}</label>
+                      <input
+                        type="text"
+                        value={(editUserForm as any).occupation || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, occupation: e.target.value } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'A. Penales 6 Meses' : 'Criminal Record (6 months)'}</label>
+                      <input
+                        type="number"
+                        value={(editUserForm as any).criminalRecord ?? ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, criminalRecord: e.target.value === '' ? null : Number(e.target.value) } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'A. Policial 6 Meses' : 'Police Record (6 months)'}</label>
+                      <input
+                        type="number"
+                        value={(editUserForm as any).policeRecord ?? ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, policeRecord: e.target.value === '' ? null : Number(e.target.value) } as any)}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Estado Civil' : 'Marital Status'}</label>
-                <select
-                  value={editUserForm.maritalStatus || ''}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, maritalStatus: e.target.value })}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="">N/A</option>
-                  <option value="Single">{language === 'es' ? 'Soltero/a' : 'Single'}</option>
-                  <option value="Married">{language === 'es' ? 'Casado/a' : 'Married'}</option>
-                  <option value="Divorced">{language === 'es' ? 'Divorciado/a' : 'Divorced'}</option>
-                  <option value="Widowed">{language === 'es' ? 'Viudo/a' : 'Widowed'}</option>
-                </select>
-              </div>
-              {editUserForm.maritalStatus === 'Married' && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Nombre Cónyuge' : 'Spouse Name'}</label>
-                  <input
-                    type="text"
-                    value={editUserForm.spouseName || ''}
-                    onChange={(e) => setEditUserForm({ ...editUserForm, spouseName: e.target.value })}
-                    className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                  />
+
+                {/* Space 2: Contactos y Familia */}
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 space-y-6">
+                  <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+                    <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <h3 className="text-lg font-bold text-slate-800">{language === 'es' ? 'Personal y Familiar' : 'Personal & Family'}</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Estado Civil' : 'Marital Status'}</label>
+                      <select
+                        value={editUserForm.maritalStatus || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, maritalStatus: e.target.value })}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="">N/A</option>
+                        <option value="Single">{language === 'es' ? 'Soltero/a' : 'Single'}</option>
+                        <option value="Married">{language === 'es' ? 'Casado/a' : 'Married'}</option>
+                        <option value="Divorced">{language === 'es' ? 'Divorciado/a' : 'Divorced'}</option>
+                        <option value="Widowed">{language === 'es' ? 'Viudo/a' : 'Widowed'}</option>
+                      </select>
+                    </div>
+                    {editUserForm.maritalStatus === 'Married' && (
+                      <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Nombre Cónyuge' : 'Spouse Name'}</label>
+                        <input
+                          type="text"
+                          value={editUserForm.spouseName || ''}
+                          onChange={(e) => setEditUserForm({ ...editUserForm, spouseName: e.target.value })}
+                          className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Hijos (Cantidad)' : 'Children Count'}</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editUserForm.childrenCount ?? 0}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, childrenCount: parseInt(e.target.value) || 0 })}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    
+                    <div className="pt-4 border-t border-slate-200 mt-2">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        {language === 'es' ? 'Emergencia' : 'Emergency'}
+                      </h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Contacto de Emergencia' : 'Emergency Contact Name'}</label>
+                          <input
+                            type="text"
+                            value={editUserForm.emergencyContactName || ''}
+                            onChange={(e) => setEditUserForm({ ...editUserForm, emergencyContactName: e.target.value })}
+                            className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{language === 'es' ? 'Tel. Emergencia' : 'Emergency Phone'}</label>
+                          <input
+                            type="text"
+                            value={editUserForm.emergencyContactPhone || ''}
+                            onChange={(e) => setEditUserForm({ ...editUserForm, emergencyContactPhone: e.target.value })}
+                            className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Hijos' : 'Children Count'}</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={editUserForm.childrenCount ?? 0}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, childrenCount: parseInt(e.target.value) || 0 })}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t('tShirtSize')}</label>
-                <select
-                  value={editUserForm.tShirtSize || ''}
-                  onChange={(e) => setEditUserForm({ ...editUserForm, tShirtSize: e.target.value as any })}
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="">{t('selectSize')}</option>
-                  <option value="XS">XS</option>
-                  <option value="S">S</option>
-                  <option value="M">M</option>
-                  <option value="L">L</option>
-                  <option value="XL">XL</option>
-                  <option value="XXL">XXL</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t('likes')} ({t('commaSeparated')})</label>
-                <input
-                  type="text"
-                  value={getArrayInputValue('likes')}
-                  onChange={(e) => handleArrayInput('likes', e.target.value)}
-                  placeholder="e.g., Coffee, Dogs, Reading"
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t('dislikes')} ({t('commaSeparated')})</label>
-                <input
-                  type="text"
-                  value={getArrayInputValue('dislikes')}
-                  onChange={(e) => handleArrayInput('dislikes', e.target.value)}
-                  placeholder="e.g., Loud noises, Spicy food"
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t('allergies')} ({t('commaSeparated')})</label>
-                <input
-                  type="text"
-                  value={getArrayInputValue('allergies')}
-                  onChange={(e) => handleArrayInput('allergies', e.target.value)}
-                  placeholder="e.g., Peanuts, Penicillin"
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div className="md:col-span-2 text-primary-600 font-semibold text-xs uppercase tracking-widest pt-4 border-t border-slate-100">
-                {t('bigPicture')} Org Chart 2.0
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">{t('askMeAbout')} ({t('commaSeparated')})</label>
-                <input
-                  type="text"
-                  value={getArrayInputValue('askMeAbout')}
-                  onChange={(e) => handleArrayInput('askMeAbout', e.target.value)}
-                  placeholder="e.g., Guest Relations, Excel, Coffee Art"
-                  className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
+
+                {/* Space 4: Preferencias y Cultura */}
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 space-y-6">
+                  <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
+                    <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <h3 className="text-lg font-bold text-slate-800">{t('preferencias')}</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('tShirtSize')}</label>
+                      <select
+                        value={editUserForm.tShirtSize || ''}
+                        onChange={(e) => setEditUserForm({ ...editUserForm, tShirtSize: e.target.value as any })}
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="">{t('selectSize')}</option>
+                        <option value="XS">XS</option>
+                        <option value="S">S</option>
+                        <option value="M">M</option>
+                        <option value="L">L</option>
+                        <option value="XL">XL</option>
+                        <option value="XXL">XXL</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('likes')} ({t('commaSeparated')})</label>
+                      <input
+                        type="text"
+                        value={getArrayInputValue('likes')}
+                        onChange={(e) => handleArrayInput('likes', e.target.value)}
+                        placeholder="e.g., Coffee, Dogs, Reading"
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('dislikes')} ({t('commaSeparated')})</label>
+                      <input
+                        type="text"
+                        value={getArrayInputValue('dislikes')}
+                        onChange={(e) => handleArrayInput('dislikes', e.target.value)}
+                        placeholder="e.g., Loud noises, Spicy food"
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('allergies')} ({t('commaSeparated')})</label>
+                      <input
+                        type="text"
+                        value={getArrayInputValue('allergies')}
+                        onChange={(e) => handleArrayInput('allergies', e.target.value)}
+                        placeholder="e.g., Peanuts, Penicillin"
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    <div className="pt-4 border-t border-slate-200 mt-2">
+                      <div className="text-xs font-bold text-primary-600 uppercase tracking-widest mb-3">
+                        {t('bigPicture')} Org Chart 2.0
+                      </div>
+                      <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('askMeAbout')} ({t('commaSeparated')})</label>
+                      <input
+                        type="text"
+                        value={getArrayInputValue('askMeAbout')}
+                        onChange={(e) => handleArrayInput('askMeAbout', e.target.value)}
+                        placeholder="e.g., Guest Relations, Excel, Coffee Art"
+                        className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {editingUser && (

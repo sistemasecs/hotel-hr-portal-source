@@ -74,8 +74,8 @@ export interface User {
   profession?: string | null;
   address?: string | null;
   accountType?: string | null;
-  criminalRecord?: string | null;
-  policeRecord?: string | null;
+  criminalRecord?: number | null;
+  policeRecord?: number | null;
   motherName?: string | null;
   fatherName?: string | null;
   childrenNames?: string | null;
