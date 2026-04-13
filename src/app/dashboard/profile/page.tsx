@@ -72,10 +72,6 @@ export default function ProfilePage() {
     'childrenCount',
     'motherName',
     'fatherName',
-    'hotelContract',
-    'baseSalary',
-    'incentiveBonus',
-    'renewalDate',
     'dpi',
     'socialSecurityNumber',
     'spouseDpi',
@@ -88,20 +84,6 @@ export default function ProfilePage() {
     'placeOfBirth',
   ]);
 
-  const groupedProfileCustomFields = staffCustomFields
-    .filter((f) => (f.show_in_profile ?? true))
-    .filter((f) => !hardcodedProfileFieldKeys.has(f.field_key))
-    .sort((a, b) => {
-      const g = (a.group_key || 'custom').localeCompare(b.group_key || 'custom');
-      if (g !== 0) return g;
-      return (a.sort_order ?? 0) - (b.sort_order ?? 0);
-    })
-    .reduce<Record<string, StaffCustomFieldDefinition[]>>((acc, field) => {
-      const key = field.group_key || 'custom';
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(field);
-      return acc;
-    }, {});
 
   if (!currentUser) {
     return <div className="p-8 text-center text-slate-500">{t('loading')}</div>;
@@ -676,19 +658,6 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('renewalDateLabel')}</label>
-                  {isEditing ? (
-                    <input
-                      type="date"
-                      value={(formData as any).renewalDate || ''}
-                      onChange={(e) => setFormData({ ...formData, renewalDate: e.target.value } as any)}
-                      className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
-                    />
-                  ) : (
-                    <p className="text-sm font-medium text-slate-900">{(currentUser as any).renewalDate || '-'}</p>
-                  )}
-                </div>
               </div>
             </div>
 
