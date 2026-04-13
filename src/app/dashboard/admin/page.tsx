@@ -6,7 +6,7 @@ import { useData } from '@/context/DataContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { User, Event, TrainingModule, EmployeeRequest, TrainingTier } from '@/types';
+import { User, Event, TrainingModule, EmployeeRequest, TrainingTier, StaffCustomFieldDefinition } from '@/types';
 import ModuleForm from '@/components/admin/ModuleForm';
 import AttendanceReports from '@/components/admin/AttendanceReports';
 import VacationCalendar from '@/components/requests/VacationCalendar';
@@ -55,23 +55,46 @@ const FEATURE_GROUPS = [
   }
 ];
 
-const ALL_DIRECTORY_COLUMNS = [
-  { id: 'name', label: 'Nombre', fixed: true },
-  { id: 'email', label: 'Email' },
-  { id: 'role', label: 'Rol' },
+const ALL_DIRECTORY_COLUMNS: { id: string; label: string; fixed?: boolean }[] = [
+  { id: 'name', label: 'Nombre y Apellidos', fixed: true },
+  { id: 'status', label: 'Activo' },
+  { id: 'hireDate', label: 'Fecha de Ingreso' },
+  { id: 'contractSigningDate', label: 'Fecha de Inicio Contrato' },
   { id: 'department', label: 'Departamento' },
   { id: 'area', label: 'Área' },
-  { id: 'hireDate', label: 'Fecha Contratación' },
-  { id: 'employmentType', label: 'Tipo de Empleado' },
-  { id: 'birthday', label: 'Cumpleaños' },
-  { id: 'tShirtSize', label: 'Talla de Camisa' },
-  { id: 'emergency', label: 'Contacto Emergencia' },
-  { id: 'vacations', label: 'Vacaciones' },
+  { id: 'hotelContract', label: 'Hotel Contrato' },
+  { id: 'baseSalary', label: 'Salario Base' },
+  { id: 'incentiveBonus', label: 'Bonificación Incentivo' },
+  { id: 'birthday', label: 'Fecha de Nacimiento' },
+  { id: 'age', label: 'Edad Actual' },
+  { id: 'dpi', label: 'DPI' },
+  { id: 'socialSecurityNumber', label: 'Afiliación IGSS' },
+  { id: 'phone', label: 'Celular' },
+  { id: 'spouseDpi', label: 'Afiliación ITRA' },
+  { id: 'cardNumber', label: 'No. Carné' },
+  { id: 'renewalDate', label: 'Fecha de Renovación' },
+  { id: 'nationality', label: 'Nacionalidad' },
+  { id: 'placeOfBirth', label: 'Lugar de Nacimiento' },
+  { id: 'socialSecurityCode', label: 'Código IGSS' },
+  { id: 'occupation', label: 'Código de Ocupación' },
+  { id: 'taxId', label: 'NIT' },
   { id: 'maritalStatus', label: 'Estado Civil' },
-  { id: 'spouseName', label: 'Nombre de Cónyuge' },
-  { id: 'childrenCount', label: 'Hijos' },
-  { id: 'taxId', label: 'NIT / RTN' },
-  { id: 'status', label: 'Estado' },
+  { id: 'educationLevel', label: 'Nivel Educativo' },
+  { id: 'profession', label: 'Profesión' },
+  { id: 'email', label: 'Correo' },
+  { id: 'address', label: 'Dirección' },
+  { id: 'accountType', label: 'Tipo de Cuenta' },
+  { id: 'emergencyContactName', label: 'Contacto de Emergencia' },
+  { id: 'emergencyContactPhone', label: 'Tel. Emergencia' },
+  { id: 'criminalRecord', label: 'A. Penales 6 Meses' },
+  { id: 'policeRecord', label: 'A. Policial 6 Meses' },
+  { id: 'motherName', label: 'Madre' },
+  { id: 'fatherName', label: 'Padre' },
+  { id: 'spouseName', label: 'Esposo/a Nombre' },
+  { id: 'childrenCount', label: 'Cantidad de Hijos' },
+  { id: 'childrenNames', label: 'Nombres de Hijos' },
+  { id: 'employmentType', label: 'Tipo de Empleado' },
+  { id: 'vacations', label: 'Vacaciones' },
   { id: 'actions', label: 'Acciones', fixed: true },
 ];
 
@@ -307,6 +330,9 @@ function AdminDashboardContent() {
     if (activeTab === 'Attendance') {
       fetchAttendanceLogs();
     }
+    if (activeTab === 'Directory') {
+      fetchStaffCustomFields();
+    }
   }, [activeTab]);
 
   // Edit/Add User State
@@ -322,6 +348,168 @@ function AdminDashboardContent() {
   const [pendingDeleteUser, setPendingDeleteUser] = useState<User | null>(null);
   const [deleteMode, setDeleteMode] = useState<'inactive' | 'hard'>('inactive');
   const [inactivePayload, setInactivePayload] = useState({ date: new Date().toISOString().split('T')[0], reason: 'Fired' });
+
+  // Staff custom fields manager state
+  const [staffCustomFields, setStaffCustomFields] = useState<StaffCustomFieldDefinition[]>([]);
+  const [isStaffFieldsLoading, setIsStaffFieldsLoading] = useState(false);
+  const [staffFieldsError, setStaffFieldsError] = useState<string | null>(null);
+  const [staffFieldsSuccess, setStaffFieldsSuccess] = useState<string | null>(null);
+  const [newStaffField, setNewStaffField] = useState({
+    fieldKey: '',
+    label: '',
+    fieldType: 'text' as 'text' | 'number' | 'date' | 'boolean',
+    requiredForContract: false,
+    groupKey: 'custom',
+    showInProfile: true,
+    employeeEditable: false,
+    sortOrder: 0
+  });
+  const [editingStaffFieldId, setEditingStaffFieldId] = useState<string | null>(null);
+  const [editStaffFieldForm, setEditStaffFieldForm] = useState({
+    label: '',
+    fieldType: 'text' as 'text' | 'number' | 'date' | 'boolean',
+    requiredForContract: false,
+    groupKey: 'custom',
+    showInProfile: true,
+    employeeEditable: false,
+    sortOrder: 0
+  });
+
+  const fetchStaffCustomFields = async () => {
+    setIsStaffFieldsLoading(true);
+    setStaffFieldsError(null);
+    try {
+      const res = await fetch('/api/staff-fields');
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to load custom fields');
+      }
+      setStaffCustomFields(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      setStaffFieldsError(error?.message || 'Failed to load custom fields');
+    } finally {
+      setIsStaffFieldsLoading(false);
+    }
+  };
+
+  const handleCreateStaffField = async () => {
+    setStaffFieldsError(null);
+    setStaffFieldsSuccess(null);
+
+    if (!newStaffField.fieldKey.trim() || !newStaffField.label.trim()) {
+      setStaffFieldsError(language === 'es' ? 'Key y etiqueta son obligatorios.' : 'Field key and label are required.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/staff-fields', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fieldKey: newStaffField.fieldKey.trim(),
+          label: newStaffField.label.trim(),
+          fieldType: newStaffField.fieldType,
+          requiredForContract: newStaffField.requiredForContract,
+          groupKey: newStaffField.groupKey.trim() || 'custom',
+          showInProfile: newStaffField.showInProfile,
+          employeeEditable: newStaffField.employeeEditable,
+          sortOrder: Number(newStaffField.sortOrder) || 0
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to create custom field');
+      }
+
+      setStaffFieldsSuccess(language === 'es' ? 'Campo personalizado creado.' : 'Custom field created.');
+      setNewStaffField({
+        fieldKey: '',
+        label: '',
+        fieldType: 'text',
+        requiredForContract: false,
+        groupKey: 'custom',
+        showInProfile: true,
+        employeeEditable: false,
+        sortOrder: 0
+      });
+      await fetchStaffCustomFields();
+    } catch (error: any) {
+      setStaffFieldsError(error?.message || 'Failed to create custom field');
+    }
+  };
+
+  const beginEditStaffField = (field: StaffCustomFieldDefinition) => {
+    setEditingStaffFieldId(field.id);
+    setEditStaffFieldForm({
+      label: field.label,
+      fieldType: field.field_type,
+      requiredForContract: field.required_for_contract,
+      groupKey: field.group_key || 'custom',
+      showInProfile: field.show_in_profile ?? true,
+      employeeEditable: field.employee_editable ?? false,
+      sortOrder: field.sort_order ?? 0
+    });
+  };
+
+  const handleUpdateStaffField = async () => {
+    if (!editingStaffFieldId) return;
+
+    setStaffFieldsError(null);
+    setStaffFieldsSuccess(null);
+
+    if (!editStaffFieldForm.label.trim()) {
+      setStaffFieldsError(language === 'es' ? 'La etiqueta es obligatoria.' : 'Label is required.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/staff-fields/${editingStaffFieldId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label: editStaffFieldForm.label.trim(),
+          fieldType: editStaffFieldForm.fieldType,
+          requiredForContract: editStaffFieldForm.requiredForContract,
+          groupKey: editStaffFieldForm.groupKey.trim() || 'custom',
+          showInProfile: editStaffFieldForm.showInProfile,
+          employeeEditable: editStaffFieldForm.employeeEditable,
+          sortOrder: Number(editStaffFieldForm.sortOrder) || 0
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to update custom field');
+      }
+
+      setStaffFieldsSuccess(language === 'es' ? 'Campo personalizado actualizado.' : 'Custom field updated.');
+      setEditingStaffFieldId(null);
+      await fetchStaffCustomFields();
+    } catch (error: any) {
+      setStaffFieldsError(error?.message || 'Failed to update custom field');
+    }
+  };
+
+  const handleDeleteStaffField = async (fieldId: string) => {
+    if (!window.confirm(language === 'es' ? '¿Eliminar este campo personalizado?' : 'Delete this custom field?')) return;
+
+    setStaffFieldsError(null);
+    setStaffFieldsSuccess(null);
+
+    try {
+      const res = await fetch(`/api/staff-fields/${fieldId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Failed to delete custom field');
+      }
+
+      setStaffFieldsSuccess(language === 'es' ? 'Campo personalizado eliminado.' : 'Custom field deleted.');
+      await fetchStaffCustomFields();
+    } catch (error: any) {
+      setStaffFieldsError(error?.message || 'Failed to delete custom field');
+    }
+  };
 
   const toggleColumn = (columnId: string) => {
     setVisibleColumns(prev => {
@@ -579,15 +767,43 @@ function AdminDashboardContent() {
   };
 
   const handleSaveUser = () => {
+    const customValues = (editUserForm.customFields || {}) as Record<string, any>;
+    const isContract = (editUserForm.employmentType || 'Contract') === 'Contract';
+    const missingRequiredCustomFields = isContract
+      ? staffCustomFields
+          .filter(f => f.required_for_contract)
+          .filter((f) => {
+            const value = customValues[f.field_key];
+            if (f.field_type === 'boolean') return value !== true;
+            return value === undefined || value === null || String(value).trim() === '';
+          })
+      : [];
+
+    if (missingRequiredCustomFields.length > 0) {
+      const missingLabels = missingRequiredCustomFields.map(f => f.label).join(', ');
+      alert(
+        language === 'es'
+          ? `Completa los campos requeridos para contrato: ${missingLabels}`
+          : `Please complete required contract fields: ${missingLabels}`
+      );
+      return;
+    }
+
     if (editingUser) {
-      updateUser(editingUser.id, editUserForm);
+      updateUser(editingUser.id, {
+        ...editUserForm,
+        customFields: customValues
+      });
       setIsUserModalOpen(false);
       setEditingUser(null);
       setEditUserForm({});
       alert(t('employeeUpdated'));
     } else {
       if (editUserForm.name && editUserForm.email && editUserForm.role && editUserForm.department && editUserForm.birthday && editUserForm.hireDate && editUserForm.employmentType) {
-        addUser(editUserForm as Omit<User, 'id'>);
+        addUser({
+          ...(editUserForm as Omit<User, 'id'>),
+          customFields: customValues
+        });
       } else {
         alert('Please fill in all required fields.');
         return;
@@ -1233,134 +1449,137 @@ function AdminDashboardContent() {
       </header>
 
       {activeTab === 'Directory' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-            <div className="flex items-baseline space-x-3">
-              <h2 className="text-xl font-semibold text-slate-800">{t('staffDirectory')}</h2>
-              <span className="text-sm font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                {filteredUsers.length} {t('totalStaff')}
-              </span>
-            </div>
-            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder={t('searchEmployees')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full sm:w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm focus:ring-primary-500 focus:border-primary-500"
-                />
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+              <div className="flex items-baseline space-x-3">
+                <h2 className="text-xl font-semibold text-slate-800">{t('staffDirectory')}</h2>
+                <span className="text-sm font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {filteredUsers.length} {t('totalStaff')}
+                </span>
               </div>
-              
-              <select
-                value={departmentFilter}
-                onChange={(e) => setDepartmentFilter(e.target.value)}
-                className="w-full sm:w-48 pl-3 pr-8 py-2 border border-slate-300 rounded-md shadow-sm text-sm focus:ring-primary-500 focus:border-primary-500 bg-white px-2"
-              >
-                <option value="All">{language === 'es' ? 'Todos los Departamentos' : 'All Departments'}</option>
-                {sortedDepartments.map(dept => (
-                  <option key={dept.id} value={dept.name}>{dept.name}</option>
-                ))}
-              </select>
-
-              <div className="flex bg-slate-100 p-1 rounded-lg">
-                <button
-                  onClick={() => setEmploymentTypeFilter('All')}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${employmentTypeFilter === 'All' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  {t('all')}
-                </button>
-                <button
-                  onClick={() => setEmploymentTypeFilter('Contract')}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${employmentTypeFilter === 'Contract' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  {language === 'es' ? 'Contrato' : 'Contract'}
-                </button>
-                <button
-                  onClick={() => setEmploymentTypeFilter('Weekly')}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${employmentTypeFilter === 'Weekly' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  {language === 'es' ? 'Semanal' : 'Weekly'}
-                </button>
-              </div>
-              <div className="flex bg-slate-100 p-1 rounded-lg">
-                <button
-                  onClick={() => setShowActiveOnly(true)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${showActiveOnly ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  {t('active')}
-                </button>
-                <button
-                  onClick={() => setShowActiveOnly(false)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${!showActiveOnly ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  {t('all')}
-                </button>
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setIsCsvModalOpen(true)}
-                  className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors flex items-center whitespace-nowrap"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                  {t('uploadBatch')}
-                </button>
-                
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
                 <div className="relative">
+                  <input
+                    type="text"
+                    placeholder={t('searchEmployees')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full sm:w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+
+                <select
+                  value={departmentFilter}
+                  onChange={(e) => setDepartmentFilter(e.target.value)}
+                  className="w-full sm:w-48 pl-3 pr-8 py-2 border border-slate-300 rounded-md shadow-sm text-sm focus:ring-primary-500 focus:border-primary-500 bg-white px-2"
+                >
+                  <option value="All">{language === 'es' ? 'Todos los Departamentos' : 'All Departments'}</option>
+                  {sortedDepartments.map(dept => (
+                    <option key={dept.id} value={dept.name}>{dept.name}</option>
+                  ))}
+                </select>
+
+                <div className="flex bg-slate-100 p-1 rounded-lg">
                   <button
-                    onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)}
+                    onClick={() => setEmploymentTypeFilter('All')}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${employmentTypeFilter === 'All' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {t('all')}
+                  </button>
+                  <button
+                    onClick={() => setEmploymentTypeFilter('Contract')}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${employmentTypeFilter === 'Contract' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {language === 'es' ? 'Contrato' : 'Contract'}
+                  </button>
+                  <button
+                    onClick={() => setEmploymentTypeFilter('Weekly')}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${employmentTypeFilter === 'Weekly' ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {language === 'es' ? 'Semanal' : 'Weekly'}
+                  </button>
+                </div>
+
+                <div className="flex bg-slate-100 p-1 rounded-lg">
+                  <button
+                    onClick={() => setShowActiveOnly(true)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${showActiveOnly ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {t('active')}
+                  </button>
+                  <button
+                    onClick={() => setShowActiveOnly(false)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${!showActiveOnly ? 'bg-white text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {t('all')}
+                  </button>
+                </div>
+
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setIsCsvModalOpen(true)}
                     className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors flex items-center whitespace-nowrap"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
-                    {language === 'es' ? 'Ver' : 'View'}
+                    {t('uploadBatch')}
                   </button>
-                  
-                  {isColumnSelectorOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setIsColumnSelectorOpen(false)}></div>
-                      <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-20 overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="p-3 border-b border-slate-100 bg-slate-50">
-                          <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Columnas Visibles</h3>
-                        </div>
-                        <div className="max-h-80 overflow-y-auto p-2">
-                          {ALL_DIRECTORY_COLUMNS.map(col => (
-                            <label key={col.id} className={`flex items-center p-2 rounded-md hover:bg-slate-50 transition-colors ${col.fixed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
-                              <input
-                                type="checkbox"
-                                checked={visibleColumns.includes(col.id)}
-                                onChange={() => toggleColumn(col.id)}
-                                disabled={col.fixed}
-                                className="h-4 w-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500"
-                              />
-                              <span className="ml-3 text-sm text-slate-700">{col.label}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
 
-                <button
-                  onClick={handleAddUserClick}
-                  className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors whitespace-nowrap"
-                >
-                  + {t('addEmployee')}
-                </button>
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsColumnSelectorOpen(!isColumnSelectorOpen)}
+                      className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded-md hover:bg-slate-50 transition-colors flex items-center whitespace-nowrap"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      {language === 'es' ? 'Ver' : 'View'}
+                    </button>
+
+                    {isColumnSelectorOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setIsColumnSelectorOpen(false)}></div>
+                        <div className="absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-20 overflow-hidden animate-in fade-in zoom-in duration-200">
+                          <div className="p-3 border-b border-slate-100 bg-slate-50">
+                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Columnas Visibles</h3>
+                          </div>
+                          <div className="max-h-80 overflow-y-auto p-2">
+                            {ALL_DIRECTORY_COLUMNS.map(col => (
+                              <label key={col.id} className={`flex items-center p-2 rounded-md hover:bg-slate-50 transition-colors ${col.fixed ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={visibleColumns.includes(col.id)}
+                                  onChange={() => toggleColumn(col.id)}
+                                  disabled={col.fixed}
+                                  className="h-4 w-4 text-primary-600 rounded border-slate-300 focus:ring-primary-500"
+                                />
+                                <span className="ml-3 text-sm text-slate-700">{col.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleAddUserClick}
+                    className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-md hover:bg-primary-700 transition-colors whitespace-nowrap"
+                  >
+                    + {t('addEmployee')}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="overflow-x-auto">
+            <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
@@ -1494,6 +1713,7 @@ function AdminDashboardContent() {
             </table>
           </div>
         </div>
+      </div>
       )}
 
       {pendingDeleteUser && (
@@ -2028,6 +2248,209 @@ function AdminDashboardContent() {
                   className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
+
+              <div className="md:col-span-2 pt-4 border-t border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 mb-3">
+                  {language === 'es' ? 'Contrato y Planilla' : 'Contract & Payroll'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Hotel Contrato' : 'Hotel Contract'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).hotelContract || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, hotelContract: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Salario Base' : 'Base Salary'}</label>
+                    <input
+                      type="number"
+                      value={(editUserForm as any).baseSalary ?? ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, baseSalary: e.target.value === '' ? null : Number(e.target.value) } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Bonificación Incentivo' : 'Incentive Bonus'}</label>
+                    <input
+                      type="number"
+                      value={(editUserForm as any).incentiveBonus ?? ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, incentiveBonus: e.target.value === '' ? null : Number(e.target.value) } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 pt-4 border-t border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 mb-3">
+                  {language === 'es' ? 'Identidad y Legal' : 'Identity & Legal'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">DPI</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).dpi || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, dpi: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Afiliación IGSS' : 'Social Security Number'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).socialSecurityNumber || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, socialSecurityNumber: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Afiliación ITRA' : 'Spouse DPI / ITRA'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).spouseDpi || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, spouseDpi: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'No. Carné' : 'Card Number'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).cardNumber || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, cardNumber: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Código IGSS' : 'Social Security Code'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).socialSecurityCode || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, socialSecurityCode: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Código de Ocupación' : 'Occupation Code'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).occupation || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, occupation: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'A. Penales 6 Meses' : 'Criminal Record (6 months)'}</label>
+                    <input
+                      type="number"
+                      value={(editUserForm as any).criminalRecord ?? ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, criminalRecord: e.target.value === '' ? null : Number(e.target.value) } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'A. Policial 6 Meses' : 'Police Record (6 months)'}</label>
+                    <input
+                      type="number"
+                      value={(editUserForm as any).policeRecord ?? ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, policeRecord: e.target.value === '' ? null : Number(e.target.value) } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 pt-4 border-t border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 mb-3">
+                  {language === 'es' ? 'Personal y Familiar' : 'Personal & Family'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Nacionalidad' : 'Nationality'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).nationality || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, nationality: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Lugar de Nacimiento' : 'Place of Birth'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).placeOfBirth || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, placeOfBirth: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Madre' : 'Mother Name'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).motherName || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, motherName: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Padre' : 'Father Name'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).fatherName || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, fatherName: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Fecha de Renovación' : 'Renewal Date'}</label>
+                    <input
+                      type="date"
+                      value={(editUserForm as any).renewalDate || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, renewalDate: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 pt-4 border-t border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 mb-3">
+                  {language === 'es' ? 'Contacto y Dirección' : 'Contact & Address'}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Celular' : 'Phone'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).phone || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Dirección' : 'Address'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).address || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, address: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Tipo de Cuenta' : 'Account Type'}</label>
+                    <input
+                      type="text"
+                      value={(editUserForm as any).accountType || ''}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, accountType: e.target.value } as any)}
+                      className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">{language === 'es' ? 'Estado Civil' : 'Marital Status'}</label>
                 <select
@@ -2222,6 +2645,113 @@ function AdminDashboardContent() {
                           ))}
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {staffCustomFields.length > 0 && (
+                <div className="md:col-span-2 pt-4 border-t border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-800 mb-3">
+                    {language === 'es' ? 'Campos Personalizados' : 'Custom Fields'}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {staffCustomFields
+                      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+                      .map((field) => {
+                        const customFields = (editUserForm.customFields || {}) as Record<string, any>;
+                        const currentValue = customFields[field.field_key];
+                        const isRequiredForContract = field.required_for_contract && (editUserForm.employmentType || 'Contract') === 'Contract';
+                        const isVisibleInProfile = field.show_in_profile ?? true;
+                        const isEmployeeEditable = field.employee_editable ?? false;
+                        
+                        if (!isVisibleInProfile) return null;
+
+                        return (
+                          <div key={field.id}>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                            {field.label}
+                            {isRequiredForContract && <span className="text-red-500"> *</span>}
+                          </label>
+
+                          {field.field_type === 'text' && (
+                            <input
+                              type="text"
+                              value={currentValue || ''}
+                              onChange={(e) =>
+                                setEditUserForm((prev) => ({
+                                  ...prev,
+                                  customFields: {
+                                    ...(prev.customFields || {}),
+                                    [field.field_key]: e.target.value
+                                  }
+                                }))
+                              }
+                              className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                              disabled={editingUser === null && !isEmployeeEditable}
+                            />
+                          )}
+
+                          {field.field_type === 'number' && (
+                            <input
+                              type="number"
+                              value={currentValue ?? ''}
+                              onChange={(e) =>
+                                setEditUserForm((prev) => ({
+                                  ...prev,
+                                  customFields: {
+                                    ...(prev.customFields || {}),
+                                    [field.field_key]: e.target.value === '' ? '' : Number(e.target.value)
+                                  }
+                                }))
+                              }
+                              className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                              disabled={editingUser === null && !isEmployeeEditable}
+                            />
+                          )}
+
+                          {field.field_type === 'date' && (
+                            <input
+                              type="date"
+                              value={currentValue || ''}
+                              onChange={(e) =>
+                                setEditUserForm((prev) => ({
+                                  ...prev,
+                                  customFields: {
+                                    ...(prev.customFields || {}),
+                                    [field.field_key]: e.target.value
+                                  }
+                                }))
+                              }
+                              className="w-full border border-slate-300 rounded-md shadow-sm p-2 text-sm focus:ring-primary-500 focus:border-primary-500"
+                              disabled={editingUser === null && !isEmployeeEditable}
+                            />
+                          )}
+
+                          {field.field_type === 'boolean' && (
+                            <label className="inline-flex items-center space-x-2 mt-2">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(currentValue)}
+                                onChange={(e) =>
+                                  setEditUserForm((prev) => ({
+                                    ...prev,
+                                    customFields: {
+                                      ...(prev.customFields || {}),
+                                      [field.field_key]: e.target.checked
+                                    }
+                                  }))
+                                }
+                                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-300 rounded"
+                                disabled={editingUser === null && !isEmployeeEditable}
+                              />
+                              <span className="text-sm text-slate-600">
+                                {language === 'es' ? 'Sí' : 'Yes'}
+                              </span>
+                            </label>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -4489,6 +5019,283 @@ function AdminDashboardContent() {
 
       {activeTab === 'Settings' && (
         <div className="space-y-8">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-6 border-b border-slate-100">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-800">
+                  {language === 'es' ? 'Gestor de Campos Personalizados' : 'Custom Fields Manager'}
+                </h3>
+                <button
+                  onClick={fetchStaffCustomFields}
+                  className="px-3 py-1.5 text-xs font-medium border border-slate-300 rounded-md hover:bg-slate-50"
+                >
+                  {language === 'es' ? 'Actualizar' : 'Refresh'}
+                </button>
+              </div>
+
+              {staffFieldsError && (
+                <div className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                  {staffFieldsError}
+                </div>
+              )}
+              {staffFieldsSuccess && (
+                <div className="mb-3 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
+                  {staffFieldsSuccess}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-9 gap-3 items-end">
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">Key</label>
+                  <input
+                    type="text"
+                    value={newStaffField.fieldKey}
+                    onChange={(e) => setNewStaffField(prev => ({ ...prev, fieldKey: e.target.value }))}
+                    placeholder="visa_expiry"
+                    className="w-full border border-slate-300 rounded-md p-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">{language === 'es' ? 'Etiqueta' : 'Label'}</label>
+                  <input
+                    type="text"
+                    value={newStaffField.label}
+                    onChange={(e) => setNewStaffField(prev => ({ ...prev, label: e.target.value }))}
+                    placeholder={language === 'es' ? 'Fecha de vencimiento visa' : 'Visa Expiry Date'}
+                    className="w-full border border-slate-300 rounded-md p-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">{language === 'es' ? 'Tipo' : 'Type'}</label>
+                  <select
+                    value={newStaffField.fieldType}
+                    onChange={(e) => setNewStaffField(prev => ({ ...prev, fieldType: e.target.value as any }))}
+                    className="w-full border border-slate-300 rounded-md p-2 text-sm"
+                  >
+                    <option value="text">text</option>
+                    <option value="number">number</option>
+                    <option value="date">date</option>
+                    <option value="boolean">boolean</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">{language === 'es' ? 'Grupo' : 'Group'}</label>
+                  <input
+                    type="text"
+                    value={newStaffField.groupKey}
+                    onChange={(e) => setNewStaffField(prev => ({ ...prev, groupKey: e.target.value }))}
+                    placeholder="custom"
+                    className="w-full border border-slate-300 rounded-md p-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-700 mb-1">{language === 'es' ? 'Orden' : 'Sort'}</label>
+                  <input
+                    type="number"
+                    value={newStaffField.sortOrder}
+                    onChange={(e) => setNewStaffField(prev => ({ ...prev, sortOrder: Number(e.target.value) || 0 }))}
+                    className="w-full border border-slate-300 rounded-md p-2 text-sm"
+                  />
+                </div>
+                <div className="space-y-2 mb-1">
+                  <label className="inline-flex items-center space-x-2 text-xs text-slate-700">
+                    <input
+                      id="requiredForContractNew"
+                      type="checkbox"
+                      checked={newStaffField.requiredForContract}
+                      onChange={(e) => setNewStaffField(prev => ({ ...prev, requiredForContract: e.target.checked }))}
+                    />
+                    <span>{language === 'es' ? 'Requerido contrato' : 'Required contract'}</span>
+                  </label>
+                  <label className="inline-flex items-center space-x-2 text-xs text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={newStaffField.showInProfile}
+                      onChange={(e) => setNewStaffField(prev => ({ ...prev, showInProfile: e.target.checked }))}
+                    />
+                    <span>{language === 'es' ? 'Mostrar en perfil' : 'Show in profile'}</span>
+                  </label>
+                  <label className="inline-flex items-center space-x-2 text-xs text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={newStaffField.employeeEditable}
+                      onChange={(e) => setNewStaffField(prev => ({ ...prev, employeeEditable: e.target.checked }))}
+                    />
+                    <span>{language === 'es' ? 'Editable empleado' : 'Employee editable'}</span>
+                  </label>
+                </div>
+                <div>
+                  <button
+                    onClick={handleCreateStaffField}
+                    className="w-full px-3 py-2 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700"
+                  >
+                    {language === 'es' ? 'Agregar campo' : 'Add field'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                    <th className="p-4 font-semibold">Key</th>
+                    <th className="p-4 font-semibold">{language === 'es' ? 'Etiqueta' : 'Label'}</th>
+                    <th className="p-4 font-semibold">{language === 'es' ? 'Tipo' : 'Type'}</th>
+                    <th className="p-4 font-semibold">{language === 'es' ? 'Contrato' : 'Contract'}</th>
+                    <th className="p-4 font-semibold">{language === 'es' ? 'Grupo' : 'Group'}</th>
+                    <th className="p-4 font-semibold">{language === 'es' ? 'Perfil' : 'Profile'}</th>
+                    <th className="p-4 font-semibold">{language === 'es' ? 'Editable' : 'Editable'}</th>
+                    <th className="p-4 font-semibold">{language === 'es' ? 'Orden' : 'Sort'}</th>
+                    <th className="p-4 font-semibold text-right">{language === 'es' ? 'Acciones' : 'Actions'}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {isStaffFieldsLoading ? (
+                    <tr>
+                      <td colSpan={9} className="p-4 text-sm text-slate-500">
+                        {language === 'es' ? 'Cargando...' : 'Loading...'}
+                      </td>
+                    </tr>
+                  ) : staffCustomFields.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="p-4 text-sm text-slate-500">
+                        {language === 'es' ? 'No hay campos personalizados.' : 'No custom fields yet.'}
+                      </td>
+                    </tr>
+                  ) : (
+                    staffCustomFields.map((field) => (
+                      <tr key={field.id}>
+                        <td className="p-4 text-sm font-mono text-slate-700">{field.field_key}</td>
+                        <td className="p-4">
+                          {editingStaffFieldId === field.id ? (
+                            <input
+                              type="text"
+                              value={editStaffFieldForm.label}
+                              onChange={(e) => setEditStaffFieldForm(prev => ({ ...prev, label: e.target.value }))}
+                              className="w-full border border-slate-300 rounded-md p-2 text-sm"
+                            />
+                          ) : (
+                            <span className="text-sm text-slate-700">{field.label}</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {editingStaffFieldId === field.id ? (
+                            <select
+                              value={editStaffFieldForm.fieldType}
+                              onChange={(e) => setEditStaffFieldForm(prev => ({ ...prev, fieldType: e.target.value as any }))}
+                              className="border border-slate-300 rounded-md p-2 text-sm"
+                            >
+                              <option value="text">text</option>
+                              <option value="number">number</option>
+                              <option value="date">date</option>
+                              <option value="boolean">boolean</option>
+                            </select>
+                          ) : (
+                            <span className="text-sm text-slate-700">{field.field_type}</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {editingStaffFieldId === field.id ? (
+                            <label className="inline-flex items-center space-x-2 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={editStaffFieldForm.requiredForContract}
+                                onChange={(e) => setEditStaffFieldForm(prev => ({ ...prev, requiredForContract: e.target.checked }))}
+                              />
+                              <span>{language === 'es' ? 'Sí' : 'Yes'}</span>
+                            </label>
+                          ) : (
+                            <span className="text-sm text-slate-700">{field.required_for_contract ? (language === 'es' ? 'Sí' : 'Yes') : 'No'}</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {editingStaffFieldId === field.id ? (
+                            <input
+                              type="text"
+                              value={editStaffFieldForm.groupKey}
+                              onChange={(e) => setEditStaffFieldForm(prev => ({ ...prev, groupKey: e.target.value }))}
+                              className="w-full border border-slate-300 rounded-md p-2 text-sm"
+                            />
+                          ) : (
+                            <span className="text-sm text-slate-700">{field.group_key || 'custom'}</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {editingStaffFieldId === field.id ? (
+                            <input
+                              type="checkbox"
+                              checked={editStaffFieldForm.showInProfile}
+                              onChange={(e) => setEditStaffFieldForm(prev => ({ ...prev, showInProfile: e.target.checked }))}
+                            />
+                          ) : (
+                            <span className="text-sm text-slate-700">{(field.show_in_profile ?? true) ? (language === 'es' ? 'Sí' : 'Yes') : 'No'}</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {editingStaffFieldId === field.id ? (
+                            <input
+                              type="checkbox"
+                              checked={editStaffFieldForm.employeeEditable}
+                              onChange={(e) => setEditStaffFieldForm(prev => ({ ...prev, employeeEditable: e.target.checked }))}
+                            />
+                          ) : (
+                            <span className="text-sm text-slate-700">{(field.employee_editable ?? false) ? (language === 'es' ? 'Sí' : 'Yes') : 'No'}</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {editingStaffFieldId === field.id ? (
+                            <input
+                              type="number"
+                              value={editStaffFieldForm.sortOrder}
+                              onChange={(e) => setEditStaffFieldForm(prev => ({ ...prev, sortOrder: Number(e.target.value) || 0 }))}
+                              className="w-24 border border-slate-300 rounded-md p-2 text-sm"
+                            />
+                          ) : (
+                            <span className="text-sm text-slate-700">{field.sort_order ?? 0}</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-right">
+                          {editingStaffFieldId === field.id ? (
+                            <div className="flex justify-end space-x-2">
+                              <button
+                                onClick={handleUpdateStaffField}
+                                className="px-2 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                              >
+                                {language === 'es' ? 'Guardar' : 'Save'}
+                              </button>
+                              <button
+                                onClick={() => setEditingStaffFieldId(null)}
+                                className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50"
+                              >
+                                {language === 'es' ? 'Cancelar' : 'Cancel'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex justify-end space-x-2">
+                              <button
+                                onClick={() => beginEditStaffField(field)}
+                                className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50"
+                              >
+                                {language === 'es' ? 'Editar' : 'Edit'}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteStaffField(field.id)}
+                                className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                              >
+                                {language === 'es' ? 'Eliminar' : 'Delete'}
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
             <div className="p-6 border-b border-slate-100">
               <h2 className="text-xl font-semibold text-slate-800">Theme Settings</h2>

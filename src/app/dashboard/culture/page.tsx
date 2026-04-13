@@ -71,9 +71,11 @@ export default function CultureHubPage() {
     alert(t('thankYouNomination'));
   };
 
-  // Get current Employee of the Month
+  // Get current Employee of the Month (active users only)
   const currentEotmRecord = employeesOfTheMonth.find(e => e.month === currentMonthStr);
-  const currentEotmUser = currentEotmRecord ? users.find(u => u.id === currentEotmRecord.userId) : null;
+  const currentEotmUser = currentEotmRecord
+    ? users.find(u => u.id === currentEotmRecord.userId && u.isActive !== false)
+    : null;
 
   return (
     <div className="space-y-8 culture-page">
@@ -202,7 +204,7 @@ export default function CultureHubPage() {
                   className="w-full border border-slate-300 rounded-md shadow-sm p-1.5 text-xs focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="" disabled>{t('chooseSomeone')}</option>
-                  {users.filter(u => u.id !== user?.id).map(u => (
+                  {users.filter(u => u.id !== user?.id && u.isActive !== false).map(u => (
                     <option key={u.id} value={u.id}>{u.name}</option>
                   ))}
                 </select>

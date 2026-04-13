@@ -8,6 +8,23 @@ export interface Department {
   areas?: string[];
 }
 
+export interface StaffCustomFieldDefinition {
+  id: string;
+  field_key: string;
+  label: string;
+  field_type: 'text' | 'number' | 'date' | 'boolean';
+  required_for_contract: boolean;
+  is_active: boolean;
+  group_key: string;
+  show_in_profile: boolean;
+  employee_editable: boolean;
+  sort_order: number;
+  is_system?: boolean;
+  is_deletable?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -32,6 +49,7 @@ export interface User {
   // New profile fields
   emergencyContactName?: string | null;
   emergencyContactPhone?: string | null;
+  emergencyContactRelationship?: string | null;
   maritalStatus?: string | null;
   spouseName?: string | null;
   childrenCount?: number;
@@ -42,6 +60,29 @@ export interface User {
   policeRecordUrl?: string | null;
   askMeAbout?: string[];
   badges?: string[];
+  dpi?: string | null;
+  socialSecurityNumber?: string | null;
+  phone?: string | null;
+  spouseDpi?: string | null;
+  cardNumber?: string | null;
+  renewalDate?: string | null;
+  nationality?: string | null;
+  placeOfBirth?: string | null;
+  socialSecurityCode?: string | null;
+  occupation?: string | null;
+  educationLevel?: string | null;
+  profession?: string | null;
+  address?: string | null;
+  accountType?: string | null;
+  criminalRecord?: string | null;
+  policeRecord?: string | null;
+  motherName?: string | null;
+  fatherName?: string | null;
+  childrenNames?: string | null;
+  hotelContract?: string | null;
+  baseSalary?: number | null;
+  incentiveBonus?: number | null;
+  customFields?: Record<string, string | number | boolean | null>;
 }
 
 export interface Event {

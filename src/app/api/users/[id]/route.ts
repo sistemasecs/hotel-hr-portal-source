@@ -40,6 +40,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       foodHandlingCardUrl: row.food_handling_card_url,
       criminalRecordUrl: row.criminal_record_url,
       policeRecordUrl: row.police_record_url,
+      customFields: row.custom_fields_json || {},
     };
 
     return NextResponse.json(user);
@@ -90,6 +91,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       foodHandlingCardUrl: 'food_handling_card_url',
       criminalRecordUrl: 'criminal_record_url',
       policeRecordUrl: 'police_record_url',
+      customFields: 'custom_fields_json',
     };
 
     for (const [key, value] of Object.entries(updateData)) {
@@ -147,6 +149,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       foodHandlingCardUrl: row.food_handling_card_url,
       criminalRecordUrl: row.criminal_record_url,
       policeRecordUrl: row.police_record_url,
+      customFields: row.custom_fields_json || {},
     };
 
     await logActivity(currentUserId || null, 'UPDATE', 'USER', updatedUser.id, { updatedFields: Object.keys(updateData) });

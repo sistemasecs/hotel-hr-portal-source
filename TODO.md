@@ -1,7 +1,6 @@
-# TODO - Vacation source unification
+# TODO
 
-- [ ] Update Admin Vacations tab to use YEARLY request_documents as signing source (not consent records) for signed indicators.
-- [ ] Ensure vacation balance calculations in Admin Directory and Admin Vacations both use `calculateVacationBalance` with same inputs.
-- [ ] Keep consent endpoint as metadata-only (no impact on totals shown).
-- [ ] Verify inactive users are excluded from EOTM and birthdays.
-- [ ] Run build/typecheck to validate no regressions.
+- [x] Apply approved full overwrite refactor to `src/app/dashboard/profile/page.tsx`
+- [ ] Remove `Contract & Payroll` section from `src/app/dashboard/profile/page.tsx` while keeping data in directory/backend
+- [ ] Run quick profile render validation with dev server running
+- [ ] Report results and remaining items
