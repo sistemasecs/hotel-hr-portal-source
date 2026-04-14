@@ -217,7 +217,7 @@ export default function DashboardPage() {
         )}
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{t('welcomeBack')}, {currentUser.name}</h1>
-          <p className="text-slate-500 mt-1 font-medium">{currentUser.role} • {currentUser.department}</p>
+          <p className="text-slate-500 mt-1 font-medium">{currentUser.department}</p>
           <p className="text-slate-400 text-sm mt-1">{t('heresWhatsHappening')}</p>
         </div>
       </header>

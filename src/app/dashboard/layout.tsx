@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
@@ -22,6 +22,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { isUserOnboarded } = useData();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Unified sidebar/mobile menu state
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -48,9 +52,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {!isOnboardingFlow && <Sidebar />}
-      <div className={`flex-1 flex flex-col ${!isOnboardingFlow ? 'md:ml-64' : ''} overflow-hidden`}>
-        <PresenceBar />
+      {!isOnboardingFlow && (
+        <Sidebar 
+          isMobileMenuOpen={isMobileMenuOpen} 
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
+        />
+      )}
+      <div 
+        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${
+          !isOnboardingFlow 
+            ? (isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64') 
+            : ''
+        } overflow-hidden`}
+      >
+        <PresenceBar onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
         <main className="flex-1 overflow-y-auto p-4 md:p-8 w-full relative">
           {children}
         </main>

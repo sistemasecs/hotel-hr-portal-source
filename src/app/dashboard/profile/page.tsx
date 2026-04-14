@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useData } from '@/context/DataContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { User, StaffCustomFieldDefinition } from '@/types';
+import { formatDisplayDate } from '@/lib/dateUtils';
 
 export default function ProfilePage() {
   const { user: authUser } = useAuth();
@@ -345,7 +346,7 @@ export default function ProfilePage() {
                         className="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-primary-500 focus:border-primary-500 disabled:bg-slate-100 disabled:text-slate-400"
                       />
                     ) : (
-                      <p className="text-sm font-medium text-slate-900">{parseDate(currentUser.birthday).toLocaleDateString()}</p>
+                      <p className="text-sm font-medium text-slate-900">{formatDisplayDate(currentUser.birthday)}</p>
                     )}
                   </div>
                 )}
@@ -689,38 +690,6 @@ export default function ProfilePage() {
                     </select>
                   ) : (
                     <p className="text-sm font-medium text-slate-900">{currentUser.tShirtSize || t('notSpecified')}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('language')}</label>
-                  {isEditing ? (
-                    <div className="flex space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => setLanguage('en')}
-                        className={`flex-1 py-1 px-4 rounded-lg text-xs font-bold transition-all ${
-                          language === 'en'
-                            ? 'bg-primary-600 text-white shadow-md'
-                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        English
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLanguage('es')}
-                        className={`flex-1 py-1 px-4 rounded-lg text-xs font-bold transition-all ${
-                          language === 'es'
-                            ? 'bg-primary-600 text-white shadow-md'
-                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        Español
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="text-sm font-medium text-slate-900">{language === 'en' ? 'English' : 'Español'}</p>
                   )}
                 </div>
 

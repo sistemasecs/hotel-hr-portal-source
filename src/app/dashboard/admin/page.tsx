@@ -1678,6 +1678,46 @@ function AdminDashboardContent() {
                               return <span className="text-sm text-slate-600 font-medium">{u.childrenCount || 0}</span>;
                             case 'taxId':
                               return <span className="text-sm text-slate-600 font-mono">{u.taxId || '-'}</span>;
+                            case 'dpi':
+                              return <span className="text-sm text-slate-600 font-mono">{(u as any).dpi || '-'}</span>;
+                            case 'socialSecurityNumber':
+                              return <span className="text-sm text-slate-600">{(u as any).socialSecurityNumber || '-'}</span>;
+                            case 'socialSecurityCode':
+                              return <span className="text-sm text-slate-600">{(u as any).socialSecurityCode || '-'}</span>;
+                            case 'spouseDpi':
+                              return <span className="text-sm text-slate-600">{(u as any).spouseDpi || '-'}</span>;
+                            case 'cardNumber':
+                              return <span className="text-sm text-slate-600 font-mono">{(u as any).cardNumber || '-'}</span>;
+                            case 'renewalDate':
+                              return <span className="text-sm text-slate-600">{(u as any).renewalDate ? formatDisplayDate((u as any).renewalDate) : '-'}</span>;
+                            case 'contractSigningDate':
+                              return <span className="text-sm text-slate-600">{u.contractSigningDate ? formatDisplayDate(u.contractSigningDate) : '-'}</span>;
+                            case 'nationality':
+                              return <span className="text-sm text-slate-600">{(u as any).nationality || '-'}</span>;
+                            case 'placeOfBirth':
+                              return <span className="text-sm text-slate-600">{(u as any).placeOfBirth || '-'}</span>;
+                            case 'occupation':
+                              return <span className="text-sm text-slate-600 font-mono">{(u as any).occupation || '-'}</span>;
+                            case 'educationLevel':
+                              return <span className="text-sm text-slate-600">{(u as any).educationLevel || '-'}</span>;
+                            case 'profession':
+                              return <span className="text-sm text-slate-600">{(u as any).profession || '-'}</span>;
+                            case 'address':
+                              return <span className="text-sm text-slate-600 truncate max-w-[150px]">{(u as any).address || '-'}</span>;
+                            case 'accountType':
+                              return <span className="text-sm text-slate-600">{(u as any).accountType || '-'}</span>;
+                            case 'motherName':
+                              return <span className="text-sm text-slate-600">{(u as any).motherName || '-'}</span>;
+                            case 'fatherName':
+                              return <span className="text-sm text-slate-600">{(u as any).fatherName || '-'}</span>;
+                            case 'childrenNames':
+                              return <span className="text-sm text-slate-600 truncate max-w-[150px]">{(u as any).childrenNames || '-'}</span>;
+                            case 'baseSalary':
+                              return <span className="text-sm font-semibold text-emerald-700">{(u as any).baseSalary ? `Q${(u as any).baseSalary.toLocaleString()}` : '-'}</span>;
+                            case 'incentiveBonus':
+                              return <span className="text-sm text-emerald-600">{(u as any).incentiveBonus ? `Q${(u as any).incentiveBonus.toLocaleString()}` : '-'}</span>;
+                            case 'hotelContract':
+                              return <span className="text-sm text-slate-600">{(u as any).hotelContract || '-'}</span>;
                             case 'actions':
                               return (
                                 <div className="flex items-center justify-end space-x-2">
