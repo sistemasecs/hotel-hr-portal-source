@@ -649,6 +649,7 @@ function AdminDashboardContent() {
         setNewHolidayStart('');
         setNewHolidayEnd('');
         setNewHolidayRate(1.5);
+        alert(t('changesSaved') || 'Changes saved successfully!');
       }
     } catch (error) {
       console.error('Error adding holiday:', error);
@@ -882,6 +883,7 @@ function AdminDashboardContent() {
     if (editingEventType && editingEventType.newName.trim()) {
       updateEventType(editingEventType.id, editingEventType.newName.trim());
       setEditingEventType(null);
+      alert(t('changesSaved') || 'Changes saved successfully!');
     }
   };
 
@@ -895,6 +897,7 @@ function AdminDashboardContent() {
         areas: areasArray
       });
       setEditingDept(null);
+      alert(t('changesSaved') || 'Changes saved successfully!');
     }
   };
 
@@ -931,6 +934,7 @@ function AdminDashboardContent() {
     setIsEventModalOpen(false);
     setEditingEvent(null);
     setEditEventForm({});
+    alert(t('changesSaved') || 'Changes saved successfully!');
   };
 
   // Learning Module Handlers
@@ -1023,6 +1027,7 @@ function AdminDashboardContent() {
       addTrainingModule(data);
     }
     setIsModuleFormOpen(false);
+    alert(t('changesSaved') || 'Changes saved successfully!');
   };
 
   // Recognition Handlers
@@ -1130,6 +1135,7 @@ function AdminDashboardContent() {
         setEditingTemplate(null);
         setTemplateForm({ name: '', requestType: 'Vacation', content: '' });
         fetchTemplates();
+        alert(t('changesSaved') || 'Changes saved successfully!');
       } else {
         alert('Failed to save template');
       }
@@ -3954,9 +3960,10 @@ function AdminDashboardContent() {
                           <>
                             <button
                               onClick={() => setEditingDept({ id: dept.id, newName: dept.name, managerId: dept.managerId || null, parentId: dept.parentId || null, areas: dept.areas?.join(', ') || '' })}
-                              className="text-primary-600 hover:text-primary-900 text-sm font-medium"
+                              className="text-primary-600 hover:text-primary-900 p-1"
+                              title={t('edit')}
                             >
-                              Edit
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                             </button>
                             <button
                               onClick={() => {
@@ -3964,9 +3971,10 @@ function AdminDashboardContent() {
                                   deleteDepartment(dept.id);
                                 }
                               }}
-                              className="text-red-600 hover:text-red-900 text-sm font-medium"
+                              className="text-red-600 hover:text-red-900 p-1"
+                              title={t('delete')}
                             >
-                              Delete
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                           </>
                         )}
@@ -4027,9 +4035,10 @@ function AdminDashboardContent() {
                       <td className="p-4 text-right space-x-3">
                         <button
                           onClick={() => handleEditEventClick(e)}
-                          className="text-primary-600 hover:text-primary-900 text-sm font-medium"
+                          className="text-primary-600 hover:text-primary-900 p-1"
+                          title={t('edit')}
                         >
-                          {t('edit')}
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
                         <button
                           onClick={() => {
@@ -4037,9 +4046,10 @@ function AdminDashboardContent() {
                               deleteEvent(e.id);
                             }
                           }}
-                          className="text-red-600 hover:text-red-900 text-sm font-medium"
+                          className="text-red-600 hover:text-red-900 p-1"
+                          title={t('delete')}
                         >
-                          {t('delete')}
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                       </td>
                     </tr>
@@ -4755,15 +4765,17 @@ function AdminDashboardContent() {
                             });
                             setIsDocumentModalOpen(true);
                           }}
-                          className="text-primary-600 hover:text-primary-900 text-sm font-medium"
+                          className="text-primary-600 hover:text-primary-900 p-1"
+                          title={t('edit')}
                         >
-                          {t('edit')}
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
                         <button
                           onClick={() => handleDeleteTemplate(template.id)}
-                          className="text-red-600 hover:text-red-900 text-sm font-medium"
+                          className="text-red-600 hover:text-red-900 p-1"
+                          title={t('delete')}
                         >
-                          {t('delete')}
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                       </td>
                     </tr>

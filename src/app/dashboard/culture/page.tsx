@@ -79,16 +79,16 @@ export default function CultureHubPage() {
 
   return (
     <div className="space-y-8 culture-page">
-      <header className="flex justify-between items-end border-b border-slate-200 pb-6 culture-page-header no-print">
+      <header className="flex flex-col md:flex-row md:justify-between items-start md:items-end border-b border-slate-200 pb-6 culture-page-header no-print space-y-4 md:space-y-0">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">{t('cultureHub')}</h1>
           <p className="text-slate-500 mt-2">{t('cultureHubDesc')}</p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           {viewType === 'Month' && (
             <button
               onClick={() => window.print()}
-              className="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-md hover:bg-slate-700 transition-colors mr-4 flex items-center"
+              className="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-md hover:bg-slate-700 transition-colors flex items-center"
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -96,7 +96,7 @@ export default function CultureHubPage() {
               {t('printCalendar')}
             </button>
           )}
-          <div className="flex bg-slate-100 p-1 rounded-lg mr-4">
+          <div className="flex bg-slate-100 p-1 rounded-lg">
             <button
               onClick={() => setViewType('List')}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
@@ -134,7 +134,7 @@ export default function CultureHubPage() {
       </header>
 
       {/* Top Row: EDM (Left) and Nominate (Right) */}
-      <div className="grid grid-cols-2 gap-6 mb-8 no-print">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 no-print">
         {/* EDM Section - Left */}
         <div>
           {currentEotmUser ? (
@@ -234,7 +234,7 @@ export default function CultureHubPage() {
       <div className="space-y-6 print-only-calendar">
         {viewType === 'List' ? (
             displayEvents.map(event => (
-              <div key={event.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-start space-x-6">
+              <div key={event.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col sm:flex-row items-start sm:space-x-6 space-y-4 sm:space-y-0">
                 <div className="flex-shrink-0 w-16 h-16 bg-primary-50 text-primary-600 rounded-xl flex flex-col items-center justify-center border border-primary-100">
                   <span className="text-sm font-bold uppercase tracking-wider">{parseDate(event.date).toLocaleString('default', { month: 'short' })}</span>
                   <span className="text-2xl font-black leading-none mt-1">{parseDate(event.date).getDate()}</span>

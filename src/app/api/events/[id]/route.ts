@@ -16,7 +16,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
         for (const [key, value] of Object.entries(updates)) {
             if (allowedFields.includes(key) && value !== undefined) {
                 const dbColumn = key === 'coverImageUrl' ? 'cover_image_url' : key;
-                updateClauses.push(`${dbColumn} = ${paramIndex}`);
+                updateClauses.push(`${dbColumn} = $${paramIndex}`);
                 values.push(value);
                 paramIndex++;
             }
