@@ -1618,7 +1618,39 @@ function AdminDashboardContent() {
                                     </div>
                                   )}
                                   <div>
-                                    <p className="text-sm font-medium text-slate-900">{u.name}</p>
+                                    <div className="flex items-center space-x-2">
+                                      <p className="text-sm font-medium text-slate-900">{u.name}</p>
+                                      {(() => {
+                                        const expiringDocs = [
+                                          { field: 'dpiUrl', expField: 'dpiExp' },
+                                          { field: 'healthCardUrl', expField: 'healthCardExp' },
+                                          { field: 'foodHandlingCardUrl', expField: 'foodHandlingCardExp' },
+                                          { field: 'criminalRecordUrl', expField: 'criminalRecordExp' },
+                                          { field: 'policeRecordUrl', expField: 'policeRecordExp' },
+                                        ].filter(doc => {
+                                          const url = (u as any)[doc.field];
+                                          const expDateStr = (u as any)[doc.expField];
+                                          if (!url || !expDateStr) return false;
+                                          
+                                          const expDate = new Date(expDateStr);
+                                          const today = new Date();
+                                          const thirtyDaysFromNow = new Date();
+                                          thirtyDaysFromNow.setDate(today.getDate() + 30);
+                                          return expDate <= thirtyDaysFromNow;
+                                        });
+
+                                        return expiringDocs.length > 0 ? (
+                                          <div className="group relative">
+                                            <svg className="h-4 w-4 text-amber-500 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                            </svg>
+                                            <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-[10px] p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                                              {language === 'es' ? 'Documentos por vencer' : 'Documents expiring soon'}
+                                            </div>
+                                          </div>
+                                        ) : null;
+                                      })()}
+                                    </div>
                                     <p className="text-xs text-slate-500">{u.email}</p>
                                   </div>
                                 </div>
@@ -2661,14 +2693,44 @@ function AdminDashboardContent() {
 
               {editingUser && (
                 <div className="md:col-span-2 pt-4 border-t border-slate-200">
-                  <h3 className="text-sm font-bold text-slate-800 mb-2">{language === 'es' ? 'Documentos' : 'Documents'}</h3>
-                  <div className="flex flex-wrap gap-4">
-                    {editingUser.healthCardUrl ? <a href={editingUser.healthCardUrl} target="_blank" rel="noreferrer" className="text-primary-600 font-medium text-xs hover:underline flex items-center bg-primary-50 px-2 py-1 rounded-md"><svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> Tarjeta Salud</a> : <span className="text-slate-400 text-xs border border-dashed border-slate-300 px-2 py-1 rounded bg-slate-50">No Tarjeta Salud</span>}
-                    {(editingUser.department === 'Alimentos y Bebidas' || editingUser.department === 'Food & Beverage') && (
-                      editingUser.foodHandlingCardUrl ? <a href={editingUser.foodHandlingCardUrl} target="_blank" rel="noreferrer" className="text-primary-600 font-medium text-xs hover:underline flex items-center bg-primary-50 px-2 py-1 rounded-md"><svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> Tarjeta Manipulación</a> : <span className="text-slate-400 text-xs border border-dashed border-slate-300 px-2 py-1 rounded bg-slate-50">No Tarj. Manipulación</span>
-                    )}
-                    {editingUser.criminalRecordUrl ? <a href={editingUser.criminalRecordUrl} target="_blank" rel="noreferrer" className="text-primary-600 font-medium text-xs hover:underline flex items-center bg-primary-50 px-2 py-1 rounded-md"><svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> Ant. Penales</a> : <span className="text-slate-400 text-xs border border-dashed border-slate-300 px-2 py-1 rounded bg-slate-50">No Ant. Penales</span>}
-                    {editingUser.policeRecordUrl ? <a href={editingUser.policeRecordUrl} target="_blank" rel="noreferrer" className="text-primary-600 font-medium text-xs hover:underline flex items-center bg-primary-50 px-2 py-1 rounded-md"><svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg> Ant. Policiacos</a> : <span className="text-slate-400 text-xs border border-dashed border-slate-300 px-2 py-1 rounded bg-slate-50">No Ant. Policiacos</span>}
+                  <h3 className="text-sm font-bold text-slate-800 mb-4">{language === 'es' ? 'Documentos' : 'Documents'}</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
+                      { label: language === 'es' ? 'Imagen de DPI' : 'DPI Image', urlField: 'dpiUrl', expField: 'dpiExp' },
+                      { label: language === 'es' ? 'Tarjeta Salud' : 'Health Card', urlField: 'healthCardUrl', expField: 'healthCardExp' },
+                      { label: language === 'es' ? 'Tarjeta Manipulación' : 'Food Handling Card', urlField: 'foodHandlingCardUrl', expField: 'foodHandlingCardExp', condition: (editUserForm.department === 'Alimentos y Bebidas' || editUserForm.department === 'Food & Beverage') },
+                      { label: language === 'es' ? 'Antecedentes Penales' : 'Criminal Record', urlField: 'criminalRecordUrl', expField: 'criminalRecordExp' },
+                      { label: language === 'es' ? 'Antecedentes Policiacos' : 'Police Record', urlField: 'policeRecordUrl', expField: 'policeRecordExp' },
+                    ].map((doc) => {
+                      if (doc.condition === false) return null;
+                      const url = (editUserForm as any)[doc.urlField];
+                      const expDate = (editUserForm as any)[doc.expField];
+                      
+                      return (
+                        <div key={doc.urlField} className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold text-slate-700">{doc.label}</span>
+                            {url ? (
+                              <a href={url} target="_blank" rel="noreferrer" className="text-primary-600 hover:text-primary-800 flex items-center bg-primary-50 px-2 py-1 rounded text-[10px] font-bold">
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                {language === 'es' ? 'Ver' : 'View'}
+                              </a>
+                            ) : (
+                              <span className="text-slate-400 text-[10px] italic">{language === 'es' ? 'No subido' : 'Not uploaded'}</span>
+                            )}
+                          </div>
+                          <div className="mt-1">
+                            <label className="block text-[9px] text-slate-500 uppercase tracking-widest mb-1">{language === 'es' ? 'Fecha Vencimiento' : 'Exp. Date'}</label>
+                            <input
+                              type="date"
+                              value={expDate || ''}
+                              onChange={(e) => setEditUserForm({ ...editUserForm, [doc.expField as any]: e.target.value })}
+                              className="w-full border border-slate-300 rounded-md p-1.5 text-xs focus:ring-primary-500 focus:border-primary-500"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

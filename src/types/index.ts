@@ -76,6 +76,12 @@ export interface User {
   accountType?: string | null;
   criminalRecord?: number | null;
   policeRecord?: number | null;
+  healthCardExp?: string | null;
+  foodHandlingCardExp?: string | null;
+  criminalRecordExp?: string | null;
+  policeRecordExp?: string | null;
+  dpiExp?: string | null;
+  dpiUrl?: string | null;
   motherName?: string | null;
   fatherName?: string | null;
   childrenNames?: string | null;

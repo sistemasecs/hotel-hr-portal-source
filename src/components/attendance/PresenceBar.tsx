@@ -11,6 +11,7 @@ import LiveClock from './LiveClock';
 import { ensureGuatemalaDate } from '@/lib/dateUtils';
 import { LogIn, LogOut, Info, Bell, Megaphone, Globe, ChevronDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 
 interface PresenceBarProps {
     onMenuToggle: () => void;
@@ -26,6 +27,12 @@ export default function PresenceBar({ onMenuToggle }: PresenceBarProps) {
     const [clockInReason, setClockInReason] = useState('');
     const [showNotifications, setShowNotifications] = useState(false);
     const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+
+    useEscapeKey(() => {
+        setShowReasonModal(false);
+        setShowNotifications(false);
+        setShowLanguageMenu(false);
+    });
 
     useEffect(() => {
         let intervalId: NodeJS.Timeout;

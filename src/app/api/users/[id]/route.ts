@@ -63,6 +63,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       profession: row.profession,
       childrenNames: row.children_names,
       emergencyContactRelationship: row.emergency_contact_relationship,
+      healthCardExp: row.health_card_exp ? row.health_card_exp.toISOString().split('T')[0] : null,
+      foodHandlingCardExp: row.food_handling_card_exp ? row.food_handling_card_exp.toISOString().split('T')[0] : null,
+      criminalRecordExp: row.criminal_record_exp ? row.criminal_record_exp.toISOString().split('T')[0] : null,
+      policeRecordExp: row.police_record_exp ? row.police_record_exp.toISOString().split('T')[0] : null,
+      dpiExp: row.dpi_exp ? row.dpi_exp.toISOString().split('T')[0] : null,
+      dpiUrl: row.dpi_url,
       customFields: row.custom_fields_json || {},
     };
 
@@ -138,6 +144,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       childrenNames: 'children_names',
       emergencyContactRelationship: 'emergency_contact_relationship',
       customFields: 'custom_fields_json',
+      healthCardExp: 'health_card_exp',
+      foodHandlingCardExp: 'food_handling_card_exp',
+      criminalRecordExp: 'criminal_record_exp',
+      policeRecordExp: 'police_record_exp',
+      dpiExp: 'dpi_exp',
+      dpiUrl: 'dpi_url',
     };
 
     for (const [key, value] of Object.entries(updateData)) {
@@ -218,6 +230,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       profession: row.profession,
       childrenNames: row.children_names,
       emergencyContactRelationship: row.emergency_contact_relationship,
+      healthCardExp: row.health_card_exp ? row.health_card_exp.toISOString().split('T')[0] : null,
+      foodHandlingCardExp: row.food_handling_card_exp ? row.food_handling_card_exp.toISOString().split('T')[0] : null,
+      criminalRecordExp: row.criminal_record_exp ? row.criminal_record_exp.toISOString().split('T')[0] : null,
+      policeRecordExp: row.police_record_exp ? row.police_record_exp.toISOString().split('T')[0] : null,
+      dpiExp: row.dpi_exp ? row.dpi_exp.toISOString().split('T')[0] : null,
+      dpiUrl: row.dpi_url,
       customFields: row.custom_fields_json || {},
     };
 

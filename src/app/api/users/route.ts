@@ -60,6 +60,12 @@ export async function GET() {
       profession: row.profession,
       childrenNames: row.children_names,
       emergencyContactRelationship: row.emergency_contact_relationship,
+      healthCardExp: row.health_card_exp ? row.health_card_exp.toISOString().split('T')[0] : null,
+      foodHandlingCardExp: row.food_handling_card_exp ? row.food_handling_card_exp.toISOString().split('T')[0] : null,
+      criminalRecordExp: row.criminal_record_exp ? row.criminal_record_exp.toISOString().split('T')[0] : null,
+      policeRecordExp: row.police_record_exp ? row.police_record_exp.toISOString().split('T')[0] : null,
+      dpiExp: row.dpi_exp ? row.dpi_exp.toISOString().split('T')[0] : null,
+      dpiUrl: row.dpi_url,
       customFields: row.custom_fields_json || {},
     }));
     return NextResponse.json(users);
@@ -72,7 +78,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, password, role, employmentType, contractSigningDate, department, area, supervisorId, avatarUrl, birthday, hireDate, likes, dislikes, tShirtSize, allergies, isActive, inactiveDate, inactiveReason, currentUserId, emergencyContactName, emergencyContactPhone, maritalStatus, spouseName, childrenCount, taxId, healthCardUrl, foodHandlingCardUrl, criminalRecordUrl, policeRecordUrl, phone, address, nationality, placeOfBirth, motherName, fatherName, dpi, socialSecurityNumber, socialSecurityCode, spouseDpi, cardNumber, occupation, criminalRecord, policeRecord, hotelContract, baseSalary, incentiveBonus, renewalDate, accountType, educationLevel, profession, childrenNames, emergencyContactRelationship, customFields } = body;
+    const { name, email, password, role, employmentType, contractSigningDate, department, area, supervisorId, avatarUrl, birthday, hireDate, likes, dislikes, tShirtSize, allergies, isActive, inactiveDate, inactiveReason, currentUserId, emergencyContactName, emergencyContactPhone, maritalStatus, spouseName, childrenCount, taxId, healthCardUrl, foodHandlingCardUrl, criminalRecordUrl, policeRecordUrl, phone, address, nationality, placeOfBirth, motherName, fatherName, dpi, socialSecurityNumber, socialSecurityCode, spouseDpi, cardNumber, occupation, criminalRecord, policeRecord, hotelContract, baseSalary, incentiveBonus, renewalDate, accountType, educationLevel, profession, childrenNames, emergencyContactRelationship, customFields, healthCardExp, foodHandlingCardExp, criminalRecordExp, policeRecordExp, dpiExp, dpiUrl } = body;
 
     // Hash the password before storing
     const salt = await bcrypt.genSalt(10);
@@ -84,10 +90,10 @@ export async function POST(request: Request) {
     const passwordHash = await bcrypt.hash(passwordToHash, salt);
 
     const result = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role, employment_type, contract_signing_date, department, area, supervisor_id, avatar_url, birthday, hire_date, likes, dislikes, t_shirt_size, allergies, is_active, inactive_date, inactive_reason, emergency_contact_name, emergency_contact_phone, marital_status, spouse_name, children_count, tax_id, health_card_url, food_handling_card_url, criminal_record_url, police_record_url, phone, address, nationality, place_of_birth, mother_name, father_name, dpi, social_security_number, social_security_code, spouse_dpi, card_number, occupation, criminal_record, police_record, hotel_contract, base_salary, incentive_bonus, renewal_date, account_type, education_level, profession, children_names, emergency_contact_relationship, custom_fields_json)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53)
+      `INSERT INTO users (name, email, password_hash, role, employment_type, contract_signing_date, department, area, supervisor_id, avatar_url, birthday, hire_date, likes, dislikes, t_shirt_size, allergies, is_active, inactive_date, inactive_reason, emergency_contact_name, emergency_contact_phone, marital_status, spouse_name, children_count, tax_id, health_card_url, food_handling_card_url, criminal_record_url, police_record_url, phone, address, nationality, place_of_birth, mother_name, father_name, dpi, social_security_number, social_security_code, spouse_dpi, card_number, occupation, criminal_record, police_record, hotel_contract, base_salary, incentive_bonus, renewal_date, account_type, education_level, profession, children_names, emergency_contact_relationship, custom_fields_json, health_card_exp, food_handling_card_exp, criminal_record_exp, police_record_exp, dpi_exp, dpi_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55, $56, $57, $58, $59)
        RETURNING *`,
-      [name, email, passwordHash, role, employmentType || 'Contract', contractSigningDate || null, department, area || null, supervisorId || null, avatarUrl || null, birthday, hireDate, likes || [], dislikes || [], tShirtSize, allergies || [], isActive !== undefined ? isActive : true, inactiveDate || null, inactiveReason || null, emergencyContactName || null, emergencyContactPhone || null, maritalStatus || null, spouseName || null, childrenCount || 0, taxId || null, healthCardUrl || null, foodHandlingCardUrl || null, criminalRecordUrl || null, policeRecordUrl || null, phone || null, address || null, nationality || null, placeOfBirth || null, motherName || null, fatherName || null, dpi || null, socialSecurityNumber || null, socialSecurityCode || null, spouseDpi || null, cardNumber || null, occupation || null, criminalRecord || null, policeRecord || null, hotelContract || null, baseSalary || null, incentiveBonus || null, renewalDate || null, accountType || null, educationLevel || null, profession || null, childrenNames || null, emergencyContactRelationship || null, customFields || {}]
+      [name, email, passwordHash, role, employmentType || 'Contract', contractSigningDate || null, department, area || null, supervisorId || null, avatarUrl || null, birthday, hireDate, likes || [], dislikes || [], tShirtSize, allergies || [], isActive !== undefined ? isActive : true, inactiveDate || null, inactiveReason || null, emergencyContactName || null, emergencyContactPhone || null, maritalStatus || null, spouseName || null, childrenCount || 0, taxId || null, healthCardUrl || null, foodHandlingCardUrl || null, criminalRecordUrl || null, policeRecordUrl || null, phone || null, address || null, nationality || null, placeOfBirth || null, motherName || null, fatherName || null, dpi || null, socialSecurityNumber || null, socialSecurityCode || null, spouseDpi || null, cardNumber || null, occupation || null, criminalRecord || null, policeRecord || null, hotelContract || null, baseSalary || null, incentiveBonus || null, renewalDate || null, accountType || null, educationLevel || null, profession || null, childrenNames || null, emergencyContactRelationship || null, customFields || {}, healthCardExp || null, foodHandlingCardExp || null, criminalRecordExp || null, policeRecordExp || null, dpiExp || null, dpiUrl || null]
     );
 
     const row = result.rows[0];
@@ -144,6 +150,12 @@ export async function POST(request: Request) {
       profession: row.profession,
       childrenNames: row.children_names,
       emergencyContactRelationship: row.emergency_contact_relationship,
+      healthCardExp: row.health_card_exp ? row.health_card_exp.toISOString().split('T')[0] : null,
+      foodHandlingCardExp: row.food_handling_card_exp ? row.food_handling_card_exp.toISOString().split('T')[0] : null,
+      criminalRecordExp: row.criminal_record_exp ? row.criminal_record_exp.toISOString().split('T')[0] : null,
+      policeRecordExp: row.police_record_exp ? row.police_record_exp.toISOString().split('T')[0] : null,
+      dpiExp: row.dpi_exp ? row.dpi_exp.toISOString().split('T')[0] : null,
+      dpiUrl: row.dpi_url,
       customFields: row.custom_fields_json || {},
     };
 

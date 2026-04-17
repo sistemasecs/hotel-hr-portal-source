@@ -180,8 +180,50 @@ export default function ProfilePage() {
     }
   };
 
+  const expiringDocs = [
+    { label: t('dpiImage'), field: 'dpiUrl', expField: 'dpiExp' },
+    { label: t('healthCard'), field: 'healthCardUrl', expField: 'healthCardExp' },
+    { label: t('foodHandlingCard'), field: 'foodHandlingCardUrl', expField: 'foodHandlingCardExp' },
+    { label: t('criminalRecordDoc'), field: 'criminalRecordUrl', expField: 'criminalRecordExp' },
+    { label: t('policeRecordDoc'), field: 'policeRecordUrl', expField: 'policeRecordExp' },
+  ].filter(doc => {
+    const url = (currentUser as any)[doc.field];
+    const expDateStr = (currentUser as any)[doc.expField];
+    if (!url || !expDateStr) return false;
+    
+    const expDate = new Date(expDateStr);
+    const today = new Date();
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(today.getDate() + 30);
+    return expDate <= thirtyDaysFromNow;
+  });
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
+      {expiringDocs.length > 0 && (
+        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-md shadow-sm animate-in fade-in slide-in-from-top duration-500">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-bold text-amber-800">
+                {language === 'es' ? 'Documentos próximos a vencer' : 'Documents expiring soon'}
+              </h3>
+              <div className="mt-2 text-sm text-amber-700">
+                <p>
+                  {language === 'es' 
+                    ? `Los siguientes documentos vencerán pronto o ya vencieron: ${expiringDocs.map(d => d.label).join(', ')}. Por favor, actualízalos pronto.`
+                    : `The following documents are expiring soon or have expired: ${expiringDocs.map(d => d.label).join(', ')}. Please update them soon.`}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="flex justify-between items-end border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">{t('myProfile')}</h1>
@@ -790,82 +832,117 @@ export default function ProfilePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
-                { label: t('profilePicture'), field: 'avatarUrl', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-                { label: t('dpiImage'), field: 'dpiUrl', icon: 'M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2' },
-                { label: t('healthCard'), field: 'healthCardUrl', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
-                { label: t('foodHandlingCard'), field: 'foodHandlingCardUrl', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-                { label: t('criminalRecordDoc'), field: 'criminalRecordUrl', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
-                { label: t('policeRecordDoc'), field: 'policeRecordUrl', icon: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
-              ].map((doc) => (
-                <div key={doc.field} className="relative group">
-                  <div className={`p-4 rounded-xl border-2 border-dashed transition-all ${
-                    (formData as any)[doc.field] 
-                      ? 'border-primary-200 bg-primary-50' 
-                      : 'border-slate-200 bg-slate-50 hover:border-primary-300 hover:bg-slate-100'
-                  }`}>
-                    <div className="flex flex-col items-center text-center space-y-3">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        (formData as any)[doc.field] ? 'bg-primary-100 text-primary-600' : 'bg-slate-200 text-slate-500'
-                      }`}>
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={doc.icon} />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-slate-800">{doc.label}</p>
-                        {(formData as any)[doc.field] ? (
-                          <div className="flex items-center justify-center space-x-2 mt-1">
-                            <span className="text-[10px] font-bold text-primary-600 uppercase tracking-widest">{language === 'es' ? 'Subido' : 'Uploaded'}</span>
-                            <a 
-                              href={(formData as any)[doc.field] as string} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-primary-600 hover:text-primary-800"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
-                            </a>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-slate-400 mt-1">{language === 'es' ? 'No hay archivo' : 'No file available'}</p>
-                        )}
-                      </div>
-                      
-                      {isEditing && (
-                        <button
-                          onClick={() => {
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.accept = doc.field === 'avatarUrl' ? 'image/*' : 'image/*,application/pdf';
-                            input.onchange = (e: any) => handleDocumentUpload(e, doc.field as keyof User);
-                            input.click();
-                          }}
-                          disabled={uploadingDoc === doc.field}
-                          className="w-full py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center space-x-2"
-                        >
-                          {uploadingDoc === doc.field ? (
-                            <>
-                              <svg className="animate-spin h-4 w-4 text-primary-600" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              <span>{t('uploading')}...</span>
-                            </>
+                { label: t('profilePicture'), field: 'avatarUrl', expField: null, icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+                { label: t('dpiImage'), field: 'dpiUrl', expField: 'dpiExp', icon: 'M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2' },
+                { label: t('healthCard'), field: 'healthCardUrl', expField: 'healthCardExp', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+                { label: t('foodHandlingCard'), field: 'foodHandlingCardUrl', expField: 'foodHandlingCardExp', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+                { label: t('criminalRecordDoc'), field: 'criminalRecordUrl', expField: 'criminalRecordExp', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
+                { label: t('policeRecordDoc'), field: 'policeRecordUrl', expField: 'policeRecordExp', icon: 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+              ].map((doc) => {
+                const expirationDate = doc.expField ? (formData as any)[doc.expField] : null;
+                const isExpiringSoon = expirationDate && (() => {
+                  const expDate = new Date(expirationDate);
+                  const today = new Date();
+                  const thirtyDaysFromNow = new Date();
+                  thirtyDaysFromNow.setDate(today.getDate() + 30);
+                  return expDate <= thirtyDaysFromNow;
+                })();
+
+                return (
+                  <div key={doc.field} className="relative group">
+                    <div className={`p-4 rounded-xl border-2 border-dashed transition-all ${
+                      (formData as any)[doc.field] 
+                        ? (isExpiringSoon ? 'border-amber-200 bg-amber-50' : 'border-primary-200 bg-primary-50')
+                        : 'border-slate-200 bg-slate-50 hover:border-primary-300 hover:bg-slate-100'
+                    }`}>
+                      <div className="flex flex-col items-center text-center space-y-3">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                          (formData as any)[doc.field] 
+                            ? (isExpiringSoon ? 'bg-amber-100 text-amber-600' : 'bg-primary-100 text-primary-600') 
+                            : 'bg-slate-200 text-slate-500'
+                        }`}>
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={doc.icon} />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800">{doc.label}</p>
+                          {(formData as any)[doc.field] ? (
+                            <div className="flex flex-col items-center">
+                              <div className="flex items-center justify-center space-x-2 mt-1">
+                                <span className={`text-[10px] font-bold uppercase tracking-widest ${isExpiringSoon ? 'text-amber-600' : 'text-primary-600'}`}>
+                                  {language === 'es' ? 'Subido' : 'Uploaded'}
+                                </span>
+                                <a 
+                                  href={(formData as any)[doc.field] as string} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className={`${isExpiringSoon ? 'text-amber-600 hover:text-amber-800' : 'text-primary-600 hover:text-primary-800'}`}
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                </a>
+                              </div>
+                              {expirationDate && (
+                                <p className={`text-[10px] mt-1 ${isExpiringSoon ? 'text-amber-700 font-bold' : 'text-slate-500'}`}>
+                                  {language === 'es' ? 'Vence: ' : 'Expires: '}{formatDisplayDate(expirationDate)}
+                                </p>
+                              )}
+                            </div>
                           ) : (
-                            <>
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                              </svg>
-                              <span>{language === 'es' ? 'Subir Archivo' : 'Upload File'}</span>
-                            </>
+                            <p className="text-xs text-slate-400 mt-1">{language === 'es' ? 'No hay archivo' : 'No file available'}</p>
                           )}
-                        </button>
-                      )}
+                        </div>
+                        
+                        {isEditing ? (
+                          <div className="w-full space-y-2">
+                            <button
+                              onClick={() => {
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = doc.field === 'avatarUrl' ? 'image/*' : 'image/*,application/pdf';
+                                input.onchange = (e: any) => handleDocumentUpload(e, doc.field as keyof User);
+                                input.click();
+                              }}
+                              disabled={uploadingDoc === doc.field}
+                              className="w-full py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center space-x-2"
+                            >
+                              {uploadingDoc === doc.field ? (
+                                <>
+                                  <svg className="animate-spin h-4 w-4 text-primary-600" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  <span>{t('uploading')}...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                  </svg>
+                                  <span>{language === 'es' ? 'Subir Archivo' : 'Upload File'}</span>
+                                </>
+                              )}
+                            </button>
+                            {doc.expField && (formData as any)[doc.field] && (
+                              <div className="mt-2 text-left">
+                                <label className="block text-[10px] text-slate-500 uppercase tracking-widest mb-1">{language === 'es' ? 'Fecha Vencimiento' : 'Exp. Date'}</label>
+                                <input
+                                  type="date"
+                                  value={(formData as any)[doc.expField] || ''}
+                                  onChange={(e) => setFormData({ ...formData, [doc.expField!]: e.target.value })}
+                                  className="w-full border border-slate-300 rounded-md p-1.5 text-xs focus:ring-primary-500 focus:border-primary-500"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
