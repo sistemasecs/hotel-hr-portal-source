@@ -203,7 +203,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 bg-white p-6 rounded-xl shadow-sm border border-slate-100 text-center sm:text-left">
+      <header id="tour-welcome-header" className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 bg-white p-6 rounded-xl shadow-sm border border-slate-100 text-center sm:text-left">
         {currentUser.avatarUrl ? (
           <img 
             src={currentUser.avatarUrl} 
@@ -266,7 +266,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Quick Actions / Status */}
-        <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+        <section id="tour-your-status" className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
           <h2 className="text-xl font-semibold text-slate-800 mb-4">{t('yourStatus')}</h2>
           <div className="space-y-4">
             <div className="flex justify-between items-center p-4 bg-primary-50 rounded-lg">
@@ -289,7 +289,7 @@ export default function DashboardPage() {
               </Link>
             </div>
             {(currentUser.role === 'HR Admin' || currentUser.role === 'Supervisor' || currentUser.role === 'Manager') && (
-              <div className="flex justify-between items-center p-4 bg-amber-50 rounded-lg">
+              <div id="tour-pending-approvals" className="flex justify-between items-center p-4 bg-amber-50 rounded-lg">
                 <div>
                   <p className="text-sm font-medium text-amber-600">{t('pendingApprovals')}</p>
                   <p className="text-2xl font-bold text-amber-900">{pendingApprovalsCount}</p>
@@ -334,7 +334,7 @@ export default function DashboardPage() {
 
       {/* HR Admin Quick Links */}
       {currentUser.role === 'HR Admin' && (
-        <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+        <section id="tour-admin-panel" className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
           <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-xl font-semibold text-slate-800">{t('hrAdministration')}</h2>

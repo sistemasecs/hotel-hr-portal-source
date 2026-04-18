@@ -70,6 +70,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       dpiExp: row.dpi_exp ? row.dpi_exp.toISOString().split('T')[0] : null,
       dpiUrl: row.dpi_url,
       customFields: row.custom_fields_json || {},
+      hasSeenTour: row.has_seen_tour || false,
     };
 
     return NextResponse.json(user);
@@ -150,6 +151,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       policeRecordExp: 'police_record_exp',
       dpiExp: 'dpi_exp',
       dpiUrl: 'dpi_url',
+      hasSeenTour: 'has_seen_tour',
     };
 
     for (const [key, value] of Object.entries(updateData)) {
@@ -237,6 +239,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       dpiExp: row.dpi_exp ? row.dpi_exp.toISOString().split('T')[0] : null,
       dpiUrl: row.dpi_url,
       customFields: row.custom_fields_json || {},
+      hasSeenTour: row.has_seen_tour || false,
     };
 
     await logActivity(currentUserId || null, 'UPDATE', 'USER', updatedUser.id, { updatedFields: Object.keys(updateData) });

@@ -89,6 +89,7 @@ export interface User {
   baseSalary?: number | null;
   incentiveBonus?: number | null;
   customFields?: Record<string, string | number | boolean | null>;
+  hasSeenTour?: boolean;
 }
 
 export interface Event {

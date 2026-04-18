@@ -140,7 +140,7 @@ export default function Sidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isColla
           </div>
         </Link>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
+        <nav id="tour-sidebar-nav" className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
           {!isAdminPage ? (
             <>
               {navItems.filter(item => can(item.featureKey)).map((item) => {

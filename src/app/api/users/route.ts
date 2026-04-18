@@ -67,6 +67,7 @@ export async function GET() {
       dpiExp: row.dpi_exp ? row.dpi_exp.toISOString().split('T')[0] : null,
       dpiUrl: row.dpi_url,
       customFields: row.custom_fields_json || {},
+      hasSeenTour: row.has_seen_tour || false,
     }));
     return NextResponse.json(users);
   } catch (error) {
@@ -157,6 +158,7 @@ export async function POST(request: Request) {
       dpiExp: row.dpi_exp ? row.dpi_exp.toISOString().split('T')[0] : null,
       dpiUrl: row.dpi_url,
       customFields: row.custom_fields_json || {},
+      hasSeenTour: row.has_seen_tour || false,
     };
 
     // Log activity

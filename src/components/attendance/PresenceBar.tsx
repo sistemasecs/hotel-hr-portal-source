@@ -9,15 +9,16 @@ import { Shift } from '@/types';
 import WorkTimer from './WorkTimer';
 import LiveClock from './LiveClock';
 import { ensureGuatemalaDate } from '@/lib/dateUtils';
-import { LogIn, LogOut, Info, Bell, Megaphone, Globe, ChevronDown } from 'lucide-react';
+import { LogIn, LogOut, Info, Bell, Megaphone, Globe, ChevronDown, HelpCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 
 interface PresenceBarProps {
     onMenuToggle: () => void;
+    onOpenHelp?: () => void;
 }
 
-export default function PresenceBar({ onMenuToggle }: PresenceBarProps) {
+export default function PresenceBar({ onMenuToggle, onOpenHelp }: PresenceBarProps) {
     const { user } = useAuth();
     const { clockIn, clockOut, shifts, fetchUserShifts, activeShift, notifications, fetchNotifications, markNotificationAsRead } = useData();
     const { t, language, setLanguage } = useLanguage();
@@ -125,7 +126,7 @@ export default function PresenceBar({ onMenuToggle }: PresenceBarProps) {
         <>
             <div className="bg-white border-b border-slate-200 px-4 py-3 md:px-6 md:py-4 shadow-sm sticky top-0 z-30 w-full transition-all no-print">
                 <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-                    <div className="flex items-center space-x-3 lg:pr-6 lg:border-r lg:border-slate-100 min-w-0">
+                    <div id="tour-clock-status" className="flex items-center space-x-3 lg:pr-6 lg:border-r lg:border-slate-100 min-w-0">
                         <div className={`w-3 h-3 rounded-full flex-shrink-0 ${activeShift ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`} />
                         <div className="flex flex-col min-w-0">
                             <p className="text-sm font-bold text-slate-900 leading-tight tracking-tight truncate">
@@ -152,6 +153,7 @@ export default function PresenceBar({ onMenuToggle }: PresenceBarProps) {
                         </Link>
 
                         <button
+                            id="tour-clock-action"
                             onClick={() => handleClockAction(activeShift ? 'CLOCK_OUT' : 'CLOCK_IN')}
                             disabled={loading}
                             className={`p-2 rounded-xl transition-colors flex items-center justify-center shrink-0 ${activeShift ? 'text-rose-700 bg-rose-100 hover:bg-rose-200' : 'text-emerald-700 bg-emerald-100 hover:bg-emerald-200'}`}
@@ -160,7 +162,7 @@ export default function PresenceBar({ onMenuToggle }: PresenceBarProps) {
                             {activeShift ? <LogOut className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
                         </button>
 
-                        <div className="relative shrink-0">
+                        <div id="tour-notifications" className="relative shrink-0">
                             <button
                                 onClick={() => setShowNotifications(prev => !prev)}
                                 className="p-2 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary-600 transition-colors flex items-center justify-center"
@@ -230,8 +232,18 @@ export default function PresenceBar({ onMenuToggle }: PresenceBarProps) {
                             )}
                         </div>
 
+                        {/* Help Center Button */}
+                        <button
+                            onClick={onOpenHelp}
+                            className="p-2 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-primary-600 transition-colors flex items-center justify-center shrink-0"
+                            title={language === 'es' ? 'Centro de Ayuda' : 'Help Center'}
+                        >
+                            <HelpCircle className="w-5 h-5" />
+                        </button>
+
                         {/* Profile Avatar / Mobile Menu Toggle */}
                         <button 
+                            id="tour-profile-link"
                             onClick={(e) => {
                                 // On mobile, toggle menu. On desktop, go to profile.
                                 if (window.innerWidth < 768) {
